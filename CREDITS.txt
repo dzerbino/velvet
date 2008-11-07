@@ -1,0 +1,27 @@
+Most of the code in this package was written by myself (Daniel Zerbino).
+
+However, some code was reused with kind permission from:
+- John-Mark Gurney, for his Fibonacci heap implementation 
+(http://resnet.uoregon.edu/~gurney_j/jmpc/fib.html)
+- Guy Slater, for his memory management routines 
+(http://www.ebi.ac.uk/~guy/exonerate/) 
+- Ewan Birney, for his hashing function
+(ftp://ftp.ebi.ac.uk/pub/software/unix/wise2/)
+
+Also this package uses and includes the zlib library developped by Jean-Loup
+Gailly and Mark Adler - more details in the zlib README file.
+(http://www.zlib.net)
+
+To this package I also bundled some third-party analysis scripts for Velvet: 
+- Paul Harrison produced a script to convert a Velvet Graph file into a
+  GraphViz .dot file, which GraphViz can then turn into pretty images.
+- Simon Gladman wrote two scripts to quickly examine .afg files. The first one
+  allows the user to break down the assembly file into contig files, and the
+  second to view, within an ASCII terminal, the alignment of reads at a given
+  position in a contig. 
+
+Many thanks to: 
+- Darren Platt for his very thorough debugging.
+- Andrew Fernandes and Greg Gloor for advice on Mac compilation.
+- Craig Cummings and Vrunda Sheth for their work on the colorspace version of
+  Velvet.

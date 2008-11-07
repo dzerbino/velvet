@@ -1,0 +1,16 @@
+V. 0.7.13
+- m64 flag for Sparc/Solaris computing
+- Color space makefile
+- Crashing parsing bug
+- Crashing initialisation bug
+- No more stuttering of tandem repeats after Pebble resolution
+
+V 0.7.14
+- Crashing bug in long read concatenation
+
+V 0.7.15
+- Tiny colorspace bug in sequence expander
+- Crashing bug in Pebble pointers
+
+V 0.7.16
+- Bug in AMOS output
