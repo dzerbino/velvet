@@ -2254,7 +2254,7 @@ Graph *importGraph(char *filename)
 
 	// Read nodes
 	fgets(line, maxline, file);
-	while (line[0] == 'N') {
+	while (strncmp(line, "NODE", 4) == 0) {
 		strtok(line, "\t\n");
 		sscanf(strtok(NULL, "\t\n"), "%li", &nodeID);
 		node = addEmptyNodeToGraph(graph, nodeID);

@@ -14,3 +14,4 @@ V 0.7.15
 
 V 0.7.16
 - Bug in AMOS output
+- Crashing bug in file parsing

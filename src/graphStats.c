@@ -2302,7 +2302,7 @@ static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
 		finish = getGapStart(gap);
 		fprintf(outfile, "{TLE\n");
 		fprintf(outfile, "off:%li\n", start);
-		fprintf(outfile, "clr:0,%li\n", finish - start + wordLength);
+		fprintf(outfile, "clr:0,%li\n", finish - start + wordShift);
 		fprintf(outfile, "src:%li\n", contigIndex++);
 		fprintf(outfile, "}\n");
 		start = getGapFinish(gap);

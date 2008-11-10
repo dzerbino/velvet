@@ -1377,8 +1377,8 @@ static IDnum abs_ID(IDnum val)
 	return val >= 0 ? val : -val;
 }
 
-static boolean pathIsClear(Node * node, Node * oppositeNode,
-			   Coordinate distance)
+static NodeList *pathIsClear(Node * node, Node * oppositeNode,
+			     Coordinate distance)
 {
 	Arc *arc;
 	Node *candidate, *dest, *current;
@@ -1386,6 +1386,8 @@ static boolean pathIsClear(Node * node, Node * oppositeNode,
 	boolean maxRepeat = 1;
 	Node *repeatEntrance = NULL;
 	IDnum counter = 0;
+	NodeList *path = NULL;
+	NodeList *tail = path;
 
 	setSingleNodeStatus(node, 2);
 
@@ -1405,7 +1407,6 @@ static boolean pathIsClear(Node * node, Node * oppositeNode,
 			if (dest == node || dest == getTwinNode(node))
 				continue;
 
-			//printf("Possible node %li at %li± %f\n", getNodeID(dest), localScaffold[getNodeID(dest) + nodeCount(graph)].distance, localScaffold[getNodeID(dest) + nodeCount(graph)].variance);
 			if (getNodeStatus(dest) <= 0)
 				continue;
 
@@ -1469,13 +1470,23 @@ static boolean pathIsClear(Node * node, Node * oppositeNode,
 				}
 			}
 		}
-		if (candidate == NULL)
+		if (candidate == NULL) {
+			while (path) {
+				tail = path->next;
+				deallocateNodeList(path);
+				path = tail;
+			}
 			return false;
-
+		}
 		// Loop detection
 		if (candidate == repeatEntrance
 		    && abs_bool(getNodeStatus(candidate)) ==
 		    maxRepeat + 1) {
+			while (path) {
+				tail = path->next;
+				deallocateNodeList(path);
+				path = tail;
+			}
 			return false;
 		} else if (abs_bool(getNodeStatus(candidate)) > maxRepeat) {
 			maxRepeat = abs_bool(getNodeStatus(candidate));
@@ -1495,9 +1506,14 @@ static boolean pathIsClear(Node * node, Node * oppositeNode,
 
 		// DEBUG 
 		if (abs_bool(getNodeStatus(candidate)) > 100
-		    || counter > nodeCount(graph))
+		    || counter > nodeCount(graph)) {
+			while (path) {
+				tail = path->next;
+				deallocateNodeList(path);
+				path = tail;
+			}
 			return false;
-
+		}
 		// DEBUG 
 		if (candidate == node || candidate == getTwinNode(node))
 			abort();
@@ -1505,17 +1521,47 @@ static boolean pathIsClear(Node * node, Node * oppositeNode,
 		// Missassembly detection
 		if (getUniqueness(candidate) && oppositeNode
 		    && candidate != oppositeNode
-		    && extension_distance > distance)
+		    && extension_distance > distance) {
+			while (path) {
+				tail = path->next;
+				deallocateNodeList(path);
+				path = tail;
+			}
 			return false;
+		}
 
 		// Warp to opposite node if candidate claimed
 		if (oppositeNode
 		    && claimedNode[getNodeID(oppositeNode) +
-				   nodeCount(graph)] == candidate)
-			return true;
+				   nodeCount(graph)] == candidate) {
+			if (path == NULL) {
+				path = allocateNodeList();
+				path->next = NULL;
+				path->node = oppositeNode;
+				tail = path;
+			} else {
+				tail->next = allocateNodeList();
+				tail = tail->next;
+				tail->node = oppositeNode;
+				tail->next = NULL;
+			}
+			return path;
+		}
+
+		if (path == NULL) {
+			path = allocateNodeList();
+			path->next = NULL;
+			path->node = candidate;
+			tail = path;
+		} else {
+			tail->next = allocateNodeList();
+			tail = tail->next;
+			tail->node = candidate;
+			tail->next = NULL;
+		}
 
 		if (getUniqueness(candidate))
-			return true;
+			return path;
 
 		current = candidate;
 	}
@@ -1524,125 +1570,20 @@ static boolean pathIsClear(Node * node, Node * oppositeNode,
 static boolean pushNeighbours(Node * node, Node * oppositeNode,
 			      Coordinate distance, boolean force_jumps)
 {
-	Arc *arc;
-	Node *candidate, *dest;
+	Node *candidate;
 	Node *lastCandidate = NULL;
-	Coordinate extension_distance = 0;
 	Coordinate oldLength = getNodeLength(node);
 	Category cat;
 	MiniConnection *localConnect;
-	NodeList *nodeList;
+	NodeList *path, *tmp;
 
+	if ((path = pathIsClear(node, oppositeNode, distance))) {
+		while (path) {
+			candidate = path->node;
+			tmp = path->next;
+			deallocateNodeList(path);
+			path = tmp;
 
-	if (pathIsClear(node, oppositeNode, distance)) {
-		for (nodeList = markedNodes; nodeList != NULL;
-		     nodeList = nodeList->next) {
-			candidate = nodeList->node;
-			if (getNodeStatus(candidate) > 0)
-				setSingleNodeStatus(candidate, 1);
-			else
-				setSingleNodeStatus(candidate, -1);
-		}
-		setSingleNodeStatus(node, 2);
-		while (true) {
-
-			//////////////////////////////////
-			//  Selecting destination       //
-			//////////////////////////////////
-			candidate = NULL;
-
-			// First round for priority nodes
-			for (arc = getArc(node); arc != NULL;
-			     arc = getNextArc(arc)) {
-				dest = getDestination(arc);
-
-				if (dest == node
-				    || dest == getTwinNode(node))
-					continue;
-
-				//printf("Possible node %li at %li± %f\n", getNodeID(dest), localScaffold[getNodeID(dest) + nodeCount(graph)].extension_distance, localScaffold[getNodeID(dest) + nodeCount(graph)].variance);
-				if (getNodeStatus(dest) <= 0)
-					continue;
-
-				if (candidate == NULL
-				    || getNodeStatus(candidate) >
-				    getNodeStatus(dest)
-				    || (getNodeStatus(candidate) ==
-					getNodeStatus(dest)
-					&& extension_distance >
-					localScaffold[getNodeID(dest) +
-						      nodeCount(graph)].
-					distance -
-					getNodeLength(dest) / 2)) {
-					extension_distance =
-					    localScaffold[getNodeID(dest) +
-							  nodeCount
-							  (graph)].
-					    distance -
-					    getNodeLength(dest) / 2;
-					candidate = dest;
-				}
-			}
-
-			// In case of failure   
-			if (candidate == NULL) {
-				for (arc = getArc(node); arc != NULL;
-				     arc = getNextArc(arc)) {
-					dest = getDestination(arc);
-
-					if (getNodeStatus(dest) == 0)
-						continue;
-
-					if (dest == node
-					    || dest == getTwinNode(node))
-						continue;
-
-					if (candidate == NULL
-					    || getNodeStatus(candidate) <
-					    getNodeStatus(dest)
-					    || (getNodeStatus(candidate) ==
-						getNodeStatus(dest)
-						&& extension_distance <
-						localScaffold[getNodeID
-							      (dest) +
-							      nodeCount
-							      (graph)].
-						distance -
-						getNodeLength(dest) / 2)) {
-						extension_distance =
-						    localScaffold[getNodeID
-								  (dest) +
-								  nodeCount
-								  (graph)].
-						    distance -
-						    getNodeLength(dest) /
-						    2;
-						candidate = dest;
-					}
-				}
-			}
-			if (candidate == NULL)
-				break;
-
-
-			if (getNodeStatus(candidate) > 0)
-				setSingleNodeStatus(candidate,
-						    getNodeStatus
-						    (candidate) + 1);
-			else
-				setSingleNodeStatus(candidate,
-						    getNodeStatus
-						    (candidate) - 1);
-
-			// Warp to opposite node if candidate claimed
-			if (oppositeNode
-			    && claimedNode[getNodeID(oppositeNode) +
-					   nodeCount(graph)] ==
-			    candidate) {
-				claimedNode[getNodeID(oppositeNode) +
-					    nodeCount(graph)] = NULL;
-				candidate = oppositeNode;
-			}
 			///////////////////////////////////////
 			//  Stepping forward to destination  //
 			///////////////////////////////////////
@@ -1859,8 +1800,6 @@ static boolean expandLongNode(Node * node, boolean force_jumps)
 	boolean modified = false;
 	Node *oppositeNode;
 	Coordinate distance = 0;
-
-	//printf("Expanding node %li\n", getNodeID(node));
 
 	markInterestingNodes(node);
 
