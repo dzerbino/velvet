@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 		} else if (strncmp(arg, "-ins_length", 11) == 0
 			   && strchr(arg, 'd') == NULL) {
 			sscanf(arg, "-ins_length%hi", (short int *) &cat);
-			if (cat < 0 || cat > CATEGORIES) {
+			if (cat < 1 || cat > CATEGORIES) {
 				printf("Unknown option: %s\n", arg);
 				exit(1);
 			}
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 		} else if (strncmp(arg, "-ins_length", 11) == 0) {
 			sscanf(arg, "-ins_length%hi_sd",
 			       (short int *) &cat);
-			if (cat < 0 || cat > CATEGORIES) {
+			if (cat < 1 || cat > CATEGORIES) {
 				printf("Unknown option: %s\n", arg);
 				exit(1);
 			}

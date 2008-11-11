@@ -983,22 +983,24 @@ ReadSet *parseDataAndReadFiles(int argc, char **argv)
 				  12) == 0) {
 				sscanf(argv[argIndex], "-shortPaired%hi",
 				       (short int *) &cat);
-				if (cat < 0 || cat > CATEGORIES) {
+				if (cat < 1 || cat > CATEGORIES) {
 					printf("Unknown option: %s\n",
 					       argv[argIndex]);
 					exit(1);
 				}
+				cat--;
 				cat *= 2;
 				cat++;
 			} else if (strncmp(argv[argIndex], "-short", 6) ==
 				   0) {
 				sscanf(argv[argIndex], "-short%hi",
 				       (short int *) &cat);
-				if (cat < 0 || cat > CATEGORIES) {
+				if (cat < 1 || cat > CATEGORIES) {
 					printf("Unknown option: %s\n",
 					       argv[argIndex]);
 					exit(1);
 				}
+				cat--;
 				cat *= 2;
 			} else if (strcmp(argv[argIndex], "-long") == 0)
 				cat = CATEGORIES * 2;

@@ -15,3 +15,8 @@ V 0.7.15
 V 0.7.16
 - Bug in AMOS output
 - Crashing bug in file parsing
+- Infinite loop in scaffolding
+
+V 0.7.17
+- Bug in colorspace compilation
+- Bug in library indexing
