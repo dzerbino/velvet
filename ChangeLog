@@ -20,3 +20,7 @@ V 0.7.16
 V 0.7.17
 - Bug in colorspace compilation
 - Bug in library indexing
+
+V 0.7.18
+- Bug in asmbly_splitter.pl script
+- Bug in fastq parsing

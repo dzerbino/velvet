@@ -70,6 +70,7 @@ my $readcount = 0;
 my $count = 0;
 my $line;
 my $iid_line;
+my $contigString;
 
 print STDERR "Searching for start of contig $contig\n";
 

@@ -577,7 +577,7 @@ ReadSet *readFastQFile(char *filename)
 		fgets(line, maxline, file);
 
 		// newline stripping that will work on any platform
-		for (i = strlen(line);
+		for (i = strlen(line) - 1;
 		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
 			line[i] = '\0';
 		}
