@@ -644,7 +644,7 @@ ReadSet *readFastQGZFile(char *filename)
 		gzgets(file, line, maxline);
 
 		// newline stripping that will work on any platform
-		for (i = strlen(line);
+		for (i = strlen(line) - 1;
 		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
 			line[i] = '\0';
 		}
