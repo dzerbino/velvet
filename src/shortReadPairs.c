@@ -31,7 +31,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "readSet.h"
 
 #define BLOCK_SIZE  100000
-#define PROBABILITY_CUTOFF 5
 #define LN2 1.4
 #define BACKTRACK_CUTOFF 100
 
@@ -67,7 +66,6 @@ struct readOccurence_st {
 static Graph *graph;
 static RecycleBin *connectionMemory = NULL;
 static RecycleBin *nodeListMemory = NULL;
-static Coordinate LONG_NODE_CUTOFF = 50;
 static double expected_coverage;
 static IDnum UNRELIABLE_CONNECTION_CUTOFF = 10;
 
@@ -75,50 +73,6 @@ static IDnum UNRELIABLE_CONNECTION_CUTOFF = 10;
 static NodeList *markedNodes;
 static Connection **scaffold = NULL;
 static MiniConnection *localScaffold = NULL;
-static Node **claimedNode = NULL;
-
-static boolean isAnchor(Node * node)
-{
-	Coordinate nodeLength = getNodeLength(node);
-	Coordinate nodeCoverage =
-	    (getVirtualCoverage(node, 0) + getVirtualCoverage(node, 1));
-	double nodeDensity, probability;
-
-	if (nodeLength > LONG_NODE_CUTOFF) {
-		nodeDensity = nodeCoverage / (double) nodeLength;
-
-		probability =
-		    LN2 / 2 +
-		    nodeLength / (2 * expected_coverage) *
-		    (expected_coverage * expected_coverage -
-		     nodeDensity * nodeDensity / 2);
-		return probability > PROBABILITY_CUTOFF;
-	} else
-		return false;
-}
-
-static void identifyUniqueNodes_pe()
-{
-	IDnum index;
-	Node *node;
-	IDnum counter = 0;
-
-	puts("Identifying unique nodes");
-
-	for (index = 1; index <= nodeCount(graph); index++) {
-		node = getNodeInGraph(graph, index);
-
-		if (node == NULL)
-			continue;
-
-		setUniqueness(node, isAnchor(node));
-
-		if (getUniqueness(node))
-			counter += getNodeLength(node);
-	}
-
-	printf("Done, %lu unique bp s counted\n", counter);
-}
 
 static Connection *allocateConnection()
 {
@@ -411,7 +365,7 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts)
 	puts("Computing read to node mappings");
 
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
-		if (nodeID != 0)
+		if (nodeID != 0 && getNodeInGraph(graph, nodeID))
 			computePartialReadToNodeMapping(nodeID, readNodes,
 							readNodeCounts,
 							readMarker);
@@ -1530,24 +1484,6 @@ static NodeList *pathIsClear(Node * node, Node * oppositeNode,
 			return false;
 		}
 
-		// Warp to opposite node if candidate claimed
-		if (oppositeNode
-		    && claimedNode[getNodeID(oppositeNode) +
-				   nodeCount(graph)] == candidate) {
-			if (path == NULL) {
-				path = allocateNodeList();
-				path->next = NULL;
-				path->node = oppositeNode;
-				tail = path;
-			} else {
-				tail->next = allocateNodeList();
-				tail = tail->next;
-				tail->node = oppositeNode;
-				tail->next = NULL;
-			}
-			return path;
-		}
-
 		if (path == NULL) {
 			path = allocateNodeList();
 			path->next = NULL;
@@ -1734,10 +1670,6 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 		}
 
 		destroyNode(oppositeNode, graph);
-		//return true;
-	} else if (lastCandidate != NULL) {
-		claimedNode[-getNodeID(node) + nodeCount(graph)] =
-		    getTwinNode(lastCandidate);
 	}
 
 	return false;
@@ -1860,8 +1792,6 @@ static void cleanMemory(ReadOccurence ** readNodes, IDnum * readNodeCounts,
 
 	free(localScaffold);
 
-	free(claimedNode);
-
 	free(lengths);
 }
 
@@ -1884,7 +1814,7 @@ static void removeUnreliableConnections()
 	   }
 	   }
 	   exit(1);
-	 */
+	*/
 
 	for (index = 0; index < maxNodeIndex; index++) {
 		for (connect = scaffold[index]; connect != NULL;
@@ -1926,14 +1856,12 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * reads,
 
 	// Prepare graph
 	resetNodeStatus(graph);
-	identifyUniqueNodes_pe();
 	prepareGraphForLocalCorrections(graph);
 
 	// Memory allocation
 	localScaffold =
 	    calloc((2 * nodeCount(graph) + 1), sizeof(MiniConnection));
-	claimedNode = calloc((2 * nodeCount(graph) + 1), sizeof(Node *));
-	if (localScaffold == NULL || claimedNode == NULL) {
+	if (localScaffold == NULL) {
 		puts("Calloc failure");
 		exit(1);
 	}
@@ -1952,9 +1880,6 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * reads,
 	// Clean up memory
 	cleanMemory(readNodes, readNodeCounts, lengths);
 	deactivateLocalCorrectionSettings();
-
-	// Clean up graph
-	concatenateGraph(graph);
 
 	sortGapMarkers(graph);
 

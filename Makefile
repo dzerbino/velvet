@@ -53,10 +53,10 @@ colordebug : cleanobj zlib obj/dbg $(OBJDBG)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velvetg_de obj/dbg/tightString.o obj/dbg/graph.o obj/dbg/run2.o obj/dbg/fibHeap.o obj/dbg/fib.o obj/dbg/concatenatedGraph.o obj/dbg/passageMarker.o obj/dbg/graphStats.o obj/dbg/correctedGraph.o obj/dbg/dfib.o obj/dbg/dfibHeap.o obj/dbg/recycleBin.o obj/dbg/readSet.o obj/dbg/shortReadPairs.o obj/dbg/locallyCorrectedGraph.o obj/dbg/graphReConstruction.o obj/dbg/roadMap.o obj/dbg/preGraph.o obj/dbg/preGraphConstruction.o obj/dbg/concatenatedPreGraph.o obj/dbg/readCoherentGraph.o $(Z_LIB_FILES)
 
 obj:
-	mkdir obj
+	mkdir -p obj
 
-obj/dbg: obj
-	mkdir obj/dbg
+obj/dbg: 
+	mkdir -p obj/dbg
 
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS) $(OPT) $(DEF) -c $? -o $@ 

@@ -283,22 +283,17 @@ int main(int argc, char **argv)
 	}
 	clipTipsHard(graph);
 
-	// Mixed length sequencing
-	if (expectedCoverage > 0) {
-		if (sequences == NULL) {
-			sequences = importReadSet(seqFilename);
-			convertSequences(sequences);
-		}
-		readCoherentGraph(graph, isUniqueSolexa, expectedCoverage,
-				  sequences);
-	}
-	// Paired ends module
 	if (expectedCoverage > 0) {
 		if (sequences == NULL) {
 			sequences = importReadSet(seqFilename);
 			convertSequences(sequences);
 		}
 
+		// Mixed length sequencing
+		readCoherentGraph(graph, isUniqueSolexa, expectedCoverage,
+				  sequences);
+
+		// Paired ends module
 		for (cat = 0; cat < CATEGORIES; cat++) {
 			if (insertLength[cat] > -1) {
 				pairUpReads(sequences, 2 * cat + 1);
@@ -323,6 +318,8 @@ int main(int argc, char **argv)
 				      expectedCoverage, true);
 		free(dubious);
 	}
+
+	concatenateGraph(graph);
 
 	printf("Final graph has %li nodes and n50 of %li max %li\n",
 	       nodeCount(graph), n50(graph), maxLength(graph));

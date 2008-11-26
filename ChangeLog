@@ -24,3 +24,10 @@ V 0.7.17
 V 0.7.18
 - Bug in asmbly_splitter.pl script
 - Bug in fastq parsing
+
+V 0.7.19
+- Bug in colorspace graph construction
+- Removed useless output in PreGraph file
+- Bug in long read resolution
+- Useless tables removed
+- Bug in long read / paired-end read resolution

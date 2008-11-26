@@ -2531,22 +2531,22 @@ Graph *readPreGraphFile(char *preGraphFilename)
 #else
 			if (line[readIndex] == 'A')
 				writeNucleotideInDescriptor(ADENINE,
-							    node->
+							    twin->
 							    descriptor,
 							    index);
 			else if (line[readIndex] == 'C')
 				writeNucleotideInDescriptor(CYTOSINE,
-							    node->
+							    twin->
 							    descriptor,
 							    index);
 			else if (line[readIndex] == 'G')
 				writeNucleotideInDescriptor(GUANINE,
-							    node->
+							    twin->
 							    descriptor,
 							    index);
 			else if (line[readIndex] == 'T')
 				writeNucleotideInDescriptor(THYMINE,
-							    node->
+							    twin->
 							    descriptor,
 							    index);
 #endif
@@ -2688,7 +2688,7 @@ char *expandNodeFragment(Node * node, Coordinate contigStart,
 	for (index = 0; index < WORDLENGTH; index++) {
 		nucleotide =
 		    getNucleotideInDescriptor(twin->descriptor,
-					      length - contigStart -
+					      twin->length - contigStart -
 					      index - 1);
 #ifndef COLOR
 		nucleotide = 3 - nucleotide;

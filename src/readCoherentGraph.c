@@ -29,7 +29,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "concatenatedGraph.h"
 #include "readSet.h"
 
-#define LONG_NODE_CUTOFF 0
+#define LONG_NODE_CUTOFF 50
 #define LN2 0.693147
 #define PROBABILITY_CUTOFF 5
 #define MAX_READ_COUNT 100
@@ -39,7 +39,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 static Graph *graph = NULL;
 static PassageMarker *path = NULL;
 static RecycleBin *listMemory = NULL;
-static boolean(*isUniqueFunction) (Node * node) = NULL;
 static double expected_coverage = 1;
 static TightString **sequences = NULL;
 
@@ -120,7 +119,7 @@ boolean isUniqueSolexa(Node * node)
 	}
 }
 
-static void identifyUniqueNodes()
+static void identifyUniqueNodes( boolean (*isUniqueFunction)(Node*))
 {
 	IDnum index;
 	Node *node;
@@ -143,92 +142,13 @@ static void identifyUniqueNodes()
 	printf("Done, %lu unique nodes counted\n", counter);
 }
 
-static void trimNodeLength(Node * node)
-{
-	PassageMarker *marker;
-	Coordinate minOffset = getNodeLength(node);
-
-	for (marker = getMarker(node); marker != NULL;
-	     marker = getNextInNode(marker))
-		if (getFinishOffset(marker) < minOffset)
-			minOffset = getFinishOffset(marker);
-
-	if (minOffset == 0)
-		return;
-
-	clipNodeLength(node, 0, minOffset);
-
-	for (marker = getMarker(node); marker != NULL;
-	     marker = getNextInNode(marker))
-		setFinishOffset(marker,
-				getFinishOffset(marker) - minOffset);
-}
-
-static void simplifyNode(Node * node)
-{
-	Node *twin = getTwinNode(node);
-	Node *destination, *twinDestination;
-
-	if (arcCount(node) == 0)
-		trimNodeLength(node);
-
-	if (simpleArcCount(node) != 1)
-		return;
-
-	destination = getDestination(getArc(node));
-	twinDestination = getTwinNode(destination);
-
-	while (simpleArcCount(node) == 1
-	       && simpleArcCount(twinDestination) == 1
-	       && destination != twin && destination != node) {
-		if (getNode(path) == destination
-		    || getNode(path) == twinDestination) {
-			return;
-		}
-
-		if (getNode(getNextInSequence(path)) == destination
-		    || getNode(getNextInSequence(path)) ==
-		    twinDestination) {
-			return;
-		}
-
-		if (getNodeStatus(destination))
-			return;
-
-		concatenateNodes(node, destination, graph);
-
-		if (simpleArcCount(node) != 1)
-			return;
-
-		destination = getDestination(getArc(node));
-		twinDestination = getTwinNode(destination);
-	}
-
-}
-
-static void decrementArc(Node * origin, Node * destination)
-{
-	Arc *arc = getArcBetweenNodes(origin, destination, graph);
-
-	if (arc == NULL)
-		return;
-
-	changeMultiplicity(arc, -1);
-
-	if (getMultiplicity(arc) == 0) {
-		destroyArc(arc, graph);
-	}
-}
-
-static boolean uniqueNodesConnect(Node * startingNode,
-				  boolean(*isUnique) (Node *))
+static boolean uniqueNodesConnect(Node * startingNode)
 {
 	Node *destination = NULL;
 	PassageMarker *startMarker, *currentMarker;
 	Connection *newList;
 	Connection *list = NULL;
 	boolean multipleHits = false;
-	Coordinate debug;
 
 	if (arcCount(startingNode) == 0)
 		return false;
@@ -241,13 +161,11 @@ static boolean uniqueNodesConnect(Node * startingNode,
 	// Checking for multiple destinations
 	for (startMarker = getMarker(startingNode); startMarker != NULL;
 	     startMarker = getNextInNode(startMarker)) {
-		debug = 0;
+
 		for (currentMarker = getNextInSequence(startMarker);
 		     currentMarker != NULL;
 		     currentMarker = getNextInSequence(currentMarker)) {
 			if (!getUniqueness(getNode(currentMarker))) {
-				debug +=
-				    getPassageMarkerLength(currentMarker);
 				continue;
 			} else if (getNodeStatus(getNode(currentMarker))) {
 				for (newList = list; newList != NULL;
@@ -289,24 +207,75 @@ static boolean uniqueNodesConnect(Node * startingNode,
 		deallocateConnection(newList);
 	}
 
+	if (multipleHits) {
+		multCounter++;
+		return false;
+	}
+
+	if (!
+	    (destination != NULL && destination != startingNode
+	     && destination != getTwinNode(startingNode))) {
+		setUniqueness(startingNode, false);
+		nullCounter++;
+		return false;
+	} 
+
+	// Check for reciprocity
+	for (startMarker = getMarker(getTwinNode(destination)); startMarker != NULL;
+	     startMarker = getNextInNode(startMarker)) {
+		for (currentMarker = getNextInSequence(startMarker);
+		     currentMarker != NULL;
+		     currentMarker = getNextInSequence(currentMarker)) {
+			if (!getUniqueness(getNode(currentMarker))) {
+				continue;
+			} else if (getNodeStatus(getNode(currentMarker))) {
+				for (newList = list; newList != NULL;
+				     newList = newList->next) {
+					if (newList->node ==
+					    getNode(currentMarker)) {
+						newList->multiplicity++;
+						break;
+					}
+				}
+				if (newList == NULL)
+					abort();
+				break;
+			} else {
+				setSingleNodeStatus(getNode(currentMarker),
+						    true);
+				newList = allocateConnection();
+				newList->node = getNode(currentMarker);
+				newList->multiplicity = 1;
+				newList->next = list;
+				list = newList;
+				break;
+			}
+		}
+	}
+
+	while (list != NULL) {
+		newList = list;
+		list = newList->next;
+		setSingleNodeStatus(newList->node, false);
+		if (newList->multiplicity >= MULTIPLICITY_CUTOFF 
+		    && newList->node != getTwinNode(startingNode))
+			multipleHits = true;
+		deallocateConnection(newList);
+	}
+
+	if (multipleHits) {
+		multCounter++;
+		setUniqueness(destination, false);
+		return uniqueNodesConnect(startingNode);
+	}
+
 	// Aligning long reads to each other:
 	// TODO 
 
 	// Merge pairwise alignments and produce consensus
 	// TODO
 
-	if (multipleHits) {
-		multCounter++;
-		return false;
-	}
-	//DEBUG
-	if (!
-	    (destination != NULL && destination != startingNode
-	     && destination != getTwinNode(startingNode)))
-		nullCounter++;
-
-	return (destination != NULL && destination != startingNode
-		&& destination != getTwinNode(startingNode));
+	return true; 
 }
 
 static boolean goesToNode(PassageMarker * marker, Node * node)
@@ -327,10 +296,6 @@ static void updateMembers(Node * bypass, Node * nextNode)
 	Node *nextNextNode;
 	Coordinate nextLength = getNodeLength(nextNode);
 
-	// Remove unwanted arcs
-	while (getArc(bypass) != NULL)
-		destroyArc(getArc(bypass), graph);
-
 	// Update  marker + arc info
 	for (marker = getMarker(bypass); marker != NULL; marker = tmp) {
 		tmp = getNextInNode(marker);
@@ -340,10 +305,6 @@ static void updateMembers(Node * bypass, Node * nextNode)
 			// Marker steps right into target
 			next = getNextInSequence(marker);
 			nextNextNode = getNode(getNextInSequence(next));
-
-			createArc(bypass, nextNextNode, graph);
-			decrementArc(nextNode, nextNextNode);
-
 			disconnectNextPassageMarker(marker, graph);
 			destroyPassageMarker(next);
 		} else if (getUniqueness(nextNode)
@@ -363,8 +324,6 @@ static void updateMembers(Node * bypass, Node * nextNode)
 			   && getFinishOffset(marker) == 0) {
 			// Marker goes somewhere else than to target
 			next = getNextInSequence(marker);
-			decrementArc(getNode(marker), getNode(next));
-
 			incrementFinishOffset(marker, nextLength);
 		} else {
 			// Marker goes nowhere
@@ -383,7 +342,7 @@ static void admitGroupies(Node * source, Node * bypass)
 		extractPassageMarker(marker);
 		transposePassageMarker(marker, bypass);
 		incrementFinishOffset(getTwinMarker(marker),
-				      getNodeLength(source));
+				      getNodeLength(bypass));
 	}
 
 }
@@ -414,30 +373,20 @@ static Node *bypass()
 {
 	Node *bypass = getNode(path);
 	Node *next = NULL;
-	Coordinate oldLength;
-	PassageMarker *marker;
+	Arc * arc;
 
-	for (marker = path;
-	     marker != NULL && !getUniqueness(getNode(marker));
-	     marker = getNextInSequence(marker))
-		setNodeStatus(getNode(marker), true);
-
-	if (marker != NULL && getUniqueness(getNode(marker)))
-		setNodeStatus(getNode(marker), true);
+	// Remove unwanted arcs
+	while (getArc(bypass) != NULL)
+		destroyArc(getArc(bypass), graph);
 
 	// Update extensive variables (length + descriptors + passage markers)
 	while (!isTerminal(path)) {
 		next = getNode(getNextInSequence(path));
 
-		if (next == NULL) {
-			setNodeStatus(bypass, false);
+		if (next == NULL) 
 			return bypass;
-		}
-
-		setNodeStatus(next, false);
 
 		// Overall node update 
-		oldLength = getNodeLength(bypass);
 		if (!getUniqueness(next)) {
 			adjustShortReads(bypass, getNextInSequence(path));
 			appendSequence(bypass, sequences,
@@ -447,45 +396,32 @@ static Node *bypass()
 			appendDescriptors(bypass, next);
 		}
 
-		if (!getUniqueness(bypass) && getUniqueness(next))
-			setUniqueness(bypass, true);
-
 		// Members
 		updateMembers(bypass, next);
 
-		// Clean data
-		if (!isTerminal(path) && !getUniqueness(next)) {
-			if (getMarker(next) == NULL) {
-				destroyNode(next, graph);
-			} else {
-				simplifyNode(next);
-				simplifyNode(getTwinNode(next));
-			}
-		} else {
+		// Termination 
+		if (isTerminal(path) || getUniqueness(next)) 
 			break;
-		}
 	}
 
-	// Pathological cases
-	if (next == bypass || next == getTwinNode(bypass)) {
+	// DEBUG 
+	if (next == bypass || next == getTwinNode(bypass)) 
 		abort();
-	}
-	// Remove unique groupies from original path 
+
+	// Remove unique groupies from arrival 
 	admitGroupies(next, bypass);
 
+	// Copy destination arcs
+	for (arc = getArc(next); arc != NULL; arc = getNextArc(arc)) {
+		if (getDestination(arc) == next)
+			continue;
+		else if (getDestination(arc) == getTwinNode(next))
+			createAnalogousArc(bypass, getTwinNode(bypass), arc, graph); 
+		else
+			createAnalogousArc(bypass, getDestination(arc), arc, graph); 
+	}
+
 	destroyNode(next, graph);
-
-	// Update
-	//if (!getNodeStatus(bypass) && isUniqueFunction(bypass))
-	//      setNodeStatus(bypass, true);
-	//      setNodeStatus(bypass, isUniqueFunction(bypass));
-
-	simplifyNode(bypass);
-	simplifyNode(getTwinNode(bypass));
-	setNodeStatus(bypass, false);
-
-	if (!getUniqueness(bypass) && isUniqueFunction(bypass))
-		setUniqueness(bypass, true);
 
 	return bypass;
 }
@@ -533,7 +469,7 @@ static void trimLongReadTips()
 	}
 }
 
-void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node *),
+void readCoherentGraph(Graph * inGraph, boolean (*isUnique)(Node* node),
 		       double coverage, ReadSet * reads)
 {
 	IDnum nodeIndex;
@@ -541,16 +477,13 @@ void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node *),
 	IDnum previousNodeCount = 0;
 
 	graph = inGraph;
-	isUniqueFunction = isUnique;
 	listMemory = newRecycleBin(sizeof(PassageMarkerList), 100000);
 	expected_coverage = coverage;
 	sequences = reads->tSequences;
 
 	puts("Read coherency...");
-	//reassessArcMultiplicities(graph);
 	resetNodeStatus(graph);
-
-	identifyUniqueNodes();
+	identifyUniqueNodes(isUnique);
 	trimLongReadTips();
 
 	previousNodeCount = 0;
@@ -566,18 +499,17 @@ void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node *),
 			if (node == NULL || !getUniqueness(node))
 				continue;
 
-			while (uniqueNodesConnect(node, isUnique))
+			while (uniqueNodesConnect(node))
 				node = bypass();
 
 			node = getTwinNode(node);
 
-			while (uniqueNodesConnect(node, isUnique))
+			while (uniqueNodesConnect(node))
 				node = bypass();
 
 		}
 
-		concatenateGraph(graph);
-		break;
+		renumberNodes(graph);
 	}
 
 	destroyRecycleBin(listMemory);

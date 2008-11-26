@@ -39,6 +39,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 // Graph operations
 #include "graph.h"
 #include "graphReConstruction.h"
+#include "concatenatedGraph.h"
 #include "correctedGraph.h"
 
 // Repeat resolution

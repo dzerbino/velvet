@@ -23,5 +23,6 @@ To this package I also bundled some third-party analysis scripts for Velvet:
 Many thanks to: 
 - Darren Platt for his very thorough debugging.
 - Andrew Fernandes and Greg Gloor for advice on Mac compilation.
+- Jean-Michel Batto for his advice on Sparc/Solaris.
 - Craig Cummings and Vrunda Sheth for their work on the colorspace version of
   Velvet.

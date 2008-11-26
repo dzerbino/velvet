@@ -1093,21 +1093,11 @@ static void exportPreNode_pg(FILE * outfile, PreNode * preNode, IDnum ID,
 	fprintf(outfile, "\n");
 }
 
-static void exportPreArc_pg(FILE * outfile, PreArc * preArc)
-{
-	if (preArc == NULL)
-		return;
-
-	fprintf(outfile, "ARC\t%li\t%li\t%li\n", preArc->preNodeIDLeft,
-		preArc->preNodeIDRight, preArc->multiplicity);
-}
-
 void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 {
 	IDnum index;
 	FILE *outfile;
 	PreNode *preNode;
-	PreArc *preArc;
 	int wordLength = getWordLength_pg(preGraph);
 
 	if (preGraph == NULL) {
@@ -1129,20 +1119,6 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 	for (index = 1; index <= preGraph->preNodeCount; index++) {
 		preNode = getPreNodeInPreGraph_pg(preGraph, index);
 		exportPreNode_pg(outfile, preNode, index, wordLength);
-	}
-
-	// PreArc info
-	for (index = 1; index <= preGraph->preNodeCount; index++) {
-		preNode = getPreNodeInPreGraph_pg(preGraph, index);
-		if (preNode == NULL)
-			continue;
-
-		for (preArc = preNode->preArcLeft; preArc != NULL;
-		     preArc = getNextPreArc_pg(preArc, -index))
-			exportPreArc_pg(outfile, preArc);
-		for (preArc = preNode->preArcRight; preArc != NULL;
-		     preArc = getNextPreArc_pg(preArc, index))
-			exportPreArc_pg(outfile, preArc);
 	}
 
 	fclose(outfile);
