@@ -31,3 +31,6 @@ V 0.7.19
 - Bug in long read resolution
 - Useless tables removed
 - Bug in long read / paired-end read resolution
+
+V 0.7.20
+- Bug in AMOS output of long reads

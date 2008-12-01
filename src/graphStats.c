@@ -2132,18 +2132,42 @@ static void exportAMOSLib(FILE * outfile, Graph * graph, Category cat)
 
 static void exportAMOSMarker(FILE * outfile, PassageMarker * marker,
 			     Coordinate nodeLength, Coordinate start,
-			     Coordinate finish)
+			     Coordinate finish, int wordShift)
 {
+	Coordinate sequenceStart, sequenceFinish;
+
 	if (getStartOffset(marker) >= finish
 	    || getFinishOffset(marker) > nodeLength - start)
 		return;
 
+	sequenceStart = getPassageMarkerStart(marker);
+	if (start > getStartOffset(marker)) {
+		if (getPassageMarkerSequenceID(marker) > 0)
+			sequenceStart += start - getStartOffset(marker);
+		else
+			sequenceStart -= start - getStartOffset(marker);
+	}
+
+	sequenceFinish = getPassageMarkerFinish(marker); 
+	if (nodeLength - finish > getFinishOffset(marker)) {
+		if (getPassageMarkerSequenceID(marker) > 0)
+			sequenceFinish -= nodeLength - finish - getFinishOffset(marker);
+		else
+			sequenceFinish += nodeLength - finish - getFinishOffset(marker);
+	}
+
+	if (getPassageMarkerSequenceID(marker) > 0)
+		sequenceFinish += wordShift;
+	else
+		sequenceStart += wordShift;
+
 	fprintf(outfile, "{TLE\n");
 	fprintf(outfile, "src:%li\n", getAbsolutePassMarkerSeqID(marker));
-	fprintf(outfile, "off:%li\n", getStartOffset(marker) - start);
-	fprintf(outfile, "clr:%li,%li\n",
-		getPassageMarkerStart(marker) + start,
-		getPassageMarkerFinish(marker) - nodeLength + finish);
+	if (getStartOffset(marker) > start)
+		fprintf(outfile, "off:%li\n", getStartOffset(marker) - start);
+	else 
+		fprintf(outfile, "off:0\n");
+	fprintf(outfile, "clr:%li,%li\n", sequenceStart, sequenceFinish);
 	fprintf(outfile, "}\n");
 }
 
@@ -2239,7 +2263,7 @@ static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
 	for (marker = getMarker(node); marker != NULL;
 	     marker = getNextInNode(marker))
 		exportAMOSMarker(outfile, marker, getNodeLength(node),
-				 contigStart, contigFinish);
+				 contigStart, contigFinish, wordShift);
 
 	if (readStartsAreActivated(graph)) {
 		shortMarkerArray = getNodeReads(node, graph);
