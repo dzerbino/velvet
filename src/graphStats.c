@@ -2189,7 +2189,7 @@ static void exportAMOSShortMarker(FILE * outfile, ShortReadMarker * marker,
 
 	fprintf(outfile, "{TLE\n");
 	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker));
-	fprintf(outfile, "off:%li\n", offset);
+	fprintf(outfile, "off:%li\n", offset - start);
 	fprintf(outfile, "clr:0,%li\n", getLength(sequence));
 	fprintf(outfile, "}\n");
 }
@@ -2217,7 +2217,7 @@ static void exportAMOSReverseShortMarker(FILE * outfile,
 
 	fprintf(outfile, "{TLE\n");
 	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker));
-	fprintf(outfile, "off:%li\n", offset);
+	fprintf(outfile, "off:%li\n", offset - start);
 	fprintf(outfile, "clr:%li,0\n", getLength(sequence));
 	fprintf(outfile, "}\n");
 }

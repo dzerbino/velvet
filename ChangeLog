@@ -34,3 +34,9 @@ V 0.7.19
 
 V 0.7.20
 - Bug in AMOS output of long reads
+
+V 0.7.21
+- Added manual TeX source code
+
+V 0.7.22
+- Corrected offset error of short reads in AMOS output
