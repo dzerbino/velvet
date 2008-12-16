@@ -2124,6 +2124,9 @@ void sortGapMarkers(Graph * graph)
 	IDnum index;
 	Node *node;
 
+	if (graph->gapMarkers == NULL) 
+		return;
+
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
 		if (node)

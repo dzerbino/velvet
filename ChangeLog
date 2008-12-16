@@ -40,3 +40,6 @@ V 0.7.21
 
 V 0.7.22
 - Corrected offset error of short reads in AMOS output
+
+V 0.7.23
+- Corrected list ordering bug which produced polyA chains and crashed the AMOS output

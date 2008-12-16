@@ -189,5 +189,6 @@ void concatenateGraph(Graph * graph)
 	}
 
 	renumberNodes(graph);
+	sortGapMarkers(graph);
 	puts("Concatenation over!");
 }
