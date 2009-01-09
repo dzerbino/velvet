@@ -1954,7 +1954,7 @@ void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
 static Coordinate getTotalCoverage(Node * node)
 {
 	Category cat;
-	Coordinate coverage = readCoverage(node);
+	Coordinate coverage = 0; 
 
 	for (cat = 0; cat < CATEGORIES; cat++)
 		coverage += getVirtualCoverage(node, cat);

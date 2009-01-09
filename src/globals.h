@@ -32,7 +32,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #define VERSION_NUMBER 0
 #define RELEASE_NUMBER 7
-#define UPDATE_NUMBER 23
+#define UPDATE_NUMBER 24
 
 #define CATEGORIES 2
 

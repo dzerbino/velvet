@@ -1537,11 +1537,15 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 				absorbExtensionInScaffold(node, candidate);
 
 				// Read coverage
-				for (cat = 0; cat < CATEGORIES; cat++)
+				for (cat = 0; cat < CATEGORIES; cat++) {
 					incrementVirtualCoverage(node, cat,
 								 getVirtualCoverage
 								 (candidate,
 								  cat));
+					incrementOriginalVirtualCoverage(node, cat,
+									 getOriginalVirtualCoverage
+									 (candidate, cat));
+				}
 
 				if (getNodeStatus(candidate)) {
 					localConnect =
