@@ -161,6 +161,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 	// Checking for multiple destinations
 	for (startMarker = getMarker(startingNode); startMarker != NULL;
 	     startMarker = getNextInNode(startMarker)) {
+		if (getFinishOffset(startMarker) > 2 * getWordLength(graph))
+			continue;
 
 		for (currentMarker = getNextInSequence(startMarker);
 		     currentMarker != NULL;
@@ -168,6 +170,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 			if (!getUniqueness(getNode(currentMarker))) {
 				continue;
 			} else if (getNodeStatus(getNode(currentMarker))) {
+				if (getStartOffset(currentMarker) > 2 * getWordLength(graph))
+					break;
 				for (newList = list; newList != NULL;
 				     newList = newList->next) {
 					if (newList->node ==
@@ -180,6 +184,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 					abort();
 				break;
 			} else {
+				if (getStartOffset(currentMarker) > 2 * getWordLength(graph)) 
+					break;
 				setSingleNodeStatus(getNode(currentMarker),
 						    true);
 				newList = allocateConnection();
@@ -209,13 +215,12 @@ static boolean uniqueNodesConnect(Node * startingNode)
 
 	if (multipleHits) {
 		multCounter++;
+		setUniqueness(startingNode, false);
 		return false;
 	}
 
-	if (!
-	    (destination != NULL && destination != startingNode
-	     && destination != getTwinNode(startingNode))) {
-		setUniqueness(startingNode, false);
+	if ( destination == NULL || destination == startingNode
+	     || destination == getTwinNode(startingNode)) {
 		nullCounter++;
 		return false;
 	} 
@@ -223,12 +228,17 @@ static boolean uniqueNodesConnect(Node * startingNode)
 	// Check for reciprocity
 	for (startMarker = getMarker(getTwinNode(destination)); startMarker != NULL;
 	     startMarker = getNextInNode(startMarker)) {
+		if (getFinishOffset(startMarker) > 2 * getWordLength(graph))
+			continue;
+
 		for (currentMarker = getNextInSequence(startMarker);
 		     currentMarker != NULL;
 		     currentMarker = getNextInSequence(currentMarker)) {
 			if (!getUniqueness(getNode(currentMarker))) {
 				continue;
 			} else if (getNodeStatus(getNode(currentMarker))) {
+				if (getStartOffset(currentMarker) > 2 * getWordLength(graph))
+					break;
 				for (newList = list; newList != NULL;
 				     newList = newList->next) {
 					if (newList->node ==
@@ -241,6 +251,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 					abort();
 				break;
 			} else {
+				if (getStartOffset(currentMarker) > 2 * getWordLength(graph))
+					break;
 				setSingleNodeStatus(getNode(currentMarker),
 						    true);
 				newList = allocateConnection();
@@ -266,7 +278,7 @@ static boolean uniqueNodesConnect(Node * startingNode)
 	if (multipleHits) {
 		multCounter++;
 		setUniqueness(destination, false);
-		return uniqueNodesConnect(startingNode);
+		return false;
 	}
 
 	// Aligning long reads to each other:
@@ -293,7 +305,6 @@ static boolean goesToNode(PassageMarker * marker, Node * node)
 static void updateMembers(Node * bypass, Node * nextNode)
 {
 	PassageMarker *marker, *next, *tmp;
-	Node *nextNextNode;
 	Coordinate nextLength = getNodeLength(nextNode);
 
 	// Update  marker + arc info
@@ -304,22 +315,20 @@ static void updateMembers(Node * bypass, Node * nextNode)
 		    && getNode(getNextInSequence(marker)) == nextNode) {
 			// Marker steps right into target
 			next = getNextInSequence(marker);
-			nextNextNode = getNode(getNextInSequence(next));
 			disconnectNextPassageMarker(marker, graph);
 			destroyPassageMarker(next);
 		} else if (getUniqueness(nextNode)
 			   && goesToNode(marker, nextNode)) {
 			// Marker goes indirectly to target
-			while (getNode(getNextInSequence(marker)) !=
-			       nextNode) {
+			while (getNode(getNextInSequence(marker)) != nextNode) {
 				next = getNextInSequence(marker);
-				setPreviousInSequence(marker,
-						      getNextInSequence
-						      (next));
 				disconnectNextPassageMarker(marker, graph);
 				destroyPassageMarker(next);
 			}
 
+			next = getNextInSequence(marker);
+			disconnectNextPassageMarker(marker, graph);
+			destroyPassageMarker(next);
 		} else if (!isTerminal(marker)
 			   && getFinishOffset(marker) == 0) {
 			// Marker goes somewhere else than to target
@@ -374,6 +383,8 @@ static Node *bypass()
 	Node *bypass = getNode(path);
 	Node *next = NULL;
 	Arc * arc;
+	Category cat;
+	PassageMarker * nextMarker;
 
 	// Remove unwanted arcs
 	while (getArc(bypass) != NULL)
@@ -381,7 +392,14 @@ static Node *bypass()
 
 	// Update extensive variables (length + descriptors + passage markers)
 	while (!isTerminal(path)) {
-		next = getNode(getNextInSequence(path));
+		nextMarker = getNextInSequence(path);
+		next = getNode(nextMarker);
+		while (next == bypass) {
+			disconnectNextPassageMarker(path, graph);
+			destroyPassageMarker(nextMarker);
+			nextMarker = getNextInSequence(path);
+			next = getNode(nextMarker);
+		}
 
 		if (next == NULL) 
 			return bypass;
@@ -393,6 +411,16 @@ static Node *bypass()
 				       getNextInSequence(path), graph);
 		} else {
 			concatenateReadStarts(bypass, next, graph);
+			// Update virtual coverage
+			for (cat = 0; cat < CATEGORIES; cat++)
+				incrementVirtualCoverage(bypass, cat,
+							 getVirtualCoverage(next, cat));
+
+			// Update original virtual coverage
+			for (cat = 0; cat < CATEGORIES; cat++)
+				incrementOriginalVirtualCoverage(bypass, cat,
+								 getOriginalVirtualCoverage
+								 (next, cat));
 			appendDescriptors(bypass, next);
 		}
 

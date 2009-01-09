@@ -2499,6 +2499,7 @@ void clipTips(Graph * graph)
 	Node *current, *twin;
 	boolean modified = true;
 	int Wordlength = getWordLength(graph);
+	PassageMarker* marker;
 
 	puts("Clipping short tips off graph");
 
@@ -2515,11 +2516,27 @@ void clipTips(Graph * graph)
 			if (getArc(current) == NULL
 			    && getTipLength(current) < 2 * Wordlength
 			    && isMinorityChoice(current)) {
+				while ((marker = getMarker(current))) {
+					if (!isInitial(marker)
+					    && !isTerminal(marker))
+						disconnectNextPassageMarker
+						    (getPreviousInSequence(marker),
+						     graph);
+					destroyPassageMarker(marker);
+				}
 				destroyNode(current, graph);
 				modified = true;
 			} else if (getArc(twin) == NULL
 				   && getTipLength(twin) < 2 * Wordlength
 				   && isMinorityChoice(twin)) {
+				while ((marker = getMarker(current))) {
+					if (!isInitial(marker)
+					    && !isTerminal(marker))
+						disconnectNextPassageMarker
+						    (getPreviousInSequence(marker),
+						     graph);
+					destroyPassageMarker(marker);
+				}
 				destroyNode(twin, graph);
 				modified = true;
 			}
@@ -2536,6 +2553,7 @@ void clipTipsHard(Graph * graph)
 	Node *current, *twin;
 	boolean modified = true;
 	int Wordlength = getWordLength(graph);
+	PassageMarker * marker;
 
 	puts("Clipping short tips off graph, drastic");
 
@@ -2551,11 +2569,27 @@ void clipTipsHard(Graph * graph)
 
 			if (getArc(current) == NULL
 			    && getTipLength(current) < 2 * Wordlength) {
+				while ((marker = getMarker(current))) {
+					if (!isInitial(marker)
+					    && !isTerminal(marker))
+						disconnectNextPassageMarker
+						    (getPreviousInSequence(marker),
+						     graph);
+					destroyPassageMarker(marker);
+				}
 				destroyNode(current, graph);
 				modified = true;
 			} else if (getArc(twin) == NULL
 				   && getTipLength(twin) <
 				   2 * Wordlength) {
+				while ((marker = getMarker(current))) {
+					if (!isInitial(marker)
+					    && !isTerminal(marker))
+						disconnectNextPassageMarker
+						    (getPreviousInSequence(marker),
+						     graph);
+					destroyPassageMarker(marker);
+				}
 				destroyNode(twin, graph);
 				modified = true;
 			}

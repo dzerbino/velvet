@@ -43,3 +43,8 @@ V 0.7.22
 
 V 0.7.23
 - Corrected list ordering bug which produced polyA chains and crashed the AMOS output
+
+V 0.7.24
+- Corrected the OCov tracking in RockBand
+- Removed the use of long reads to determine uniqueness
+- Various missassembly and crashing bugs in RockBand (long read repeat resolution)
