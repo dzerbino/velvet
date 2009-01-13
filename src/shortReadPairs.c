@@ -1249,23 +1249,20 @@ static boolean comesFromNode(PassageMarker * marker, Node * node)
 static void reconnectPassageMarker(PassageMarker * marker, Node * node,
 				   PassageMarker ** ptr)
 {
-	Node *target = getTwinNode(node);
 	PassageMarker *current;
 	PassageMarker *next = getNextInSequence(marker);
 	PassageMarker *tmpMarker;
 
-	for (current = getTwinMarker(marker); getNode(current) != target;
-	     current = getNextInSequence(current));
-
-	current = getTwinMarker(current);
+	for (current = marker; getNode(current) != node;
+	     current = getPreviousInSequence(current));
 
 	setPreviousInSequence(current, next);
 	concatenatePassageMarkers(current, marker);
 
 	for (; marker != current; marker = tmpMarker) {
 		tmpMarker = getPreviousInSequence(marker);
-		if (*ptr == marker)
-			*ptr = getNextInNode(marker);
+		if (*ptr == marker || *ptr == getTwinMarker(marker))
+			*ptr = getNextInNode(*ptr);
 		setNextInSequence(marker, NULL);
 		setPreviousInSequence(NULL, marker);
 		destroyPassageMarker(marker);
@@ -1813,7 +1810,12 @@ static void removeUnreliableConnections()
 	   connect = next) {
 	   next = connect->next;
 	   if (getUniqueness(connect->destination)) {
-	   printf("CONNECT %li %li %li %li %li %li %f %li %li\n", index - nodeCount(graph), getNodeID(connect->destination), connect->count, connect->distance, getNodeLength(node), getNodeLength(connect->destination), connect->variance, getPassageMarkerFinish(getMarker(node)), getPassageMarkerFinish(getMarker(connect->destination)));
+	   printf("CONNECT %li %li %li %li %li %li %f", index - nodeCount(graph), getNodeID(connect->destination), connect->count, connect->distance, getNodeLength(node), getNodeLength(connect->destination), connect->variance);
+	if (getMarker(node) && getMarker(connect->destination))
+		printf(" %li %li", getPassageMarkerFinish(getMarker(node)), getPassageMarkerFinish(getMarker(connect->destination)));
+	else
+		printf(" ? ?");
+	puts("");
 	   }
 	   }
 	   }

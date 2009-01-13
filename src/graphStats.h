@@ -135,4 +135,6 @@ void removeMissingStrain(Graph * graph, Category cat);
 boolean isNatural(Graph * graph);
 
 void searchForHallidayJunction(Graph * graph);
+
+Coordinate totalAssemblyLength(Graph* graph);
 #endif

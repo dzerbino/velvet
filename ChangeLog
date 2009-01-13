@@ -48,3 +48,8 @@ V 0.7.24
 - Corrected the OCov tracking in RockBand
 - Removed the use of long reads to determine uniqueness
 - Various missassembly and crashing bugs in RockBand (long read repeat resolution)
+
+V 0.7.25
+- Added total assembly length count
+- Crashing bug in long read repeat resolution
+- Updated documentation to include colorspace use of Velvet

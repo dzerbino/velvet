@@ -25,5 +25,9 @@ Normally, with a GNU environment, just type:
 
 > make
 
+For colorspace Velvet replace that command with 
+
+> make color
+
 Otherwise compile each *.c file separately, then execute the default
 instructions at the top of Makefile. 

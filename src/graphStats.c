@@ -2554,3 +2554,17 @@ void searchForHallidayJunction(Graph * graph)
 		}
 	}
 }
+
+Coordinate totalAssemblyLength(Graph* graph) {
+	IDnum index;
+	Node* node;
+	Coordinate total = 0;
+
+	for (index = 1; index <= nodeCount(graph); index++) {
+		node = getNodeInGraph(graph, index);
+		if (node)
+			total += getNodeLength(node);
+	} 
+
+	return total;
+}

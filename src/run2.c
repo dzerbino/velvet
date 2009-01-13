@@ -321,9 +321,6 @@ int main(int argc, char **argv)
 
 	concatenateGraph(graph);
 
-	printf("Final graph has %li nodes and n50 of %li max %li\n",
-	       nodeCount(graph), n50(graph), maxLength(graph));
-
 	if (sequences == NULL) {
 		sequences = importReadSet(seqFilename);
 		convertSequences(sequences);
@@ -360,9 +357,8 @@ int main(int argc, char **argv)
 					  sequences);
 	}
 
-	printf("Final graph has %li nodes and n50 of %li max %li\n",
-	       nodeCount(graph), n50(graph), maxLength(graph));
-
+	printf("Final graph has %li nodes and n50 of %li, max %li, total %li\n",
+	       nodeCount(graph), n50(graph), maxLength(graph), totalAssemblyLength(graph));
 
 	destroyGraph(graph);
 	free(graphFilename);
