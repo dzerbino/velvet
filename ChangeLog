@@ -53,3 +53,6 @@ V 0.7.25
 - Added total assembly length count
 - Crashing bug in long read repeat resolution
 - Updated documentation to include colorspace use of Velvet
+
+V 0.7.26
+- Added read-pair error correction test to reduce misassemblies
