@@ -132,7 +132,7 @@ void inputSequenceIntoSplayTable(TightString * tString,
 
 		antiWord = reverseComplement(word, table->WORDLENGTH);
 
-		if (word < antiWord) {
+		if (word <= antiWord) {
 			found =
 			    findOrInsertOccurenceInSplayTable(word,
 							      &sequenceID,
@@ -282,7 +282,7 @@ void inputMaskIntoSplayTable(TightString * tString, SplayTable * table)
 
 		antiWord = reverseComplement(word, table->WORDLENGTH);
 
-		if (word < antiWord)
+		if (word <= antiWord)
 			findOrInsertOccurenceInSplayTable(word,
 							  &sequenceID,
 							  &coord, table);

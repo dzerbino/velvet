@@ -56,3 +56,6 @@ V 0.7.25
 
 V 0.7.26
 - Added read-pair error correction test to reduce misassemblies
+
+V 0.7.27
+- Corrected bug in colorspace hashing

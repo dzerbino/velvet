@@ -256,7 +256,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 
 			antiWord = reverseComplement(word, wordLength);
 
-			if (word < antiWord) {
+			if (word <= antiWord) {
 				kmerOccurencePtr->kmer = word;
 				kmerOccurencePtr->nodeID = nodeID;
 				kmerOccurencePtr->position =
@@ -395,7 +395,7 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 		antiWord = reverseComplement(word, wordLength);
 
 		// Search in table
-		if (word < antiWord
+		if (word <= antiWord
 		    && (kmerOccurence =
 			findKmerOccurenceInSortedTable(word,
 						       kmerOccurences))) {
@@ -470,7 +470,7 @@ static void threadSequenceThroughGraph(TightString * tString,
 		antiWord = reverseComplement(word, wordLength);
 
 		// Search in table
-		if (word < antiWord
+		if (word <= antiWord
 		    && (kmerOccurence =
 			findKmerOccurenceInSortedTable(word,
 						       kmerOccurences))) {
