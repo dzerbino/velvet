@@ -59,3 +59,8 @@ V 0.7.26
 
 V 0.7.27
 - Corrected bug in colorspace hashing
+
+V 0.7.28
+- Uncaught memory exception patched
+- Warning message in the absence of expected coverage
+- Modifiable long read multiplicity cutoff

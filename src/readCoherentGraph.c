@@ -34,13 +34,13 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define PROBABILITY_CUTOFF 5
 #define MAX_READ_COUNT 100
 #define MAX_READ_LENGTH 2000
-#define MULTIPLICITY_CUTOFF 2
 
 static Graph *graph = NULL;
 static PassageMarker *path = NULL;
 static RecycleBin *listMemory = NULL;
 static double expected_coverage = 1;
 static TightString **sequences = NULL;
+static int MULTIPLICITY_CUTOFF = 2;
 
 static IDnum multCounter = 0;
 static IDnum dbgCounter = 0;
@@ -546,4 +546,14 @@ void readCoherentGraph(Graph * inGraph, boolean (*isUnique)(Node* node),
 	       multCounter, nullCounter, dbgCounter);
 
 	puts("Read coherency over!");
+}
+
+void setMultiplicityCutoff(int value)
+{
+	if (value < 0) {
+		printf("Negative long read multiplicity cutoff %i!\n", value);
+		puts("Exiting...");
+		exit(1);
+	}
+	MULTIPLICITY_CUTOFF = value;
 }

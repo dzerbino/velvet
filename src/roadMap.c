@@ -128,6 +128,10 @@ RoadMapArray *importRoadMapArray(char *filename)
 			annotationCount++;
 
 	result->annotations = calloc(annotationCount, sizeof(Annotation));
+	if (result->annotations == NULL) {
+		puts("Calloc failure");
+		exit(1);
+	}
 	nextAnnotation = result->annotations;
 	fclose(file);
 

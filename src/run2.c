@@ -50,6 +50,7 @@ static void printUsage()
 	puts("\t-max_gap_count <integer>\t: maximum number of gaps allowed in the alignment of the two branches of a bubble (default: 3)");
 	puts("\t-min_pair_count <integer>\t: minimum number of paired end connections to justify the scaffolding of two long contigs (default: 10)");
 	puts("\t-max_coverage <floating point>\t: removal of high coverage nodes AFTER tour bus (default: no removal)");
+	puts("\t-long_mult_cutoff <int>\t\t: minimum number of long reads required to merge contigs (default: 2)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -69,6 +70,7 @@ int main(int argc, char **argv)
 	double coverageCutoff = -1;
 	double maxCoverageCutoff = -1;
 	double expectedCoverage = -1;
+	int longMultCutoff = -1;
 	Coordinate minContigLength = -1;
 	boolean *dubious = NULL;
 	Coordinate insertLength[CATEGORIES];
@@ -207,6 +209,9 @@ int main(int argc, char **argv)
 			setUnreliableConnectionCutoff(arg_int);
 		} else if (strcmp(arg, "-max_coverage") == 0) {
 			sscanf(argv[arg_index], "%lf", &maxCoverageCutoff);
+		} else if (strcmp(arg, "-long_mult_cutoff") == 0) {
+			sscanf(argv[arg_index], "%i", &longMultCutoff);
+			setMultiplicityCutoff(longMultCutoff);
 		} else {
 			printf("Unknown option: %s;\n", arg);
 			printUsage();
@@ -317,6 +322,10 @@ int main(int argc, char **argv)
 		exploitShortReadPairs(graph, sequences, dubious,
 				      expectedCoverage, true);
 		free(dubious);
+	} else {
+		puts("WARNING: NO EXPECTED COVERAGE PROVIDED");
+		puts("Velvet will be unable to resolve any repeats");
+		puts("See manual for instructions on how to set the expected coverage parameter");
 	}
 
 	concatenateGraph(graph);

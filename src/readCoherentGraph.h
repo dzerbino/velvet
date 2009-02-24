@@ -30,4 +30,5 @@ boolean isUniqueSolexa(Node * node);
 
 void setBaseCoverage(double coverage);
 
+void setMultiplicityCutoff(int value);
 #endif
