@@ -1909,7 +1909,7 @@ static IDnum ** countShortReads(Graph * graph) {
 		for (readIndex = 0; readIndex < readCount; readIndex++) {
 			marker = getShortReadMarkerAtIndex(array, readIndex);
 			readID = getShortReadMarkerID(marker);
-			cat = reads->categories[readID];
+			cat = reads->categories[readID - 1];
 			if (cat % 2 == 1 && counts[cat/2] != NULL)
 				counts[cat/2][nodeIndex]++;
 		}	

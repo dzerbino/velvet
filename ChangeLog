@@ -64,3 +64,6 @@ V 0.7.28
 - Uncaught memory exception patched
 - Warning message in the absence of expected coverage
 - Modifiable long read multiplicity cutoff
+
+V 0.7.29
+- Crashing bug when scaffolding
