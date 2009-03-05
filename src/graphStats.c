@@ -2162,7 +2162,7 @@ static void exportAMOSMarker(FILE * outfile, PassageMarker * marker,
 		sequenceStart += wordShift;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getAbsolutePassMarkerSeqID(marker));
+	fprintf(outfile, "src:%li\n", getAbsolutePassMarkerSeqID(marker) - 1);
 	if (getStartOffset(marker) > start)
 		fprintf(outfile, "off:%li\n", getStartOffset(marker) - start);
 	else 
@@ -2188,7 +2188,7 @@ static void exportAMOSShortMarker(FILE * outfile, ShortReadMarker * marker,
 		return;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker));
+	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker) - 1);
 	fprintf(outfile, "off:%li\n", offset - start);
 	fprintf(outfile, "clr:0,%li\n", getLength(sequence));
 	fprintf(outfile, "}\n");
@@ -2216,7 +2216,7 @@ static void exportAMOSReverseShortMarker(FILE * outfile,
 		return;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker));
+	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker) - 1);
 	fprintf(outfile, "off:%li\n", offset - start);
 	fprintf(outfile, "clr:%li,0\n", getLength(sequence));
 	fprintf(outfile, "}\n");
@@ -2349,7 +2349,7 @@ static void exportAMOSRead(FILE * outfile, TightString * tString,
 
 	fprintf(outfile, "{RED\n");
 	fprintf(outfile, "iid:%li\n", index);
-	fprintf(outfile, "eid:%li\n", index);
+	fprintf(outfile, "eid:%li\n", index + 1);
 
 	fprintf(outfile, "seq:\n");
 	start = 0;
@@ -2395,7 +2395,7 @@ void exportAMOSContigs(char *filename, Graph * graph,
 
 	for (index = 0; index < reads->readCount; index++)
 		exportAMOSRead(outfile, reads->tSequences[index],
-			       index + 1);
+			       index);
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);

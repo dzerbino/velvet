@@ -67,3 +67,6 @@ V 0.7.28
 
 V 0.7.29
 - Crashing bug when scaffolding
+
+V 0.7.30 
+- Read numbering bug in AMOS file
