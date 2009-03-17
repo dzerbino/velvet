@@ -550,6 +550,12 @@ void correctGraphLocally(Node * argStart)
 void deactivateLocalCorrectionSettings()
 {
 	puts("Deactivating local correction settings");
+	IDnum index;
+
+	for (index = 0; index <= MAXREADLENGTH; index++) {
+		free(Fmatrix[index]);
+	}
+	free(Fmatrix); 
 
 	free(times);
 	free(previous);

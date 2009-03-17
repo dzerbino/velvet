@@ -70,3 +70,8 @@ V 0.7.29
 
 V 0.7.30 
 - Read numbering bug in AMOS file
+
+V 0.7.31
+- Read numbering bug in AMOS file (1-indexing)
+- Marginal memory leaks
+- Updated manual

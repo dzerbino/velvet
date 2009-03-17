@@ -2122,7 +2122,7 @@ static void exportAMOSLib(FILE * outfile, Graph * graph, Category cat)
 		return;
 
 	fprintf(outfile, "{LIB\n");
-	fprintf(outfile, "iid:%hi\n", cat);
+	fprintf(outfile, "iid:%hi\n", cat + 1);
 	fprintf(outfile, "{DST\n");
 	fprintf(outfile, "mea:%li\n", distance);
 	fprintf(outfile, "std:%li\n", (long int) sqrt(variance));
@@ -2162,7 +2162,7 @@ static void exportAMOSMarker(FILE * outfile, PassageMarker * marker,
 		sequenceStart += wordShift;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getAbsolutePassMarkerSeqID(marker) - 1);
+	fprintf(outfile, "src:%li\n", getAbsolutePassMarkerSeqID(marker));
 	if (getStartOffset(marker) > start)
 		fprintf(outfile, "off:%li\n", getStartOffset(marker) - start);
 	else 
@@ -2188,7 +2188,7 @@ static void exportAMOSShortMarker(FILE * outfile, ShortReadMarker * marker,
 		return;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker) - 1);
+	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker));
 	fprintf(outfile, "off:%li\n", offset - start);
 	fprintf(outfile, "clr:0,%li\n", getLength(sequence));
 	fprintf(outfile, "}\n");
@@ -2216,7 +2216,7 @@ static void exportAMOSReverseShortMarker(FILE * outfile,
 		return;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker) - 1);
+	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker));
 	fprintf(outfile, "off:%li\n", offset - start);
 	fprintf(outfile, "clr:%li,0\n", getLength(sequence));
 	fprintf(outfile, "}\n");
@@ -2300,7 +2300,7 @@ static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
 	Coordinate finish;
 	GapMarker *gap;
 	IDnum smallIndex = 0;
-	static IDnum iid = 0;
+	static IDnum iid = 1;
 	IDnum contigIndex = iid;
 	int wordShift = getWordLength(graph) - 1;
 
@@ -2348,7 +2348,7 @@ static void exportAMOSRead(FILE * outfile, TightString * tString,
 	char str[100];
 
 	fprintf(outfile, "{RED\n");
-	fprintf(outfile, "iid:%li\n", index);
+	fprintf(outfile, "iid:%li\n", index + 1);
 	fprintf(outfile, "eid:%li\n", index + 1);
 
 	fprintf(outfile, "seq:\n");
@@ -2408,13 +2408,13 @@ void exportAMOSContigs(char *filename, Graph * graph,
 	}
 
 	if (readStartsAreActivated(graph)) {
-		for (index = 0; index < reads->readCount; index++) {
+		for (index = 1; index <= reads->readCount; index++) {
 			if (reads->categories[index] % 2 != 0
 			    && reads->categories[index] <=
 			    2 * CATEGORIES) {
 				fprintf(outfile, "{FRG\n");
 				fprintf(outfile, "lib:%hi\n",
-					reads->categories[index] % 2);
+					(reads->categories[index] % 2) + 1);
 				fprintf(outfile, "rds:%li,%li\n", index,
 					index + 1);
 				fprintf(outfile, "}\n");

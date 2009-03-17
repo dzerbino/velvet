@@ -60,6 +60,18 @@ From a GNU environment, simply type:
 > make
 \end{verbatim}
 
+\subsection{Colorspace Velvet}
+
+To produce the colorspace version of Velvet, compile with the instruction:
+
+\begin{verbatim}
+> make color
+\end{verbatim}
+
+All the rest of the manual remains valid, except that the executables are now called velveth\_de and velveth\_de . 
+
+\textbf{Beware} that color- and sequence space are incompatible, hence separate sets of executables. In other words, don't try to hash sequence files with colorspace velvet or vice-versa, under penalty of meaningless results!
+
 \section{Running instructions}
 
 \subsection{Running velveth}
@@ -191,8 +203,7 @@ To do this, Velvet needs to have a reasonable estimate of the expected coverage 
 \textbf{Reminder:} you must have flagged your reads as being paired-ends when running
 velveth (cf. \ref{sec:hashing}).
 
-To activate the use of read pairs, you must specify two parameters: the \emph{expected} (i.e. average)
-insert length (or at least a rough estimate), and the expected \emph{short-read k-mer coverage} (see \ref{sec:kmercov} for more information). If you expect your insert length to be around 400bp, and your coverage to be around 21.3x, you would type:
+To activate the use of read pairs, you must specify two parameters: the \emph{expected} (i.e. average) insert length (or at least a rough estimate), and the expected \emph{short-read k-mer coverage} (see \ref{sec:kmercov} for more information). The insert length is understood to be the length of the sequenced fragment, i.e. it includes the length of the reads themselves. If you expect your insert length to be around 400bp, and your coverage to be around 21.3x, you would type:
 
 \begin{verbatim}
 > ./velvetg output_directory/ -ins_length 400 -exp_cov 21.3 
@@ -313,7 +324,13 @@ After aligning the two sequences with a standard dynamic alignment, Velvet compa
 > ./velvetg output_directory/ -max_gap_count 5 (...other parameters...)
 \end{verbatim} 
 
-\subsection{Advanced parameters: Tour Bus}
+\subsection{Advanced parameters: Rock Band}
+
+\paragraph{Minimum long read connection cutoff}
+
+When using long reads to connect and complete contigs, Velvet applies a simple multiplicity cutoff (by default 2) to reduce the amount of noise. In other words, at least two long reads are required to validate a connection. Nonetheless, you may want to lower this cutoff to 0 if the long sequences you are using are in fact high confidence non-overlapping sequences, such as contigs. On the contrary, if your long read coverage is very high, you might consider raising this cutoff.
+
+\subsection{Advanced parameters: Pebble}
 
 \paragraph{Minimum read-pair validation}
 

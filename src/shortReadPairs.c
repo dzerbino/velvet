@@ -1865,7 +1865,7 @@ static void cleanMemory(ReadOccurence ** readNodes, IDnum * readNodeCounts,
 
 	puts("Cleaning memory");
 
-	for (index = 1; index < sequenceCount(graph); index++)
+	for (index = 1; index <= sequenceCount(graph); index++)
 		free(readNodes[index]);
 
 	free(readNodes);
