@@ -2115,8 +2115,8 @@ void removeMissingStrain(Graph * graph, Category cat)
 
 static void exportAMOSLib(FILE * outfile, Graph * graph, Category cat)
 {
-	Coordinate distance = getInsertLength(graph, cat);
-	double variance = getInsertLength_var(graph, cat);
+	Coordinate distance = getInsertLength(graph, cat * 2);
+	double variance = getInsertLength_var(graph, cat * 2);
 
 	if (distance == -1)
 		return;
@@ -2342,7 +2342,7 @@ static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
 }
 
 static void exportAMOSRead(FILE * outfile, TightString * tString,
-			   IDnum index)
+			   IDnum index, IDnum frg_index)
 {
 	Coordinate start, finish;
 	char str[100];
@@ -2350,6 +2350,8 @@ static void exportAMOSRead(FILE * outfile, TightString * tString,
 	fprintf(outfile, "{RED\n");
 	fprintf(outfile, "iid:%li\n", index + 1);
 	fprintf(outfile, "eid:%li\n", index + 1);
+	if (frg_index > 0)	
+		fprintf(outfile, "frg:%li\n", frg_index);
 
 	fprintf(outfile, "seq:\n");
 	start = 0;
@@ -2378,6 +2380,7 @@ void exportAMOSContigs(char *filename, Graph * graph,
 		       Coordinate cutoff_length, ReadSet * reads)
 {
 	IDnum index;
+	Category cat;
 	Node *node;
 	FILE *outfile;
 
@@ -2390,12 +2393,38 @@ void exportAMOSContigs(char *filename, Graph * graph,
 		exit(0);
 	}
 
-	for (index = 0; index <= CATEGORIES; index++)
-		exportAMOSLib(outfile, graph, (Category) index);
+	for (cat = 0; cat <= CATEGORIES; cat++)
+		exportAMOSLib(outfile, graph, cat);
 
-	for (index = 0; index < reads->readCount; index++)
-		exportAMOSRead(outfile, reads->tSequences[index],
-			       index);
+	for (index = 1; index <= reads->readCount; index++) {
+		if (reads->categories[index - 1] % 2 != 0 &&
+		    getInsertLength(graph, reads->categories[index - 1]) >= 0) {
+			fprintf(outfile, "{FRG\n");
+			fprintf(outfile, "lib:%hi\n",
+				(reads->categories[index - 1] / 2) + 1);
+			fprintf(outfile, "rds:%li,%li\n", index,
+				index + 1);
+			fprintf(outfile, "eid:%li\n", index);
+			fprintf(outfile, "iid:%li\n", index);
+			fprintf(outfile, "typ:I\n");
+			fprintf(outfile, "}\n");
+			index++;
+		}
+	}
+
+	for (index = 1; index <= reads->readCount; index++) {
+		if (reads->categories[index - 1] % 2 != 0 &&
+		    getInsertLength(graph, reads->categories[index - 1]) >= 0) {
+			exportAMOSRead(outfile, reads->tSequences[index - 1],
+				       index, index);
+			index++;
+			exportAMOSRead(outfile, reads->tSequences[index - 1],
+				       index, index - 1);
+		} else {
+			exportAMOSRead(outfile, reads->tSequences[index - 1],
+				       index, -1);
+		}
+	}
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -2405,22 +2434,6 @@ void exportAMOSContigs(char *filename, Graph * graph,
 
 		if (getNodeLength(node) >= cutoff_length)
 			exportAMOSNode(outfile, reads, node, graph);
-	}
-
-	if (readStartsAreActivated(graph)) {
-		for (index = 1; index <= reads->readCount; index++) {
-			if (reads->categories[index] % 2 != 0
-			    && reads->categories[index] <=
-			    2 * CATEGORIES) {
-				fprintf(outfile, "{FRG\n");
-				fprintf(outfile, "lib:%hi\n",
-					(reads->categories[index] % 2) + 1);
-				fprintf(outfile, "rds:%li,%li\n", index,
-					index + 1);
-				fprintf(outfile, "}\n");
-				index++;
-			}
-		}
 	}
 
 	fclose(outfile);

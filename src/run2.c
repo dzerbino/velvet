@@ -137,7 +137,7 @@ int main(int argc, char **argv)
 				       insertLength[0]);
 				exit(1);
 			}
-		} else if (strcmp(arg, "-ins_length") == 0) {
+		} else if (strcmp(arg, "-ins_length_sd") == 0) {
 			sscanf(argv[arg_index], "%li", &std_dev[0]);
 			if (&std_dev[0] < 0) {
 				printf("Invalid std deviation: %li\n",
@@ -276,8 +276,26 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
+	for(cat = 0; cat < CATEGORIES; cat++) {
+		if (insertLength[cat] > -1 && std_dev[cat] < 0)
+			std_dev[cat] = insertLength[cat] / 10;
+		setInsertLengths(graph, cat,
+				 insertLength[cat], std_dev[cat]);
+	}
+
+	if (insertLengthLong > -1 && std_dev_long < 0)
+			std_dev_long = insertLengthLong / 10;
+	setInsertLengths(graph, CATEGORIES,
+			 insertLengthLong, std_dev_long);
+
 	// Coverage cutoff
-	if (!readTracking) {
+	if (coverageCutoff < 0) {
+		puts("WARNING: NO COVERAGE CUTOFF PROVIDED");
+		puts("Velvet will probably leave behind many detectable errors");
+		puts("See manual for instructions on how to set the coverage cutoff parameter");
+	}
+
+	if (!readStartsAreActivated(graph)) {
 		removeLowCoverageNodes(graph, coverageCutoff);
 		removeHighCoverageNodes(graph, maxCoverageCutoff);
 	} else {
@@ -299,34 +317,25 @@ int main(int argc, char **argv)
 				  sequences);
 
 		// Paired ends module
-		for (cat = 0; cat < CATEGORIES; cat++) {
-			if (insertLength[cat] > -1) {
+		for (cat = 0; cat < CATEGORIES; cat++) 
+			if (insertLength[cat] > -1) 
 				pairUpReads(sequences, 2 * cat + 1);
-				if (std_dev[cat] < 0)
-					std_dev[cat] =
-					    insertLength[cat] / 10;
-			}
-			setInsertLengths(graph, cat,
-					 insertLength[cat], std_dev[cat]);
-		}
-		if (insertLengthLong > -1) {
+
+		if (insertLengthLong > -1) 
 			pairUpReads(sequences, 2 * CATEGORIES + 1);
-			if (std_dev_long < 0)
-				std_dev_long = insertLengthLong / 10;
-		}
-		setInsertLengths(graph, CATEGORIES,
-				 insertLengthLong, std_dev_long);
 
 		detachDubiousReads(sequences, dubious);
 		activateGapMarkers(graph);
 		exploitShortReadPairs(graph, sequences, dubious,
 				      expectedCoverage, true);
-		free(dubious);
 	} else {
 		puts("WARNING: NO EXPECTED COVERAGE PROVIDED");
 		puts("Velvet will be unable to resolve any repeats");
 		puts("See manual for instructions on how to set the expected coverage parameter");
 	}
+
+	if (dubious)
+		free(dubious);
 
 	concatenateGraph(graph);
 

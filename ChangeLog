@@ -75,3 +75,7 @@ V 0.7.31
 - Read numbering bug in AMOS file (1-indexing)
 - Marginal memory leaks
 - Updated manual
+
+V 0.7.32
+- Crashing bug
+- Bug in AMOS format output
