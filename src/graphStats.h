@@ -136,5 +136,5 @@ boolean isNatural(Graph * graph);
 
 void searchForHallidayJunction(Graph * graph);
 
-Coordinate totalAssemblyLength(Graph* graph);
+Coordinate totalAssemblyLength(Graph * graph);
 #endif

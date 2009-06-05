@@ -23,6 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 // Utilities
 #include "graphStats.h"
+#include "utility.h"
 
 // Datastructures
 #include "readSet.h"

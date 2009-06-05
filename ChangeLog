@@ -79,3 +79,6 @@ V 0.7.31
 V 0.7.32
 - Crashing bug
 - Bug in AMOS format output
+- Memory allocation checks
+- Rearranged shuffling scripts
+- Homogenised local TourBus to use the same params as normal TB

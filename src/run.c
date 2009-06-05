@@ -68,6 +68,8 @@ int main(int argc, char **argv)
 	char *directory, *filename, *buf;
 	DIR *dir;
 
+	setProgramName("velveth");
+
 	if (argc < 4) {
 		puts("velveth - simple hashing program");
 		printf("Version %i.%i.%2.2i\n", VERSION_NUMBER,
@@ -80,12 +82,8 @@ int main(int argc, char **argv)
 	}
 
 	directory = argv[1];
-	filename = malloc((strlen(directory) + 100) * sizeof(char));
-	buf = malloc((strlen(directory) + 100) * sizeof(char));
-	if (filename == NULL || buf == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	filename = mallocOrExit(strlen(directory) + 100, char);
+	buf = mallocOrExit(strlen(directory) + 100, char);
 
 	hashLength = atoi(argv[2]);
 

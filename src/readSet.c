@@ -27,6 +27,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "globals.h"
 #include "tightString.h"
 #include "readSet.h"
+#include "utility.h"
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include "../third-party/zlib-1.2.3/Win32/include/zlib.h"
@@ -36,11 +37,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 ReadSet *newReadSet()
 {
-	ReadSet *rs = calloc(1, sizeof(ReadSet));
-	if (rs == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	ReadSet *rs = callocOrExit(1, ReadSet);
 	return rs;
 }
 
@@ -63,12 +60,7 @@ void concatenateReadSets(ReadSet * A, ReadSet * B)
 
 	// Sequences
 	if (A->sequences != NULL || B->sequences != NULL) {
-		tmp.sequences = malloc(tmp.readCount * sizeof(char *));
-		if (tmp.sequences == NULL && tmp.readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
-
+		tmp.sequences = mallocOrExit(tmp.readCount, char *);
 		if (A->sequences != NULL) {
 			for (index = 0; index < A->readCount; index++)
 				tmp.sequences[index] = A->sequences[index];
@@ -91,11 +83,7 @@ void concatenateReadSets(ReadSet * A, ReadSet * B)
 	// tSequences
 	if (A->tSequences != NULL || B->tSequences != NULL) {
 		tmp.tSequences =
-		    malloc(tmp.readCount * sizeof(TightString *));
-		if (tmp.tSequences == NULL && tmp.readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(tmp.readCount, TightString *);
 
 		if (A->tSequences != NULL) {
 			for (index = 0; index < A->readCount; index++)
@@ -120,11 +108,7 @@ void concatenateReadSets(ReadSet * A, ReadSet * B)
 
 	// Labels
 	if (A->labels != NULL || B->labels != NULL) {
-		tmp.labels = malloc(tmp.readCount * sizeof(char *));
-		if (tmp.labels == NULL && tmp.readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		tmp.labels = mallocOrExit(tmp.readCount, char *);
 
 		if (A->labels != NULL) {
 			for (index = 0; index < A->readCount; index++)
@@ -149,11 +133,7 @@ void concatenateReadSets(ReadSet * A, ReadSet * B)
 	// Confidence scores
 	if (A->confidenceScores != NULL || B->confidenceScores != NULL) {
 		tmp.confidenceScores =
-		    malloc(tmp.readCount * sizeof(Quality *));
-		if (tmp.confidenceScores == NULL && tmp.readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(tmp.readCount, Quality *);
 
 		if (A->confidenceScores != NULL) {
 			for (index = 0; index < A->readCount; index++)
@@ -180,11 +160,7 @@ void concatenateReadSets(ReadSet * A, ReadSet * B)
 	// Kmer probabilities 
 	if (A->kmerProbabilities != NULL || B->kmerProbabilities != NULL) {
 		tmp.kmerProbabilities =
-		    malloc(tmp.readCount * sizeof(Quality *));
-		if (tmp.kmerProbabilities == NULL && tmp.readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(tmp.readCount, Quality *);
 
 		if (A->kmerProbabilities != NULL) {
 			for (index = 0; index < A->readCount; index++)
@@ -210,11 +186,7 @@ void concatenateReadSets(ReadSet * A, ReadSet * B)
 
 	// Mate reads 
 	if (A->mateReads != NULL || B->mateReads != NULL) {
-		tmp.mateReads = malloc(tmp.readCount * sizeof(IDnum));
-		if (tmp.mateReads == NULL && tmp.readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		tmp.mateReads = mallocOrExit(tmp.readCount, IDnum);
 
 		if (A->mateReads != NULL) {
 			for (index = 0; index < A->readCount; index++)
@@ -237,11 +209,7 @@ void concatenateReadSets(ReadSet * A, ReadSet * B)
 
 	// Categories
 	if (A->categories != NULL || B->categories != NULL) {
-		tmp.categories = malloc(tmp.readCount * sizeof(Quality *));
-		if (tmp.categories == NULL && tmp.readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		tmp.categories = mallocOrExit(tmp.readCount, Quality *);
 
 		if (A->categories != NULL) {
 			for (index = 0; index < A->readCount; index++)
@@ -300,20 +268,12 @@ void convertConfidenceScores(ReadSet * rs, int WORDLENGTH)
 	Probability proba;
 
 	rs->kmerProbabilities =
-	    malloc(rs->readCount * sizeof(Probability *));
-	if (rs->kmerProbabilities == NULL && rs->readCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(rs->readCount, Probability *);
 
 	for (index = 0; index < rs->readCount; index++) {
 		rs->kmerProbabilities[index] =
-		    malloc((getLength(rs->tSequences[index]) - WORDLENGTH +
-			    1) * sizeof(Probability));
-		if (rs->kmerProbabilities[index] == NULL) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(getLength(rs->tSequences[index]) - WORDLENGTH +
+			    1, Probability);
 		kmerProbabilities = rs->kmerProbabilities[index];
 		baseCallerScores = rs->confidenceScores[index];
 
@@ -346,14 +306,9 @@ void categorizeReads(ReadSet * readSet, Category category)
 {
 	IDnum index;
 
-	if (readSet->categories == NULL) {
+	if (readSet->categories == NULL) 
 		readSet->categories =
-		    malloc(readSet->readCount * sizeof(Category));
-		if (readSet->categories == NULL && readSet->readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
-	}
+		    mallocOrExit(readSet->readCount, Category);
 
 	for (index = 0; index < readSet->readCount; index++)
 		readSet->categories[index] = category;
@@ -363,14 +318,9 @@ void simplifyReads(ReadSet * readSet)
 {
 	IDnum index;
 
-	if (readSet->categories == NULL) {
+	if (readSet->categories == NULL)
 		readSet->categories =
-		    malloc(readSet->readCount * sizeof(Category));
-		if (readSet->categories == NULL && readSet->readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
-	}
+		    mallocOrExit(readSet->readCount, Category);
 
 	for (index = 0; index < readSet->readCount; index++) {
 		if (readSet->categories[index] < CATEGORIES) {
@@ -418,10 +368,8 @@ ReadSet *readSolexaFile(char *filename)
 
 	if (file != NULL)
 		printf("Reading Solexa file %s\n", filename);
-	else {
-		printf("Could not open %s\n", filename);
-		exit(0);
-	}
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	reads = newReadSet();
 
@@ -438,18 +386,9 @@ ReadSet *readSolexaFile(char *filename)
 
 	// Create table:
 	reads->readCount = readCount;
-	reads->sequences = malloc(readCount * sizeof(char *));
-	if (reads->sequences == NULL && readCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
-	for (readIndex = 0; readIndex < readCount; readIndex++) {
-		reads->sequences[readIndex] = malloc(100 * sizeof(char));
-		if (reads->sequences[readIndex] == NULL) {
-			puts("Malloc failure");
-			exit(1);
-		}
-	}
+	reads->sequences = mallocOrExit(readCount, char *);
+	for (readIndex = 0; readIndex < readCount; readIndex++) 
+		reads->sequences[readIndex] = mallocOrExit(100, char);
 
 	// Reopen file and memorize line:
 	puts("Writing lines into string array...");
@@ -478,10 +417,8 @@ ReadSet *readElandFile(char *filename)
 
 	if (file != NULL)
 		printf("Reading Eland file %s\n", filename);
-	else {
-		printf("Could not open %s\n", filename);
-		exit(0);
-	}
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	reads = newReadSet();
 
@@ -496,18 +433,9 @@ ReadSet *readElandFile(char *filename)
 
 	// Create table:
 	reads->readCount = readCount;
-	reads->sequences = malloc(readCount * sizeof(char *));
-	if (reads->sequences == NULL && readCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
-	for (readIndex = 0; readIndex < readCount; readIndex++) {
-		reads->sequences[readIndex] = malloc(100 * sizeof(char));
-		if (reads->sequences[readIndex] == NULL) {
-			puts("Malloc failure");
-			exit(1);
-		}
-	}
+	reads->sequences = mallocOrExit(readCount, char *);
+	for (readIndex = 0; readIndex < readCount; readIndex++)
+		reads->sequences[readIndex] = mallocOrExit(100, char);
 
 	// Reopen file and memorize line:
 	puts("Writing lines into string array...");
@@ -547,10 +475,8 @@ ReadSet *readFastQFile(char *filename)
 
 	if (file != NULL)
 		printf("Reading FastQ file %s\n", filename);
-	else {
-		printf("Could not open %s\n", filename);
-		exit(0);
-	}
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	reads = newReadSet();
 
@@ -564,11 +490,7 @@ ReadSet *readFastQFile(char *filename)
 
 	// Create table:
 	reads->readCount = readCount;
-	reads->sequences = malloc(sizeof(char *) * (readCount));
-	if (reads->sequences == NULL && readCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	reads->sequences = mallocOrExit(readCount, char *);
 	// Reopen file and memorize line:
 	puts("Writing lines into string array...");
 	file = fopen(filename, "r");
@@ -582,13 +504,7 @@ ReadSet *readFastQFile(char *filename)
 			line[i] = '\0';
 		}
 
-		reads->sequences[readIndex] = malloc(sizeof(char) * (strlen(line) + 1));	// Allocate enough space for null + line contents
-		if (reads->sequences[readIndex] == NULL
-		    && strlen(line) > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
-
+		reads->sequences[readIndex] = mallocOrExit(strlen(line) + 1, char);	// Allocate enough space for null + line contents
 		strncpy(reads->sequences[readIndex], line, strlen(line) + 1);	// Copy line plus null terminating char
 
 		fgets(line, maxline, file);
@@ -614,10 +530,8 @@ ReadSet *readFastQGZFile(char *filename)
 
 	if (file != NULL)
 		printf("Reading zipped FastQ file %s\n", filename);
-	else {
-		printf("Could not open zipped file %s\n", filename);
-		exit(0);
-	}
+	else 
+		exitErrorf(EXIT_FAILURE, true, "Could not open zipped file %s\n", filename);
 
 	reads = newReadSet();
 
@@ -631,11 +545,7 @@ ReadSet *readFastQGZFile(char *filename)
 
 	// Create table:
 	reads->readCount = readCount;
-	reads->sequences = malloc(sizeof(char *) * (readCount));
-	if (reads->sequences == NULL && readCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	reads->sequences = mallocOrExit(readCount, char);
 	// Reopen file and memorize line:
 	puts("Writing lines into string array...");
 	file = gzopen(filename, "r");
@@ -649,12 +559,7 @@ ReadSet *readFastQGZFile(char *filename)
 			line[i] = '\0';
 		}
 
-		reads->sequences[readIndex] = malloc(sizeof(char) * (strlen(line) + 1));	// Allocate enough space for null + line contents
-		if (reads->sequences[readIndex] == NULL
-		    && strlen(line) > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		reads->sequences[readIndex] = mallocOrExit(strlen(line) + 1, char);	// Allocate enough space for null + line contents
 		strncpy(reads->sequences[readIndex], line, strlen(line) + 1);	// Copy line plus null terminating char
 
 		gzgets(file, line, maxline);
@@ -681,10 +586,8 @@ ReadSet *readFastAFile(char *filename)
 
 	if (file != NULL)
 		printf("Reading FastA file %s;\n", filename);
-	else {
-		printf("Could not open %s\n", filename);
-		exit(0);
-	}
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	reads = newReadSet();
 	// Count number of separate sequences
@@ -696,11 +599,7 @@ ReadSet *readFastAFile(char *filename)
 	printf("%li sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
-	reads->sequences = calloc(sequenceCount, sizeof(char *));
-	if (reads->sequences == NULL && sequenceCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	reads->sequences = callocOrExit(sequenceCount, char *);
 	if (sequenceCount == 0) {
 		reads->sequences = NULL;
 		return reads;
@@ -710,17 +609,9 @@ ReadSet *readFastAFile(char *filename)
 	sequenceIndex = -1;
 	while (fgets(line, maxline, file) != NULL) {
 		if (line[0] == '>') {
-			if (sequenceIndex != -1) {
-				//printf("Sequence %li has length %li\n",
-				//       sequenceIndex, bpCount);
+			if (sequenceIndex != -1)
 				reads->sequences[sequenceIndex] =
-				    calloc(sizeof(char), bpCount + 1);
-				if (reads->sequences[sequenceIndex] ==
-				    NULL) {
-					puts("Allocation screwed up!");
-					exit(1);
-				}
-			}
+				    callocOrExit(bpCount + 1, char);
 			sequenceIndex++;
 			bpCount = 0;
 		} else {
@@ -730,11 +621,7 @@ ReadSet *readFastAFile(char *filename)
 
 	//printf("Sequence %li has length %li\n", sequenceIndex, bpCount);
 	reads->sequences[sequenceIndex] =
-	    calloc(sizeof(char), bpCount + 1);
-	if (reads->sequences[sequenceIndex] == NULL) {
-		puts("Allocation screwed up!");
-		exit(1);
-	}
+	    callocOrExit(bpCount + 1, char);
 	fclose(file);
 
 	// Reopen file and memorize line:
@@ -783,10 +670,8 @@ ReadSet *readFastAGZFile(char *filename)
 
 	if (file != NULL)
 		printf("Reading zipped FastA file %s;\n", filename);
-	else {
-		printf("Could not open %s\n", filename);
-		exit(0);
-	}
+	else 
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	reads = newReadSet();
 	// Count number of separate sequences
@@ -799,27 +684,15 @@ ReadSet *readFastAGZFile(char *filename)
 	printf("%li sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
-	reads->sequences = malloc(sequenceCount * sizeof(char *));
-	if (reads->sequences == NULL && sequenceCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	reads->sequences = mallocOrExit(sequenceCount, char *);
 	// Counting base pair length of each sequence:
 	file = gzopen(filename, "r");
 	sequenceIndex = -1;
 	while (gzgets(file, line, maxline) != NULL) {
 		if (line[0] == '>') {
-			if (sequenceIndex != -1) {
-				//printf("Sequence %li has length %li\n",
-				//       sequenceIndex, bpCount);
+			if (sequenceIndex != -1) 
 				reads->sequences[sequenceIndex] =
-				    malloc(sizeof(char) * (bpCount + 1));
-				if (reads->sequences[sequenceIndex] ==
-				    NULL) {
-					puts("Allocation screwed up!");
-					exit(1);
-				}
-			}
+				    mallocOrExit(bpCount + 1, char);
 			sequenceIndex++;
 			bpCount = 0;
 		} else {
@@ -829,11 +702,7 @@ ReadSet *readFastAGZFile(char *filename)
 
 	//printf("Sequence %li has length %li\n", sequenceIndex, bpCount);
 	reads->sequences[sequenceIndex] =
-	    malloc(sizeof(char) * (bpCount + 1));
-	if (reads->sequences[sequenceIndex] == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(bpCount + 1, char);
 	gzclose(file);
 
 	// Reopen file and memorize line:
@@ -878,10 +747,8 @@ ReadSet *readMAQGZFile(char *filename)
 
 	if (file != NULL)
 		printf("Reading zipped MAQ file %s;\n", filename);
-	else {
-		printf("Could not open %s\n", filename);
-		exit(0);
-	}
+	else 
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	reads = newReadSet();
 
@@ -893,19 +760,10 @@ ReadSet *readMAQGZFile(char *filename)
 	printf("%li sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
-	reads->sequences = malloc(sequenceCount * sizeof(char *));
-	if (reads->sequences == NULL && sequenceCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	reads->sequences = mallocOrExit(sequenceCount, char *);
 	// Counting base pair length of each sequence:
-	for (index = 0; index < sequenceCount; index++) {
-		reads->sequences[index] = malloc(100 * sizeof(char));
-		if (reads->sequences[index] == NULL) {
-			puts("Malloc failure");
-			exit(1);
-		}
-	}
+	for (index = 0; index < sequenceCount; index++)
+		reads->sequences[index] = mallocOrExit(100, char);
 
 	// Reopen file and memorize line:
 	file = gzopen(filename, "r");
@@ -1012,7 +870,7 @@ ReadSet *parseDataAndReadFiles(int argc, char **argv)
 			else {
 				printf("Unknown option: %s\n",
 				       argv[argIndex]);
-				exit(0);
+				exit(1);
 			}
 
 			continue;
@@ -1045,7 +903,7 @@ ReadSet *parseDataAndReadFiles(int argc, char **argv)
 			break;
 		default:
 			puts("Screw up in parser... exiting");
-			exit(0);
+			exit(1);
 		}
 
 		convertSequences(reads);
@@ -1105,7 +963,7 @@ ReadSet *parseDataAndReadMaskFiles(int argc, char **argv)
 			else {
 				printf("Unknown option: %s\n",
 				       argv[argIndex]);
-				exit(0);
+				exit(1);
 			}
 
 			continue;
@@ -1138,7 +996,7 @@ ReadSet *parseDataAndReadMaskFiles(int argc, char **argv)
 			break;
 		default:
 			puts("Screw up in parser... exiting");
-			exit(0);
+			exit(1);
 		}
 
 		convertSequences(reads);
@@ -1158,10 +1016,8 @@ void importClippingData(char *filename, ReadSet * reads)
 	Coordinate start, finish;
 	TightString **sequences = reads->tSequences;
 
-	if (file == NULL) {
-		printf("Could not read %s, sorry.\n", filename);
-		exit(1);
-	}
+	if (file == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not read %s, sorry.\n", filename);
 
 	puts("Importing clip data");
 
@@ -1186,13 +1042,8 @@ void importClippingData(char *filename, ReadSet * reads)
 void pairUpReads(ReadSet * reads, Category cat)
 {
 	int phase = 0;
-	IDnum *mateReads = malloc(reads->readCount * sizeof(IDnum));
+	IDnum *mateReads = mallocOrExit(reads->readCount, IDnum);
 	IDnum index;
-
-	if (mateReads == NULL && reads->readCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
 
 	for (index = 0; index < reads->readCount; index++) {
 		if (reads->categories[index] != cat) {
@@ -1296,10 +1147,8 @@ ReadSet *importReadSet(char *filename)
 
 	if (file != NULL)
 		printf("Reading read set file %s;\n", filename);
-	else {
-		printf("Could not open %s\n", filename);
-		exit(0);
-	}
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	reads = newReadSet();
 
@@ -1312,16 +1161,8 @@ ReadSet *importReadSet(char *filename)
 	printf("%li sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
-	reads->sequences = calloc(sequenceCount, sizeof(char *));
-	if (reads->sequences == NULL && sequenceCount > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
-	reads->categories = calloc(sequenceCount, sizeof(Category));
-	if (reads->categories == NULL && sequenceCount > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	reads->sequences = callocOrExit(sequenceCount, char *);
+	reads->categories = callocOrExit(sequenceCount, Category);
 	// Counting base pair length of each sequence:
 	file = fopen(filename, "r");
 	sequenceIndex = -1;
@@ -1332,17 +1173,9 @@ ReadSet *importReadSet(char *filename)
 			sscanf(line, "%*[^\t]\t%hhi",
 			       &(reads->categories[sequenceIndex + 1]));
 
-			if (sequenceIndex != -1) {
-				//printf("Sequence %li has length %li\n",
-				//       sequenceIndex, bpCount);
+			if (sequenceIndex != -1)
 				reads->sequences[sequenceIndex] =
-				    malloc(sizeof(char) * (bpCount + 1));
-				if (reads->sequences[sequenceIndex] ==
-				    NULL) {
-					puts("Allocation screwed up!");
-					exit(1);
-				}
-			}
+				    mallocOrExit(bpCount + 1, char);
 			sequenceIndex++;
 			bpCount = 0;
 		} else {
@@ -1352,11 +1185,7 @@ ReadSet *importReadSet(char *filename)
 
 	//printf("Sequence %li has length %li\n", sequenceIndex, bpCount);
 	reads->sequences[sequenceIndex] =
-	    malloc(sizeof(char) * (bpCount + 1));
-	if (reads->sequences[sequenceIndex] == NULL) {
-		puts("Malloc failures");
-		exit(1);
-	}
+	    mallocOrExit(bpCount + 1, char);
 	fclose(file);
 
 	// Reopen file and memorize line:
@@ -1392,15 +1221,11 @@ void logInstructions(int argc, char **argv, char *directory)
 {
 	int index;
 	char *logFilename =
-	    malloc((strlen(directory) + 100) * sizeof(char));
+	    mallocOrExit(strlen(directory) + 100, char);
 	FILE *logFile;
 	time_t date;
 	char *string;
 
-	if (logFilename == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
 	time(&date);
 	string = ctime(&date);
 
@@ -1408,11 +1233,9 @@ void logInstructions(int argc, char **argv, char *directory)
 	strcat(logFilename, "/Log");
 	logFile = fopen(logFilename, "a");
 
-	if (logFile == NULL) {
-		printf("Could not open file %s, exiting...\n",
+	if (logFile == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not open file %s, exiting...\n",
 		       logFilename);
-		exit(0);
-	}
 
 	fprintf(logFile, "%s", string);
 
@@ -1464,14 +1287,9 @@ void destroyReadSet(ReadSet * reads)
 
 Coordinate *getSequenceLengths(ReadSet * reads, int wordLength)
 {
-	Coordinate *lengths = calloc(reads->readCount, sizeof(Coordinate));
+	Coordinate *lengths = callocOrExit(reads->readCount, Coordinate);
 	IDnum index;
 	int lengthOffset = wordLength - 1;
-
-	if (lengths == NULL && reads->readCount > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
 
 	for (index = 0; index < reads->readCount; index++)
 		lengths[index] =
@@ -1492,10 +1310,8 @@ Coordinate *getSequenceLengthsFromFile(char *filename, int wordLength)
 
 	if (file != NULL)
 		printf("Reading read set file %s;\n", filename);
-	else {
-		printf("Could not open %s\n", filename);
-		exit(0);
-	}
+	else 
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	// Count number of separate sequences
 	sequenceCount = 0;
@@ -1504,11 +1320,7 @@ Coordinate *getSequenceLengthsFromFile(char *filename, int wordLength)
 			sequenceCount++;
 	fclose(file);
 
-	lengths = calloc(sequenceCount, sizeof(Coordinate));
-	if (lengths == NULL && sequenceCount > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	lengths = callocOrExit(sequenceCount, Coordinate);
 	// Counting base pair length of each sequence:
 	file = fopen(filename, "r");
 	sequenceIndex = -1;

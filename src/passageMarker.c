@@ -26,6 +26,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "recycleBin.h"
 #include "passageMarker.h"
 #include "tightString.h"
+#include "utility.h"
 
 struct passage_st {
 	IDnum sequenceID;
@@ -229,11 +230,7 @@ connectPassageMarkers(PassageMarker * previous, PassageMarker * next,
 
 char *readPassageMarker(PassageMarker * marker)
 {
-	char *s = malloc(100 * sizeof(char));
-	if (s == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	char *s = mallocOrExit(100, char);
 
 	if (marker == NULL)
 		return s;
@@ -269,12 +266,7 @@ char *readPassageMarkerSequence(PassageMarker * marker,
 	if (marker == NULL)
 		return s;
 
-	s = malloc((getPassageMarkerLength(marker) + 1) * sizeof(char));
-
-	if (s == NULL) {
-		puts("Memory failure!");
-		abort();
-	}
+	s = mallocOrExit(getPassageMarkerLength(marker) + 1, char);
 
 	if (getPassageMarkerSequenceID(marker) > 0)
 		for (i = 0; i < getPassageMarkerLength(marker); i++)

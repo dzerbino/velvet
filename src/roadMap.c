@@ -27,6 +27,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "recycleBin.h"
 #include "tightString.h"
 #include "roadMap.h"
+#include "utility.h"
 
 #ifndef NULL
 #define NULL 0
@@ -52,7 +53,7 @@ struct roadmap_st {
 // Creates empty RoadMap
 RoadMap *newRoadMap()
 {
-	return calloc(1, sizeof(RoadMap));
+	return callocOrExit(1, RoadMap);
 }
 
 IDnum getAnnotationCount(RoadMap * rdmap)
@@ -94,21 +95,16 @@ RoadMapArray *importRoadMapArray(char *filename)
 {
 	FILE *file;
 	const int maxline = 100;
-	char *line = malloc(sizeof(char) * maxline);
+	char *line = mallocOrExit(maxline, char);
 	RoadMap *array;
 	RoadMap *rdmap = NULL;
 	IDnum rdmapIndex = 0;
 	IDnum seqID;
 	Coordinate position, start, finish;
 	Annotation *nextAnnotation;
-	RoadMapArray *result = malloc(sizeof(RoadMapArray));
+	RoadMapArray *result = mallocOrExit(1, RoadMapArray);
 	IDnum sequenceCount;
 	IDnum annotationCount = 0;
-
-	if (line == NULL || result == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
 
 	printf("Reading roadmap file %s\n", filename);
 
@@ -116,22 +112,14 @@ RoadMapArray *importRoadMapArray(char *filename)
 	fgets(line, maxline, file);
 	sscanf(line, "%li\t%i\n", &sequenceCount, &(result->WORDLENGTH));
 	result->length = sequenceCount;
-	array = malloc(sequenceCount * sizeof(RoadMap));
-	if (array == NULL && sequenceCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	array = mallocOrExit(sequenceCount, RoadMap);
 	result->array = array;
 
 	while (fgets(line, maxline, file) != NULL)
 		if (line[0] != 'R')
 			annotationCount++;
 
-	result->annotations = calloc(annotationCount, sizeof(Annotation));
-	if (result->annotations == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	result->annotations = callocOrExit(annotationCount, Annotation);
 	nextAnnotation = result->annotations;
 	fclose(file);
 

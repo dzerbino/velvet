@@ -23,6 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #include  "globals.h"
 #include "dfib.h"
+#include "utility.h"
 
 // Return number of elements stored in heap
 IDnum getDFibHeapSize(DFibHeap * heap)
@@ -34,7 +35,11 @@ IDnum getDFibHeapSize(DFibHeap * heap)
 // Memory allocated
 DFibHeap *newDFibHeap()
 {
-	return dfh_makekeyheap();
+	DFibHeap* dheap = dfh_makekeyheap();
+	if (dheap == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Can't allocate DFibHeap");
+
+	return dheap;
 }
 
 // Add new node into heap with a key, and a pointer to the specified node

@@ -22,9 +22,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define _SHORTREADPAIRS_H_
 
 void exploitShortReadPairs(Graph * graph, ReadSet * reads,
-			   boolean * dubious, double exp_cov,
-			   boolean force_jumps);
-void printfScaffolds(Graph * argGraph, IDnum * readPairs);
+			   boolean * dubious, boolean force_jumps);
 void detachImprobablePairs(ReadSet * sequences, Graph * graph);
 void handicapNode(Node * node);
 NodeList *getMarkedNodeList();

@@ -27,6 +27,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "recycleBin.h"
 #include "tightString.h"
 #include "passageMarker.h"
+#include "utility.h"
 
 #define ADENINE 0
 #define CYTOSINE 1
@@ -559,11 +560,7 @@ static Nucleotide getNucleotideInDescriptor(Descriptor * descriptor,
 
 char *readNode(Node * node)
 {
-	char *s = calloc(1000000, sizeof(char));
-	if (s == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	char *s = callocOrExit(1000000, char);
 	char tmpString[100000];
 	Descriptor *descriptor = node->descriptor;
 	Nucleotide nucleotide;
@@ -818,13 +815,8 @@ static inline Descriptor *mergeDescriptors(Descriptor * descr,
 	Descriptor *readPtr, *writePtr;
 	Descriptor readCopy;
 	int readOffset, writeOffset;
-	Descriptor *new = calloc(arrayLength, sizeof(Descriptor));
+	Descriptor *new = callocOrExit(arrayLength, Descriptor);
 	Coordinate index;
-
-	if (new == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
 
 	readPtr = descr;
 	readCopy = *readPtr;
@@ -901,18 +893,10 @@ static void addBufferToDescriptor(Node * node, Coordinate length)
 		if (length % 4 != 0)
 			arrayLength++;
 
-		node->descriptor = calloc(arrayLength, sizeof(Descriptor));
-		if (node->descriptor == NULL && arrayLength > 0) {
-			puts("Calloc failure");
-			exit(1);
-		}
+		node->descriptor = callocOrExit(arrayLength, Descriptor);
 		node->length = length;
 		twinNode->descriptor =
-		    calloc(arrayLength, sizeof(Descriptor));;
-		if (twinNode->descriptor == NULL && arrayLength > 0) {
-			puts("Calloc failure");
-			exit(1);
-		}
+		    callocOrExit(arrayLength, Descriptor);
 		twinNode->length = length;
 		return;
 	}
@@ -924,11 +908,7 @@ static void addBufferToDescriptor(Node * node, Coordinate length)
 
 	// Merging forward descriptors
 	node->descriptor =
-	    realloc(node->descriptor, arrayLength * sizeof(Descriptor));
-	if (node->descriptor == NULL && arrayLength > 0) {
-		puts("Realloc failed (B)");
-		exit(1);
-	}
+	    reallocOrExit(node->descriptor, arrayLength, Descriptor);
 
 	for (index = node->length; index < newLength; index++)
 		writeNucleotideInDescriptor(ADENINE, node->descriptor,
@@ -937,11 +917,7 @@ static void addBufferToDescriptor(Node * node, Coordinate length)
 
 	// Merging reverse descriptors
 	old_descriptor = twinNode->descriptor;
-	twinNode->descriptor = calloc(arrayLength, sizeof(Descriptor));
-	if (twinNode->descriptor == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	twinNode->descriptor = callocOrExit(arrayLength, Descriptor);
 	for (index = 0; index < twinNode->length; index++)
 		writeNucleotideInDescriptor(getNucleotideInDescriptor
 					    (old_descriptor, index),
@@ -1087,17 +1063,12 @@ static Descriptor *appendSequenceToDescriptor(Descriptor * descr,
 					      boolean downStream)
 {
 	int writeOffset = 0;
-	Descriptor *new = calloc(arrayLength, sizeof(Descriptor));
+	Descriptor *new = callocOrExit(arrayLength, Descriptor);
 	Descriptor *writePtr = new;
 	TightString *sequence;
 	IDnum sequenceID = getPassageMarkerSequenceID(marker);
 	Coordinate start = getPassageMarkerStart(marker);
 	Coordinate finish = getPassageMarkerFinish(marker);
-
-	if (new == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
 
 	if (sequenceID > 0)
 		sequence = sequences[sequenceID - 1];
@@ -1244,42 +1215,28 @@ void renumberNodes(Graph * graph)
 			    graph->nodeReadCounts[nodeIndex];
 		}
 	}
+
 	// Rellocating node space
 	graph->nodeCount -= counter;
 	graph->nodes =
-	    realloc(graph->nodes, (graph->nodeCount + 1) * sizeof(Node *));
-	if (graph->nodes == NULL) {
-		puts("Realloc failed (C)");
-		exit(1);
-	}
+	    reallocOrExit(graph->nodes, graph->nodeCount + 1, Node *);
+
 	// Reallocating short read marker arrays
 	if (graph->nodeReads != NULL) {
 		graph->nodeReads =
-		    realloc(graph->nodeReads,
-			    (2 * graph->nodeCount +
-			     1) * sizeof(ShortReadMarker *));
-		if (graph->nodeReads == NULL) {
-			puts("Realloc failed (D)");
-			exit(1);
-		}
+		    reallocOrExit(graph->nodeReads,
+			    2 * graph->nodeCount +
+			     1, ShortReadMarker *);
 		graph->nodeReadCounts =
-		    realloc(graph->nodeReadCounts,
-			    (2 * graph->nodeCount + 1) * sizeof(IDnum));
-		if (graph->nodeReadCounts == NULL) {
-			puts("Realloc failed (E)");
-			exit(1);
-		}
+		    reallocOrExit(graph->nodeReadCounts,
+			    2 * graph->nodeCount + 1, IDnum);
 	}
+
 	// Reallocating gap marker table
-	if (graph->gapMarkers != NULL) {
-		graph->gapMarkers = realloc(graph->gapMarkers,
-					    (graph->nodeCount +
-					     1) * sizeof(GapMarker *));
-		if (graph->gapMarkers == NULL) {
-			puts("Realloc failed (G)");
-			exit(1);
-		}
-	}
+	if (graph->gapMarkers != NULL)
+		graph->gapMarkers = reallocOrExit(graph->gapMarkers,
+					    graph->nodeCount +
+					     1, GapMarker *);
 
 	printf("Removed %li null nodes\n", counter);
 }
@@ -1316,11 +1273,7 @@ void splitNodeDescriptor(Node * source, Node * target, Coordinate offset)
 
 	if (target != NULL) {
 		// Target node .. forwards
-		new = malloc(arrayLength * sizeof(Descriptor));
-		if (new == NULL && arrayLength > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		new = mallocOrExit(arrayLength, Descriptor);
 		target->descriptor = new;
 		for (index = 0; index < backLength; index++) {
 			nucleotide =
@@ -1341,11 +1294,7 @@ void splitNodeDescriptor(Node * source, Node * target, Coordinate offset)
 
 	// target node other way
 	descriptor = source->twinNode->descriptor;
-	new = malloc(arrayLength * sizeof(Descriptor));
-	if (new == NULL && arrayLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	new = mallocOrExit(arrayLength, Descriptor);
 	target->twinNode->descriptor = new;
 
 	for (index = offset; index < originalLength; index++) {
@@ -1477,11 +1426,7 @@ void reassessArcMultiplicities(Graph * graph)
 // Allocate memory for an empty graph created with sequenceCount different sequences
 Graph *emptyGraph(IDnum sequenceCount, int wordLength)
 {
-	Graph *newGraph = malloc(sizeof(Graph));
-	if (newGraph == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	Graph *newGraph = mallocOrExit(1, Graph);
 	newGraph->sequenceCount = sequenceCount;
 	newGraph->arcLookupTable = NULL;
 	newGraph->nodeReads = NULL;
@@ -1507,11 +1452,7 @@ static Descriptor *newPositiveDescriptor(IDnum sequenceID,
 	if (length % 4 > 0)
 		arrayLength++;
 
-	res = malloc(arrayLength * sizeof(Descriptor));
-	if (res == NULL && arrayLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	res = mallocOrExit(arrayLength, Descriptor);
 
 	for (index = 0; index < length; index++) {
 		nucleotide =
@@ -1539,11 +1480,7 @@ static Descriptor *newNegativeDescriptor(IDnum sequenceID,
 	if (length % 4 > 0)
 		arrayLength++;
 
-	res = malloc(arrayLength * sizeof(Descriptor));
-	if (res == NULL && arrayLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	res = mallocOrExit(arrayLength, Descriptor);
 
 	for (index = 0; index < length; index++) {
 		nucleotide = getNucleotide(start - index, tString);
@@ -1622,11 +1559,7 @@ Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
 
 void allocateNodeSpace(Graph * graph, IDnum nodeCount)
 {
-	graph->nodes = calloc(nodeCount + 1, sizeof(Node *));
-	if (graph->nodes == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	graph->nodes = callocOrExit(nodeCount + 1, Node *);
 	graph->nodeCount = nodeCount;
 }
 
@@ -1799,11 +1732,7 @@ void activateArcLookupTable(Graph * graph)
 
 	puts("Activating arc lookup table");
 
-	graph->arcLookupTable = calloc(6 * nodes + 1, sizeof(Arc *));
-	if (graph->arcLookupTable == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	graph->arcLookupTable = callocOrExit(6 * nodes + 1, Arc *);
 
 	table = graph->arcLookupTable;
 
@@ -2124,7 +2053,7 @@ void sortGapMarkers(Graph * graph)
 	IDnum index;
 	Node *node;
 
-	if (graph->gapMarkers == NULL) 
+	if (graph->gapMarkers == NULL)
 		return;
 
 	for (index = 1; index <= nodeCount(graph); index++) {
@@ -2239,10 +2168,8 @@ Graph *importGraph(char *filename)
 	ShortLength length;
 	Category cat;
 
-	if (file == NULL) {
-		printf("Could not open %s, sorry\n", filename);
-		exit(1);
-	}
+	if (file == NULL) 
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
 
 	printf("Reading graph file %s\n", filename);
 
@@ -2276,11 +2203,7 @@ Graph *importGraph(char *filename)
 		if (node->length % 4 > 0)
 			arrayLength++;
 		node->descriptor =
-		    malloc(arrayLength * sizeof(Descriptor));
-		if (node->descriptor == NULL && arrayLength > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(arrayLength, Descriptor);
 
 		for (index = 0; index < node->length; index++) {
 			if (line[index] == 'A')
@@ -2309,11 +2232,7 @@ Graph *importGraph(char *filename)
 		fgets(line, maxline, file);
 		twin->length = (long) strlen(line) - 1;
 		twin->descriptor =
-		    malloc(arrayLength * sizeof(Descriptor));
-		if (twin->descriptor == NULL && arrayLength > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(arrayLength, Descriptor);
 		for (index = 0; index < twin->length; index++) {
 			if (line[index] == 'A')
 				writeNucleotideInDescriptor(ADENINE,
@@ -2368,7 +2287,7 @@ Graph *importGraph(char *filename)
 				printf
 				    ("ERROR: reading in graph - only %d items read for line '%s'",
 				     sCount, line);
-				exit(99);
+				exit(1);
 			}
 			newMarker =
 			    newPassageMarker(seqID, start, finish,
@@ -2391,11 +2310,7 @@ Graph *importGraph(char *filename)
 
 		graph->nodeReadCounts[nodeID + graph->nodeCount] =
 		    readCount;
-		array = malloc(readCount * sizeof(ShortReadMarker));
-		if (array == NULL && readCount > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		array = mallocOrExit(readCount, ShortReadMarker);
 		graph->nodeReads[nodeID + graph->nodeCount] = array;
 
 		readCount = 0;
@@ -2434,10 +2349,8 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	int wordLength;
 	size_t arrayLength;
 
-	if (file == NULL) {
-		printf("Could not open %s, sorry\n", preGraphFilename);
-		exit(1);
-	}
+	if (file == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", preGraphFilename);
 
 	printf("Reading pre-graph file %s\n", preGraphFilename);
 
@@ -2467,11 +2380,7 @@ Graph *readPreGraphFile(char *preGraphFilename)
 		if (node->length % 4 > 0)
 			arrayLength++;
 		node->descriptor =
-		    malloc(arrayLength * sizeof(Descriptor));
-		if (node->descriptor == NULL && arrayLength > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(arrayLength, Descriptor);
 
 		for (index = 0; index < nodeLength; index++) {
 			readIndex = index + wordLength - 1;
@@ -2501,11 +2410,7 @@ Graph *readPreGraphFile(char *preGraphFilename)
 		twin = node->twinNode;
 		twin->length = nodeLength;
 		twin->descriptor =
-		    malloc(arrayLength * sizeof(Descriptor));
-		if (twin->descriptor == NULL && arrayLength > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(arrayLength, Descriptor);
 
 		for (index = 0; index < nodeLength; index++) {
 			readIndex = nodeLength - index - 1;
@@ -2643,11 +2548,6 @@ TightString *expandNode(Node * node, int WORDLENGTH)
 	Node *twin = node->twinNode;
 	Coordinate length = node->length;
 
-	if (tString == NULL) {
-		puts("Memory failure!");
-		exit(-1);
-	}
-
 	for (index = 0; index < WORDLENGTH; index++) {
 		nucleotide =
 		    getNucleotideInDescriptor(twin->descriptor,
@@ -2676,12 +2576,7 @@ char *expandNodeFragment(Node * node, Coordinate contigStart,
 	Coordinate index;
 	Node *twin = node->twinNode;
 	Coordinate length = contigFinish - contigStart;
-	char *string = calloc(length + WORDLENGTH, sizeof(char));
-
-	if (string == NULL) {
-		puts("Memory failure!");
-		exit(-1);
-	}
+	char *string = callocOrExit(length + WORDLENGTH, char);
 
 	if (length < WORDLENGTH - 1) {
 		puts("Overly short contig!");
@@ -2746,13 +2641,9 @@ boolean readStartsAreActivated(Graph * graph)
 void activateReadStarts(Graph * graph)
 {
 	graph->nodeReads =
-	    calloc((2 * graph->nodeCount + 1), sizeof(ShortReadMarker *));
+	    callocOrExit(2 * graph->nodeCount + 1, ShortReadMarker *);
 	graph->nodeReadCounts =
-	    calloc((2 * graph->nodeCount + 1), sizeof(IDnum));
-	if (graph->nodeReads == NULL || graph->nodeReadCounts == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	    callocOrExit(2 * graph->nodeCount + 1, IDnum);
 }
 
 void deactivateReadStarts(Graph * graph)
@@ -2828,13 +2719,8 @@ void createNodeReadStartArrays(Graph * graph)
 	for (index = 0; index <= 2 * (graph->nodeCount); index++) {
 		if (graph->nodeReadCounts[index] != 0) {
 			graph->nodeReads[index] =
-			    malloc(graph->nodeReadCounts[index] *
-				   sizeof(ShortReadMarker));
-			if (graph->nodeReads[index] == NULL
-			    && graph->nodeReadCounts[index] > 0) {
-				puts("Malloc failure");
-				exit(1);
-			}
+			    mallocOrExit(graph->nodeReadCounts[index],
+				   ShortReadMarker);
 			graph->nodeReadCounts[index] = 0;
 		} else {
 			graph->nodeReads[index] = NULL;
@@ -2921,12 +2807,8 @@ ShortReadMarker *commonNodeReads(Node * nodeA, Node * nodeB, Graph * graph,
 	}
 
 	mergeArray =
-	    malloc((sourceLength +
-		    targetLength) * sizeof(ShortReadMarker));
-	if (mergeArray == NULL && sourceLength + targetLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(sourceLength +
+		    targetLength, ShortReadMarker);
 
 	mergeLength = 0;
 	sourceIndex = 0;
@@ -3055,16 +2937,8 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 		sourcePtr++;
 	}
 
-	newArray = malloc(newLength * sizeof(ShortReadMarker));
-	if (newArray == NULL && newLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
-	mergeArray = malloc(mergeLength * sizeof(ShortReadMarker));
-	if (mergeArray == NULL && mergeLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	newArray = mallocOrExit(newLength, ShortReadMarker);
+	mergeArray = mallocOrExit(mergeLength, ShortReadMarker);
 
 	mergePtr = mergeArray;
 	newPtr = newArray;
@@ -3194,16 +3068,8 @@ ShortReadMarker *extractBackOfNodeReads(Node * node, Coordinate breakpoint,
 		sourcePtr++;
 	}
 
-	newArray = malloc(newLength * sizeof(ShortReadMarker));
-	if (newArray == NULL && newLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
-	mergeArray = malloc(mergeLength * sizeof(ShortReadMarker));
-	if (mergeArray == NULL && mergeLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	newArray = mallocOrExit(newLength, ShortReadMarker);
+	mergeArray = mallocOrExit(mergeLength, ShortReadMarker);
 
 	mergePtr = mergeArray;
 	newPtr = newArray;
@@ -3301,11 +3167,7 @@ void spreadReadIDs(ShortReadMarker * reads, IDnum readCount, Node * node,
 
 	if (targetArray == NULL) {
 		mergeArray =
-		    malloc(sourceLength * sizeof(ShortReadMarker));
-		if (mergeArray == NULL && sourceLength > 0) {
-			puts("Malloc failure");
-			exit(1);
-		}
+		    mallocOrExit(sourceLength, ShortReadMarker);
 		mergePtr = mergeArray;
 
 		sourceIndex = 0;
@@ -3324,12 +3186,8 @@ void spreadReadIDs(ShortReadMarker * reads, IDnum readCount, Node * node,
 	}
 
 	mergeArray =
-	    malloc((sourceLength +
-		    targetLength) * sizeof(ShortReadMarker));
-	if (mergeArray == NULL && sourceLength + targetLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(sourceLength +
+		    targetLength, ShortReadMarker);
 	mergePtr = mergeArray;
 
 	mergeLength = 0;
@@ -3444,12 +3302,8 @@ void injectShortReads(ShortReadMarker * sourceArray, IDnum sourceLength,
 	}
 
 	mergeArray =
-	    malloc((sourceLength +
-		    targetLength) * sizeof(ShortReadMarker));
-	if (mergeArray == NULL && sourceLength + targetLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(sourceLength +
+		    targetLength, ShortReadMarker);
 	mergePtr = mergeArray;
 
 	mergeLength = 0;
@@ -3608,19 +3462,11 @@ void foldSymmetricalNodeReads(Node * node, Graph * graph)
 		return;
 
 	mergeArray =
-	    malloc((sourceLength +
-		    targetLength) * sizeof(ShortReadMarker));
-	if (mergeArray == NULL && sourceLength + targetLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(sourceLength +
+		    targetLength, ShortReadMarker);
 	mergeArray2 =
-	    malloc((sourceLength +
-		    targetLength) * sizeof(ShortReadMarker));
-	if (mergeArray2 == NULL && sourceLength + targetLength > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(sourceLength +
+		    targetLength, ShortReadMarker);
 	mergePtr = mergeArray;
 	mergePtr2 = mergeArray2;
 
@@ -3881,11 +3727,7 @@ double getInsertLength_var(Graph * graph, Category cat)
 void activateGapMarkers(Graph * graph)
 {
 	graph->gapMarkers =
-	    calloc(graph->nodeCount + 1, sizeof(GapMarker *));
-	if (graph->gapMarkers == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	    callocOrExit(graph->nodeCount + 1, GapMarker *);
 	gapMarkerMemory = newRecycleBin(sizeof(GapMarker), GAPBLOCKSIZE);
 }
 

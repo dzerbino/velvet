@@ -18,13 +18,20 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
+#include <stdlib.h>
+
 #include "fib.h"
+#include "utility.h"
 
 // Constructor
 // Memory allocated
 FibHeap *newFibHeap()
 {
-	return fh_makekeyheap();
+	FibHeap * heap = fh_makekeyheap();
+	if (heap == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Can't allocate FibHeap");
+	
+	return heap;
 }
 
 // Add new node into heap with a key, and a pointer to the specified node

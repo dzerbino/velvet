@@ -23,6 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 
 #include "globals.h"
+#include "utility.h"
 
 typedef unsigned char Codon;
 
@@ -145,11 +146,7 @@ void writeNucleotide(Nucleotide nucleotide, Codon * codonPtr, int position)
 //
 TightString *newTightStringFromString(char *sequence)
 {
-	TightString *newTString = malloc(sizeof(TightString));
-	if (newTString == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	TightString *newTString = mallocOrExit(1, TightString);
 
 	int size = (int) strlen(sequence);
 	int arrayLength = size / 4;
@@ -160,12 +157,7 @@ TightString *newTightStringFromString(char *sequence)
 
 	newTString->length = size;
 	newTString->arrayLength = arrayLength;
-	newTString->sequence = calloc(arrayLength, sizeof(Codon));
-
-	if (newTString->sequence == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	newTString->sequence = callocOrExit(arrayLength, Codon);
 
 	for (index = 0; index < arrayLength; index++)
 		newTString->sequence[index] = 0;
@@ -187,11 +179,7 @@ TightString **newTightStringArrayFromStringArray(char **sequences,
 {
 	IDnum sequenceIndex;
 	TightString **tStringArray =
-	    malloc(sizeof(TightString *) * sequenceCount);
-	if (tStringArray == NULL && sequenceCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(sequenceCount, TightString *);
 
 	for (sequenceIndex = 0; sequenceIndex < sequenceCount;
 	     sequenceIndex++)
@@ -225,20 +213,12 @@ char *readTightString(TightString * tString)
 	Codon codon;
 
 	if (tString == NULL || tString->length == 0) {
-		string = calloc(5, sizeof(char));
-		if (string == NULL) {
-			puts("Calloc failure");
-			exit(1);
-		}
+		string = callocOrExit(5, char);
 		strcpy(string, "VOID");
 		return string;
 	}
 
-	string = calloc(tString->length + 1, sizeof(char));
-	if (string == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	string = callocOrExit(tString->length + 1, char);
 
 	for (index = 0; index < tString->length / 4; index++) {
 		index4 = index << 2;
@@ -366,22 +346,13 @@ TightString *newTightString(Coordinate length)
 {
 	Coordinate arrayLength = length / 4;
 	Coordinate index;
-	TightString *newTString = malloc(sizeof(TightString));
-	if (newTString == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	TightString *newTString = mallocOrExit(1, TightString);
 	if (length % 4 > 0)
 		arrayLength++;
 
 	newTString->length = length;
 	newTString->arrayLength = arrayLength;
-	newTString->sequence = calloc(arrayLength, sizeof(Codon));
-
-	if (newTString->sequence == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	newTString->sequence = callocOrExit(arrayLength, Codon);
 
 	for (index = 0; index < arrayLength; index++)
 		newTString->sequence[index] = 0;
@@ -403,17 +374,14 @@ writeNucleotideAtPosition(Nucleotide nucleotide, Coordinate position,
 
 void trimTightString(TightString * tString, Coordinate length)
 {
-	Codon *tmpPtr;
 	Coordinate newArrayLength = length / 4;
 	if (length % 4 == 0)
 		newArrayLength++;
 
 	tString->length = length;
 	tString->arrayLength = newArrayLength;
-	tmpPtr =
-	    realloc(tString->sequence, newArrayLength * sizeof(Codon));
-	if (tmpPtr != NULL)
-		tString->sequence = tmpPtr;
+	tString->sequence = 
+	    reallocOrExit(tString->sequence, newArrayLength, Codon);
 }
 
 Coordinate getLength(TightString * tString)
@@ -435,11 +403,7 @@ TightString **concatenateTightStringArrays(TightString ** array1,
 		return array1;
 
 	unionArray =
-	    realloc(array1, sizeof(TightString *) * (size1 + size2));
-	if (unionArray == NULL) {
-		puts("Reallocation failed!");
-		exit(1);
-	}
+	    reallocOrExit(array1, size1 + size2, TightString *);
 
 	for (index = 0; index < size2; index++)
 		unionArray[size1 + index] = array2[index];
@@ -493,14 +457,9 @@ void setTightStringLength(TightString * tString, Coordinate length)
 
 	if (newArrayLength > tString->arrayLength) {
 		tString->sequence =
-		    realloc(tString->sequence,
-			    newArrayLength * sizeof(Codon));
+		    reallocOrExit(tString->sequence,
+			    newArrayLength, Codon);
 		tString->arrayLength = newArrayLength;
-	}
-
-	if (tString->sequence == NULL) {
-		puts("Allocation error!");
-		exit(0);
 	}
 
 	tString->length = length;

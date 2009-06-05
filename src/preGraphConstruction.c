@@ -29,6 +29,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "roadMap.h"
 #include "readSet.h"
 #include "concatenatedPreGraph.h"
+#include "utility.h"
 
 #define ADENINE 0
 #define CYTOSINE 1
@@ -96,11 +97,7 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 	InsertionMarker *nextMarker, *newMarker;
 	IDnum annotIndex, lastAnnotIndex;
 	InsertionMarker **insMarkers =
-	    calloc(rdmaps->length + 1, sizeof(InsertionMarker *));
-	if (insMarkers == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	    callocOrExit(rdmaps->length + 1, InsertionMarker *);
 	// Counting insertion markers
 	for (sequenceIndex = 1; sequenceIndex < sequenceCounter + 1;
 	     sequenceIndex++) {
@@ -336,10 +333,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	IDnum annotIndex, lastAnnotIndex;
 	IDnum markerIndex, lastMarkerIndex;
 
-	if (file == NULL) {
-		printf("Could not read %s, sorry\n", sequenceFilename);
-		exit(1);
-	}
+	if (file == NULL) 
+		exitErrorf(EXIT_FAILURE, true, "Could not read %s, sorry\n", sequenceFilename);
 	// Reading sequence descriptor in first line
 	fgets(line, lineLength, file);
 
@@ -474,7 +469,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 						printf
 						    ("Irregular sequence file: are you sure your Sequence and Roadmap file come from the same source?\n");
 						fflush(stdout);
-						exit(0);
+						exit(1);
 					}
 				}
 
@@ -661,15 +656,10 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 {
 	int WORDLENGTH = rdmapArray->WORDLENGTH;
 	IDnum sequenceCount = rdmapArray->length;
-	IDnum *markerCounters = calloc((sequenceCount + 1), sizeof(IDnum));
-	IDnum *chains = calloc((sequenceCount + 1), sizeof(IDnum));
+	IDnum *markerCounters = callocOrExit(sequenceCount + 1, IDnum);
+	IDnum *chains = callocOrExit(sequenceCount + 1, IDnum);
 	InsertionMarker *insertionMarkers;
 	InsertionMarker *veryLastMarker;
-
-	if (markerCounters == NULL || chains == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
 
 	PreGraph *preGraph =
 	    emptyPreGraph_pg(sequenceCount, rdmapArray->WORDLENGTH);

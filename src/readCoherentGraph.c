@@ -119,7 +119,7 @@ boolean isUniqueSolexa(Node * node)
 	}
 }
 
-static void identifyUniqueNodes( boolean (*isUniqueFunction)(Node*))
+static void identifyUniqueNodes(boolean(*isUniqueFunction) (Node *))
 {
 	IDnum index;
 	Node *node;
@@ -161,7 +161,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 	// Checking for multiple destinations
 	for (startMarker = getMarker(startingNode); startMarker != NULL;
 	     startMarker = getNextInNode(startMarker)) {
-		if (getFinishOffset(startMarker) > 2 * getWordLength(graph))
+		if (getFinishOffset(startMarker) >
+		    2 * getWordLength(graph))
 			continue;
 
 		for (currentMarker = getNextInSequence(startMarker);
@@ -170,7 +171,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 			if (!getUniqueness(getNode(currentMarker))) {
 				continue;
 			} else if (getNodeStatus(getNode(currentMarker))) {
-				if (getStartOffset(currentMarker) > 2 * getWordLength(graph))
+				if (getStartOffset(currentMarker) >
+				    2 * getWordLength(graph))
 					break;
 				for (newList = list; newList != NULL;
 				     newList = newList->next) {
@@ -184,7 +186,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 					abort();
 				break;
 			} else {
-				if (getStartOffset(currentMarker) > 2 * getWordLength(graph)) 
+				if (getStartOffset(currentMarker) >
+				    2 * getWordLength(graph))
 					break;
 				setSingleNodeStatus(getNode(currentMarker),
 						    true);
@@ -219,16 +222,17 @@ static boolean uniqueNodesConnect(Node * startingNode)
 		return false;
 	}
 
-	if ( destination == NULL || destination == startingNode
-	     || destination == getTwinNode(startingNode)) {
+	if (destination == NULL || destination == startingNode
+	    || destination == getTwinNode(startingNode)) {
 		nullCounter++;
 		return false;
-	} 
-
+	}
 	// Check for reciprocity
-	for (startMarker = getMarker(getTwinNode(destination)); startMarker != NULL;
+	for (startMarker = getMarker(getTwinNode(destination));
+	     startMarker != NULL;
 	     startMarker = getNextInNode(startMarker)) {
-		if (getFinishOffset(startMarker) > 2 * getWordLength(graph))
+		if (getFinishOffset(startMarker) >
+		    2 * getWordLength(graph))
 			continue;
 
 		for (currentMarker = getNextInSequence(startMarker);
@@ -237,7 +241,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 			if (!getUniqueness(getNode(currentMarker))) {
 				continue;
 			} else if (getNodeStatus(getNode(currentMarker))) {
-				if (getStartOffset(currentMarker) > 2 * getWordLength(graph))
+				if (getStartOffset(currentMarker) >
+				    2 * getWordLength(graph))
 					break;
 				for (newList = list; newList != NULL;
 				     newList = newList->next) {
@@ -251,7 +256,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 					abort();
 				break;
 			} else {
-				if (getStartOffset(currentMarker) > 2 * getWordLength(graph))
+				if (getStartOffset(currentMarker) >
+				    2 * getWordLength(graph))
 					break;
 				setSingleNodeStatus(getNode(currentMarker),
 						    true);
@@ -269,7 +275,7 @@ static boolean uniqueNodesConnect(Node * startingNode)
 		newList = list;
 		list = newList->next;
 		setSingleNodeStatus(newList->node, false);
-		if (newList->multiplicity >= MULTIPLICITY_CUTOFF 
+		if (newList->multiplicity >= MULTIPLICITY_CUTOFF
 		    && newList->node != getTwinNode(startingNode))
 			multipleHits = true;
 		deallocateConnection(newList);
@@ -280,14 +286,13 @@ static boolean uniqueNodesConnect(Node * startingNode)
 		setUniqueness(destination, false);
 		return false;
 	}
-
 	// Aligning long reads to each other:
 	// TODO 
 
 	// Merge pairwise alignments and produce consensus
 	// TODO
 
-	return true; 
+	return true;
 }
 
 static boolean goesToNode(PassageMarker * marker, Node * node)
@@ -320,7 +325,8 @@ static void updateMembers(Node * bypass, Node * nextNode)
 		} else if (getUniqueness(nextNode)
 			   && goesToNode(marker, nextNode)) {
 			// Marker goes indirectly to target
-			while (getNode(getNextInSequence(marker)) != nextNode) {
+			while (getNode(getNextInSequence(marker)) !=
+			       nextNode) {
 				next = getNextInSequence(marker);
 				disconnectNextPassageMarker(marker, graph);
 				destroyPassageMarker(next);
@@ -382,9 +388,9 @@ static Node *bypass()
 {
 	Node *bypass = getNode(path);
 	Node *next = NULL;
-	Arc * arc;
+	Arc *arc;
 	Category cat;
-	PassageMarker * nextMarker;
+	PassageMarker *nextMarker;
 
 	// Remove unwanted arcs
 	while (getArc(bypass) != NULL)
@@ -401,7 +407,7 @@ static Node *bypass()
 			next = getNode(nextMarker);
 		}
 
-		if (next == NULL) 
+		if (next == NULL)
 			return bypass;
 
 		// Overall node update 
@@ -414,13 +420,16 @@ static Node *bypass()
 			// Update virtual coverage
 			for (cat = 0; cat < CATEGORIES; cat++)
 				incrementVirtualCoverage(bypass, cat,
-							 getVirtualCoverage(next, cat));
+							 getVirtualCoverage
+							 (next, cat));
 
 			// Update original virtual coverage
 			for (cat = 0; cat < CATEGORIES; cat++)
-				incrementOriginalVirtualCoverage(bypass, cat,
+				incrementOriginalVirtualCoverage(bypass,
+								 cat,
 								 getOriginalVirtualCoverage
-								 (next, cat));
+								 (next,
+								  cat));
 			appendDescriptors(bypass, next);
 		}
 
@@ -428,12 +437,12 @@ static Node *bypass()
 		updateMembers(bypass, next);
 
 		// Termination 
-		if (isTerminal(path) || getUniqueness(next)) 
+		if (isTerminal(path) || getUniqueness(next))
 			break;
 	}
 
 	// DEBUG 
-	if (next == bypass || next == getTwinNode(bypass)) 
+	if (next == bypass || next == getTwinNode(bypass))
 		abort();
 
 	// Remove unique groupies from arrival 
@@ -444,9 +453,11 @@ static Node *bypass()
 		if (getDestination(arc) == next)
 			continue;
 		else if (getDestination(arc) == getTwinNode(next))
-			createAnalogousArc(bypass, getTwinNode(bypass), arc, graph); 
+			createAnalogousArc(bypass, getTwinNode(bypass),
+					   arc, graph);
 		else
-			createAnalogousArc(bypass, getDestination(arc), arc, graph); 
+			createAnalogousArc(bypass, getDestination(arc),
+					   arc, graph);
 	}
 
 	destroyNode(next, graph);
@@ -497,7 +508,7 @@ static void trimLongReadTips()
 	}
 }
 
-void readCoherentGraph(Graph * inGraph, boolean (*isUnique)(Node* node),
+void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node * node),
 		       double coverage, ReadSet * reads)
 {
 	IDnum nodeIndex;
@@ -551,7 +562,8 @@ void readCoherentGraph(Graph * inGraph, boolean (*isUnique)(Node* node),
 void setMultiplicityCutoff(int value)
 {
 	if (value < 0) {
-		printf("Negative long read multiplicity cutoff %i!\n", value);
+		printf("Negative long read multiplicity cutoff %i!\n",
+		       value);
 		puts("Exiting...");
 		exit(1);
 	}

@@ -31,6 +31,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "passageMarker.h"
 #include "concatenatedGraph.h"
 #include "graphStats.h"
+#include "utility.h"
 
 #define TICKET_BLOCK_SIZE 10000
 
@@ -2499,7 +2500,7 @@ void clipTips(Graph * graph)
 	Node *current, *twin;
 	boolean modified = true;
 	int Wordlength = getWordLength(graph);
-	PassageMarker* marker;
+	PassageMarker *marker;
 
 	puts("Clipping short tips off graph");
 
@@ -2520,8 +2521,8 @@ void clipTips(Graph * graph)
 					if (!isInitial(marker)
 					    && !isTerminal(marker))
 						disconnectNextPassageMarker
-						    (getPreviousInSequence(marker),
-						     graph);
+						    (getPreviousInSequence
+						     (marker), graph);
 					destroyPassageMarker(marker);
 				}
 				destroyNode(current, graph);
@@ -2533,8 +2534,8 @@ void clipTips(Graph * graph)
 					if (!isInitial(marker)
 					    && !isTerminal(marker))
 						disconnectNextPassageMarker
-						    (getPreviousInSequence(marker),
-						     graph);
+						    (getPreviousInSequence
+						     (marker), graph);
 					destroyPassageMarker(marker);
 				}
 				destroyNode(twin, graph);
@@ -2553,7 +2554,7 @@ void clipTipsHard(Graph * graph)
 	Node *current, *twin;
 	boolean modified = true;
 	int Wordlength = getWordLength(graph);
-	PassageMarker * marker;
+	PassageMarker *marker;
 
 	puts("Clipping short tips off graph, drastic");
 
@@ -2573,8 +2574,8 @@ void clipTipsHard(Graph * graph)
 					if (!isInitial(marker)
 					    && !isTerminal(marker))
 						disconnectNextPassageMarker
-						    (getPreviousInSequence(marker),
-						     graph);
+						    (getPreviousInSequence
+						     (marker), graph);
 					destroyPassageMarker(marker);
 				}
 				destroyNode(current, graph);
@@ -2586,8 +2587,8 @@ void clipTipsHard(Graph * graph)
 					if (!isInitial(marker)
 					    && !isTerminal(marker))
 						disconnectNextPassageMarker
-						    (getPreviousInSequence(marker),
-						     graph);
+						    (getPreviousInSequence
+						     (marker), graph);
 					destroyPassageMarker(marker);
 				}
 				destroyNode(twin, graph);
@@ -2636,13 +2637,9 @@ void correctGraph(Graph * argGraph, Coordinate * argSequenceLengths)
 	nodes = nodeCount(graph);
 
 	// Allocating memory
-	times = malloc((2 * nodes + 1) * sizeof(Time));
-	previous = malloc((2 * nodes + 1) * sizeof(Node *));
-	dheapNodes = malloc((2 * nodes + 1) * sizeof(DFibHeapNode *));
-	if (times == NULL || previous == NULL || dheapNodes == NULL) {
-		puts("Malloc failed");
-		exit(1);
-	}
+	times = mallocOrExit(2 * nodes + 1, Time);
+	previous = mallocOrExit(2 * nodes + 1, Node *);
+	dheapNodes = mallocOrExit(2 * nodes + 1, DFibHeapNode *);
 
 	for (index = 0; index < (2 * nodeCount(graph) + 1); index++) {
 		times[index] = -1;
@@ -2654,26 +2651,15 @@ void correctGraph(Graph * argGraph, Coordinate * argSequenceLengths)
 
 	fastSequence = newTightString(MAXREADLENGTH);
 	slowSequence = newTightString(MAXREADLENGTH);
-	fastToSlowMapping = calloc(MAXREADLENGTH + 1, sizeof(Coordinate));
-	slowToFastMapping = calloc(MAXREADLENGTH + 1, sizeof(Coordinate));
-	Fmatrix = calloc(MAXREADLENGTH + 1, sizeof(double *));
-	for (index = 0; index < MAXREADLENGTH + 1; index++) {
-		Fmatrix[index] = calloc(MAXREADLENGTH + 1, sizeof(double));
-		if (Fmatrix[index] == NULL) {
-			puts("Calloc failure");
-			exit(1);
-		}
-	}
+	fastToSlowMapping = callocOrExit(MAXREADLENGTH + 1, Coordinate);
+	slowToFastMapping = callocOrExit(MAXREADLENGTH + 1, Coordinate);
+	Fmatrix = callocOrExit(MAXREADLENGTH + 1, double *);
+	for (index = 0; index < MAXREADLENGTH + 1; index++)
+		Fmatrix[index] = callocOrExit(MAXREADLENGTH + 1, double);
 
-	eligibleStartingPoints = malloc((2 * nodes + 1) * sizeof(IDnum));
-	progressStatus = calloc((2 * nodes + 1), sizeof(boolean));
-	todoLists = calloc((2 * nodes + 1), sizeof(Ticket *));
-	if (fastToSlowMapping == NULL || slowToFastMapping == NULL
-	    || Fmatrix == NULL || eligibleStartingPoints == NULL
-	    || progressStatus == NULL || todoLists == NULL) {
-		puts("Memory failure");
-		exit(1);
-	}
+	eligibleStartingPoints = mallocOrExit(2 * nodes + 1, IDnum);
+	progressStatus = callocOrExit(2 * nodes + 1, boolean);
+	todoLists = callocOrExit(2 * nodes + 1, Ticket *);
 	//Done with memory 
 
 	resetNodeStatus(graph);

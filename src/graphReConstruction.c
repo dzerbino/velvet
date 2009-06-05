@@ -29,6 +29,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "readSet.h"
 #include "tightString.h"
 #include "recycleBin.h"
+#include "utility.h"
 
 #define ADENINE 0
 #define CYTOSINE 1
@@ -139,10 +140,9 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	Kmer lastHeader = 0;
 	Kmer header;
 
-	if (file == NULL) {
-		printf("Could not open %s, sorry\n", preGraphFilename);
-		exit(1);
-	}
+	if (file == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s, sorry\n", preGraphFilename);
+
 	// Count kmers
 	printf("Scanning pre-graph file %s for k-mers\n",
 	       preGraphFilename);
@@ -153,11 +153,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	wordFilter = (((Kmer) 1) << (2 * wordLength)) - 1;
 
 	// Initialize kmer occurence table:
-	kmerTable = malloc(sizeof(KmerOccurenceTable));
-	if (kmerTable == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	kmerTable = mallocOrExit(1, KmerOccurenceTable);
 	if (accelerationBits > 2 * wordLength)
 		accelerationBits = 2 * wordLength;
 
@@ -172,12 +168,8 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 		kmerTable->accelerationMask <<= (2 * wordLength -
 						 accelerationBits);
 		kmerTable->accelerationTable =
-		    calloc(((size_t) 1) << accelerationBits,
-			   sizeof(IDnum));
-		if (kmerTable->accelerationTable == NULL) {
-			puts("Calloc failure");
-			exit(1);
-		}
+		    callocOrExit(((size_t) 1) << accelerationBits,
+			   IDnum);
 		accelPtr = kmerTable->accelerationTable;
 		kmerTable->accelerationShift =
 		    (short int) 2 *wordLength - accelerationBits;
@@ -201,11 +193,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 
 	// Create table
 	printf("%li kmers found\n", kmerCount);
-	kmerOccurences = calloc(kmerCount, sizeof(KmerOccurence));
-	if (kmerOccurences == NULL && kmerCount > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	kmerOccurences = callocOrExit(kmerCount, KmerOccurence);
 	kmerOccurencePtr = kmerOccurences;
 	kmerOccurenceIndex = 0;
 	kmerTable->kmerTable = kmerOccurences;
@@ -213,10 +201,9 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 
 	// Fill table
 	file = fopen(preGraphFilename, "r");
-	if (file == NULL) {
-		printf("Could not open %s, sorry.\n", preGraphFilename);
-		exit(1);
-	}
+	if (file == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s, sorry.\n", preGraphFilename);
+
 	fgets(line, maxline, file);
 
 	// Read nodes

@@ -28,7 +28,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "recycleBin.h"
 #include "passageMarker.h"
 #include "shortReadPairs.h"
-#include  "locallyCorrectedGraph.h"
+#include "locallyCorrectedGraph.h"
+#include "utility.h"
 
 static const Time INDEL = 0;
 static const Time SIM[4][4] = {
@@ -489,15 +490,10 @@ void prepareGraphForLocalCorrections(Graph * argGraph)
 	       MAXDIVERGENCE);
 
 	// Allocating memory
-	times = malloc((2 * nodes + 1) * sizeof(Time));
-	previous = malloc((2 * nodes + 1) * sizeof(Node *));
+	times = mallocOrExit(2 * nodes + 1, Time);
+	previous = mallocOrExit(2 * nodes + 1, Node *);
 
-	dheapNodes = malloc((2 * nodes + 1) * sizeof(DFibHeapNode *));
-
-	if (times == NULL || previous == NULL || dheapNodes == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	dheapNodes = mallocOrExit(2 * nodes + 1, DFibHeapNode *);
 
 	dheap = newDFibHeap();
 
@@ -510,18 +506,9 @@ void prepareGraphForLocalCorrections(Graph * argGraph)
 		previous[index] = NULL;
 	}
 
-	Fmatrix = calloc(MAXREADLENGTH + 1, sizeof(double *));
-	if (Fmatrix == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
-	for (index = 0; index < MAXREADLENGTH + 1; index++) {
-		Fmatrix[index] = calloc(MAXREADLENGTH + 1, sizeof(double));
-		if (Fmatrix[index] == NULL) {
-			puts("Calloc failure");
-			exit(1);
-		}
-	}
+	Fmatrix = callocOrExit(MAXREADLENGTH + 1, double *);
+	for (index = 0; index < MAXREADLENGTH + 1; index++)
+		Fmatrix[index] = callocOrExit(MAXREADLENGTH + 1, double);
 	//Done with memory 
 }
 
@@ -555,7 +542,7 @@ void deactivateLocalCorrectionSettings()
 	for (index = 0; index <= MAXREADLENGTH; index++) {
 		free(Fmatrix[index]);
 	}
-	free(Fmatrix); 
+	free(Fmatrix);
 
 	free(times);
 	free(previous);

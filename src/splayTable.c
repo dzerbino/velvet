@@ -27,6 +27,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "splay.h"
 #include "tightString.h"
 #include "crc.h"
+#include "utility.h"
 
 struct splayTable_st {
 	SplayTree **table;
@@ -37,19 +38,11 @@ struct splayTable_st {
 
 SplayTable *newSplayTable(int WORDLENGTH)
 {
-	SplayTable *splayTable = malloc(sizeof(SplayTable));
+	SplayTable *splayTable = mallocOrExit(1, SplayTable);
 	splayTable->WORDLENGTH = WORDLENGTH;
 	splayTable->WORDFILTER = (((Kmer) 1) << (2 * WORDLENGTH)) - 1;
-	splayTable->table = calloc(CRC_HASH_BUCKETS, sizeof(SplayTree *));
+	splayTable->table = callocOrExit(CRC_HASH_BUCKETS, SplayTree *);
 	splayTable->lastIndex = 0;
-
-	if (splayTable == NULL || splayTable->table == NULL) {
-		printf
-		    ("could not allocate splay hash table of size %i\n",
-		     CRC_HASH_BUCKETS);
-		return NULL;
-	}
-
 	return splayTable;
 }
 
@@ -218,10 +211,9 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	TightString **array;
 	FILE *outfile = fopen(filename, "w");
 
-	if (outfile == NULL) {
-		puts("Couldn't open file, sorry");
-		exit(-1);
-	} else
+	if (outfile == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", filename);
+	else
 		printf("Writing into roadmap file %s...\n", filename);
 
 	fprintf(outfile, "%li\t%i\n", sequenceCount, table->WORDLENGTH);

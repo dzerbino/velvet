@@ -28,6 +28,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "recycleBin.h"
 #include "tightString.h"
 #include "run.h"
+#include "utility.h"
 
 #define ADENINE 0
 #define CYTOSINE 1
@@ -461,11 +462,7 @@ static inline Descriptor *mergeDescriptors_pg(Descriptor * descr,
 	arrayLength = newLength / 4;
 	if (newLength % 4)
 		arrayLength++;
-	new = calloc(arrayLength, sizeof(Descriptor));
-	if (new == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	new = callocOrExit(arrayLength, Descriptor);
 	for (index = 0; index < arrayLength; index++)
 		new[index] = 0;
 
@@ -581,11 +578,7 @@ static inline Descriptor *mergeDescriptorsH2H_pg(Descriptor * descr,
 	arrayLength = newLength / 4;
 	if (newLength % 4)
 		arrayLength++;
-	new = calloc(arrayLength, sizeof(Descriptor));
-	if (new == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	new = callocOrExit(arrayLength, Descriptor);
 	for (index = 0; index < arrayLength; index++)
 		new[index] = 0;
 
@@ -710,11 +703,7 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 	arrayLength = newLength / 4;
 	if (newLength % 4)
 		arrayLength++;
-	new = calloc(arrayLength, sizeof(Descriptor));
-	if (new == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	new = callocOrExit(arrayLength, Descriptor);
 	for (index = 0; index < arrayLength; index++)
 		new[index] = 0;
 
@@ -939,14 +928,9 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 	}
 
 	preGraph->preNodeCount -= counter;
-	preGraph->preNodes = realloc(preGraph->preNodes,
-				     (preGraph->preNodeCount +
-				      1) * sizeof(PreNode));
-
-	if (preGraph->preNodes == NULL) {
-		puts("Realloc failed (A)");
-		exit(1);
-	}
+	preGraph->preNodes = reallocOrExit(preGraph->preNodes,
+				     preGraph->preNodeCount +
+				      1, PreNode);
 
 	printf("Destroyed %li preNodes\n", counter);
 }
@@ -954,11 +938,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 // Allocate memory for an empty preGraph created with sequenceCount different sequences
 PreGraph *emptyPreGraph_pg(IDnum sequenceCount, int wordLength)
 {
-	PreGraph *newPreGraph = malloc(sizeof(PreGraph));
-	if (newPreGraph == NULL) {
-		puts("Malloc error");
-		exit(1);
-	}
+	PreGraph *newPreGraph = mallocOrExit(1, PreGraph);
 	newPreGraph->sequenceCount = sequenceCount;
 	newPreGraph->wordLength = wordLength;
 	newPreGraph->preNodeCount = 0;
@@ -979,11 +959,7 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 	if (totalLength % 4 > 0)
 		arrayLength++;
 
-	res = calloc(arrayLength, sizeof(Descriptor));
-	if (res == NULL && arrayLength > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	res = callocOrExit(arrayLength, Descriptor);
 	for (index = 0; index < arrayLength; index++)
 		res[index] = 0;
 
@@ -1030,11 +1006,7 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 
 void allocatePreNodeSpace_pg(PreGraph * preGraph, IDnum preNodeCount)
 {
-	preGraph->preNodes = calloc((preNodeCount + 1), sizeof(PreNode));
-	if (preGraph->preNodes == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	preGraph->preNodes = callocOrExit(preNodeCount + 1, PreNode);
 	preGraph->preNodeCount = preNodeCount;
 }
 

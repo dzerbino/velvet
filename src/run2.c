@@ -87,6 +87,8 @@ int main(int argc, char **argv)
 	Coordinate *sequenceLengths = NULL;
 	Category cat;
 
+	setProgramName("velvetg");
+
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		insertLength[cat] = -1;
 		std_dev[cat] = -1;
@@ -105,16 +107,11 @@ int main(int argc, char **argv)
 	}
 	// Memory allocation 
 	directory = argv[1];
-	graphFilename = malloc((strlen(directory) + 100) * sizeof(char));
+	graphFilename = mallocOrExit(strlen(directory) + 100, char);
 	preGraphFilename =
-	    malloc((strlen(directory) + 100) * sizeof(char));
-	roadmapFilename = malloc((strlen(directory) + 100) * sizeof(char));
-	seqFilename = malloc((strlen(directory) + 100) * sizeof(char));
-	if (graphFilename == NULL || preGraphFilename == NULL
-	    || roadmapFilename == NULL || seqFilename == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(strlen(directory) + 100, char);
+	roadmapFilename = mallocOrExit(strlen(directory) + 100, char);
+	seqFilename = mallocOrExit(strlen(directory) + 100, char);
 	// Argument parsing
 	for (arg_index = 2; arg_index < argc; arg_index++) {
 		arg = argv[arg_index++];
@@ -195,15 +192,19 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-max_branch_length") == 0) {
 			sscanf(argv[arg_index], "%i", &arg_int);
 			setMaxReadLength(arg_int);
+			setLocalMaxReadLength(arg_int);
 		} else if (strcmp(arg, "-max_indel_count") == 0) {
 			sscanf(argv[arg_index], "%i", &arg_int);
 			setMaxIndels(arg_int);
+			setLocalMaxIndels(arg_int);
 		} else if (strcmp(arg, "-max_divergence") == 0) {
 			sscanf(argv[arg_index], "%lf", &arg_double);
 			setMaxDivergence(arg_double);
+			setLocalMaxDivergence(arg_double);
 		} else if (strcmp(arg, "-max_gap_count") == 0) {
 			sscanf(argv[arg_index], "%i", &arg_int);
 			setMaxGaps(arg_int);
+			setLocalMaxGaps(arg_int);
 		} else if (strcmp(arg, "-min_pair_count") == 0) {
 			sscanf(argv[arg_index], "%i", &arg_int);
 			setUnreliableConnectionCutoff(arg_int);
@@ -273,10 +274,10 @@ int main(int argc, char **argv)
 		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else {
 		puts("No Roadmap file to build upon! Please run velveth (see manual)");
-		exit(0);
+		exit(1);
 	}
 
-	for(cat = 0; cat < CATEGORIES; cat++) {
+	for (cat = 0; cat < CATEGORIES; cat++) {
 		if (insertLength[cat] > -1 && std_dev[cat] < 0)
 			std_dev[cat] = insertLength[cat] / 10;
 		setInsertLengths(graph, cat,
@@ -284,7 +285,7 @@ int main(int argc, char **argv)
 	}
 
 	if (insertLengthLong > -1 && std_dev_long < 0)
-			std_dev_long = insertLengthLong / 10;
+		std_dev_long = insertLengthLong / 10;
 	setInsertLengths(graph, CATEGORIES,
 			 insertLengthLong, std_dev_long);
 
@@ -311,23 +312,21 @@ int main(int argc, char **argv)
 			sequences = importReadSet(seqFilename);
 			convertSequences(sequences);
 		}
-
 		// Mixed length sequencing
 		readCoherentGraph(graph, isUniqueSolexa, expectedCoverage,
 				  sequences);
 
 		// Paired ends module
-		for (cat = 0; cat < CATEGORIES; cat++) 
-			if (insertLength[cat] > -1) 
+		for (cat = 0; cat < CATEGORIES; cat++)
+			if (insertLength[cat] > -1)
 				pairUpReads(sequences, 2 * cat + 1);
 
-		if (insertLengthLong > -1) 
+		if (insertLengthLong > -1)
 			pairUpReads(sequences, 2 * CATEGORIES + 1);
 
 		detachDubiousReads(sequences, dubious);
 		activateGapMarkers(graph);
-		exploitShortReadPairs(graph, sequences, dubious,
-				      expectedCoverage, true);
+		exploitShortReadPairs(graph, sequences, dubious, true);
 	} else {
 		puts("WARNING: NO EXPECTED COVERAGE PROVIDED");
 		puts("Velvet will be unable to resolve any repeats");
@@ -375,8 +374,10 @@ int main(int argc, char **argv)
 					  sequences);
 	}
 
-	printf("Final graph has %li nodes and n50 of %li, max %li, total %li\n",
-	       nodeCount(graph), n50(graph), maxLength(graph), totalAssemblyLength(graph));
+	printf
+	    ("Final graph has %li nodes and n50 of %li, max %li, total %li\n",
+	     nodeCount(graph), n50(graph), maxLength(graph),
+	     totalAssemblyLength(graph));
 
 	destroyGraph(graph);
 	free(graphFilename);

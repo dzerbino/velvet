@@ -31,6 +31,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "concatenatedGraph.h"
 #include "readCoherentGraph.h"
 #include "fibHeap.h"
+#include "utility.h"
 
 static void surveyPath(PassageMarker * marker)
 {
@@ -213,11 +214,9 @@ void testForBizarreMarkers(Graph * graph)
 
 		for (marker = getMarker(node); marker != NULL;
 		     marker = getNextInNode(marker)) {
-			if (getTwinMarker(marker) == NULL) {
-				printf("Bizarre marker %s\n",
+			if (getTwinMarker(marker) == NULL) 
+				exitErrorf(EXIT_FAILURE, false, "Bizarre marker %s\n",
 				       readPassageMarker(marker));
-				exit(-1);
-			}
 		}
 	}
 }
@@ -315,11 +314,7 @@ IDnum nodeMultiplicity(Node * node)
 // Prints out a set of predefined statistics for one node
 char *nodeStatistics(Node * node)
 {
-	char *s = malloc(100 * sizeof(char));
-	if (s == NULL) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	char *s = mallocOrExit(100, char);
 	sprintf(s, "NODE %li\t%li\t%i\t%i\t%li", getNodeID(node),
 		getNodeLength(node), simpleArcCount(node),
 		simpleArcCount(getTwinNode(node)), nodeMultiplicity(node));
@@ -607,11 +602,7 @@ int countLocalBreakpoints(PassageMarker * marker, IDnum firstStrain)
 	// Count arcs
 	for (arc = getArc(localNode); arc != NULL; arc = getNextArc(arc))
 		arcCount++;
-	arcStatus = calloc(arcCount, sizeof(boolean));
-	if (arcStatus == NULL && arcCount > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	arcStatus = callocOrExit(arcCount, boolean);
 	// Check for other genomic markers in node
 	for (localMarker = getMarker(localNode); localMarker != NULL;
 	     localMarker = getNextInNode(localMarker)) {
@@ -1132,15 +1123,10 @@ void displayBreakpoints(Graph * graph, IDnum firstStrain)
 	Node *node;
 	PassageMarker *strainMarker, *genomeMarker;
 	Node **genomeDestination =
-	    calloc(2 * nodeCount(graph) + 1, sizeof(Node *));
+	    callocOrExit(2 * nodeCount(graph) + 1, Node *);
 	Node **strainDestination =
-	    calloc(2 * nodeCount(graph) + 1, sizeof(Node *));
+	    callocOrExit(2 * nodeCount(graph) + 1, Node *);
 	IDnum counters[3];
-
-	if (genomeDestination == NULL || strainDestination == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
 
 	counters[0] = 0;
 	counters[1] = 0;
@@ -1704,12 +1690,7 @@ void destroyDisconnectedElements(Graph * graph)
 	Coordinate domainSize;
 	FibHeap *heap = newFibHeap();
 	Coordinate *domainSizes =
-	    calloc(1 + nodeCount(graph), sizeof(Coordinate));
-
-	if (domainSizes == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	    callocOrExit(1 + nodeCount(graph), Coordinate);
 
 	resetNodeStatus(graph);
 
@@ -1934,11 +1915,7 @@ void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
 		   int WORDLENGTH, int pairedReadsCount)
 {
 	TightString **sequences =
-	    malloc(reads->readCount * sizeof(TightString *));
-	if (sequences == NULL && reads->readCount > 0) {
-		puts("Malloc failure");
-		exit(1);
-	}
+	    mallocOrExit(reads->readCount, TightString *);
 	IDnum i;
 
 	for (i = 0; i < pairedReadsCount; i++) {
@@ -1954,7 +1931,7 @@ void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
 static Coordinate getTotalCoverage(Node * node)
 {
 	Category cat;
-	Coordinate coverage = 0; 
+	Coordinate coverage = 0;
 
 	for (cat = 0; cat < CATEGORIES; cat++)
 		coverage += getVirtualCoverage(node, cat);
@@ -1967,17 +1944,12 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 {
 	IDnum index;
 	Node *node;
-	boolean *res = calloc(sequenceCount(graph), sizeof(boolean));
+	boolean *res = callocOrExit(sequenceCount(graph), boolean);
 	ShortReadMarker *nodeArray, *shortMarker;
 	PassageMarker *marker;
 	IDnum maxIndex;
 	IDnum readID;
 	IDnum index2;
-
-	if (res == NULL && sequenceCount(graph) > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -2148,12 +2120,14 @@ static void exportAMOSMarker(FILE * outfile, PassageMarker * marker,
 			sequenceStart -= start - getStartOffset(marker);
 	}
 
-	sequenceFinish = getPassageMarkerFinish(marker); 
+	sequenceFinish = getPassageMarkerFinish(marker);
 	if (nodeLength - finish > getFinishOffset(marker)) {
 		if (getPassageMarkerSequenceID(marker) > 0)
-			sequenceFinish -= nodeLength - finish - getFinishOffset(marker);
+			sequenceFinish -=
+			    nodeLength - finish - getFinishOffset(marker);
 		else
-			sequenceFinish += nodeLength - finish - getFinishOffset(marker);
+			sequenceFinish +=
+			    nodeLength - finish - getFinishOffset(marker);
 	}
 
 	if (getPassageMarkerSequenceID(marker) > 0)
@@ -2164,8 +2138,9 @@ static void exportAMOSMarker(FILE * outfile, PassageMarker * marker,
 	fprintf(outfile, "{TLE\n");
 	fprintf(outfile, "src:%li\n", getAbsolutePassMarkerSeqID(marker));
 	if (getStartOffset(marker) > start)
-		fprintf(outfile, "off:%li\n", getStartOffset(marker) - start);
-	else 
+		fprintf(outfile, "off:%li\n",
+			getStartOffset(marker) - start);
+	else
 		fprintf(outfile, "off:0\n");
 	fprintf(outfile, "clr:%li,%li\n", sequenceStart, sequenceFinish);
 	fprintf(outfile, "}\n");
@@ -2233,9 +2208,8 @@ static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
 	ShortReadMarker *shortMarkerArray, *shortMarker;
 	Coordinate index, maxIndex;
 	int wordShift = getWordLength(graph) - 1;
-	char *string =
-	    expandNodeFragment(node, contigStart, contigFinish,
-			       getWordLength(graph));
+	char *string = expandNodeFragment(node, contigStart, contigFinish,
+					  getWordLength(graph));
 	Coordinate length = contigFinish - contigStart + wordShift;
 
 	fprintf(outfile, "{CTG\n");
@@ -2326,7 +2300,8 @@ static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
 		finish = getGapStart(gap);
 		fprintf(outfile, "{TLE\n");
 		fprintf(outfile, "off:%li\n", start);
-		fprintf(outfile, "clr:0,%li\n", finish - start + wordShift);
+		fprintf(outfile, "clr:0,%li\n",
+			finish - start + wordShift);
 		fprintf(outfile, "src:%li\n", contigIndex++);
 		fprintf(outfile, "}\n");
 		start = getGapFinish(gap);
@@ -2350,7 +2325,7 @@ static void exportAMOSRead(FILE * outfile, TightString * tString,
 	fprintf(outfile, "{RED\n");
 	fprintf(outfile, "iid:%li\n", index + 1);
 	fprintf(outfile, "eid:%li\n", index + 1);
-	if (frg_index > 0)	
+	if (frg_index > 0)
 		fprintf(outfile, "frg:%li\n", frg_index);
 
 	fprintf(outfile, "seq:\n");
@@ -2387,18 +2362,17 @@ void exportAMOSContigs(char *filename, Graph * graph,
 	printf("Writing into AMOS file %s...\n", filename);
 	outfile = fopen(filename, "w");
 
-	if (outfile == NULL) {
-		printf("Could not open AMOS file %s, exiting!\n",
+	if (outfile == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not open AMOS file %s\n",
 		       filename);
-		exit(0);
-	}
 
 	for (cat = 0; cat <= CATEGORIES; cat++)
 		exportAMOSLib(outfile, graph, cat);
 
 	for (index = 1; index <= reads->readCount; index++) {
 		if (reads->categories[index - 1] % 2 != 0 &&
-		    getInsertLength(graph, reads->categories[index - 1]) >= 0) {
+		    getInsertLength(graph,
+				    reads->categories[index - 1]) >= 0) {
 			fprintf(outfile, "{FRG\n");
 			fprintf(outfile, "lib:%hi\n",
 				(reads->categories[index - 1] / 2) + 1);
@@ -2414,15 +2388,19 @@ void exportAMOSContigs(char *filename, Graph * graph,
 
 	for (index = 1; index <= reads->readCount; index++) {
 		if (reads->categories[index - 1] % 2 != 0 &&
-		    getInsertLength(graph, reads->categories[index - 1]) >= 0) {
-			exportAMOSRead(outfile, reads->tSequences[index - 1],
-				       index, index);
+		    getInsertLength(graph,
+				    reads->categories[index - 1]) >= 0) {
+			exportAMOSRead(outfile,
+				       reads->tSequences[index - 1], index,
+				       index);
 			index++;
-			exportAMOSRead(outfile, reads->tSequences[index - 1],
-				       index, index - 1);
+			exportAMOSRead(outfile,
+				       reads->tSequences[index - 1], index,
+				       index - 1);
 		} else {
-			exportAMOSRead(outfile, reads->tSequences[index - 1],
-				       index, -1);
+			exportAMOSRead(outfile,
+				       reads->tSequences[index - 1], index,
+				       -1);
 		}
 	}
 
@@ -2568,16 +2546,17 @@ void searchForHallidayJunction(Graph * graph)
 	}
 }
 
-Coordinate totalAssemblyLength(Graph* graph) {
+Coordinate totalAssemblyLength(Graph * graph)
+{
 	IDnum index;
-	Node* node;
+	Node *node;
 	Coordinate total = 0;
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
 		if (node)
 			total += getNodeLength(node);
-	} 
+	}
 
 	return total;
 }

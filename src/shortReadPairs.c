@@ -21,6 +21,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 #include "globals.h"
 #include "graph.h"
@@ -29,7 +30,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "locallyCorrectedGraph.h"
 #include "passageMarker.h"
 #include "readSet.h"
-#include "math.h"
+#include "utility.h"
 
 #define BLOCK_SIZE  100000
 #define LN2 1.4
@@ -66,10 +67,9 @@ struct readOccurence_st {
 
 // Global params
 static Graph *graph;
-static ReadSet * reads;
+static ReadSet *reads;
 static RecycleBin *connectionMemory = NULL;
 static RecycleBin *nodeListMemory = NULL;
-static double expected_coverage;
 static IDnum UNRELIABLE_CONNECTION_CUTOFF = 10;
 
 // Global pointers
@@ -160,23 +160,27 @@ static Node *popNodeRecord()
 	return node;
 }
 
-static double norm(double X) {
-	return 0.4 * exp(-X*X / 2);
+static double norm(double X)
+{
+	return 0.4 * exp(-X * X / 2);
 }
 
-static double normInt(double X, double Y) {
-	return (erf(0.7 * Y) - erf(0.7 * X))/2;
+static double normInt(double X, double Y)
+{
+	return (erf(0.7 * Y) - erf(0.7 * X)) / 2;
 }
 
-static IDnum expectedNumberOfConnections(IDnum IDA, Connection* connect, IDnum ** counts, Category cat) {
+static IDnum expectedNumberOfConnections(IDnum IDA, Connection * connect,
+					 IDnum ** counts, Category cat)
+{
 	Node *A = getNodeInGraph(graph, IDA);
-	Node* B = connect->destination;
+	Node *B = connect->destination;
 	double left, middle, right;
 	Coordinate longLength, shortLength, D;
 	IDnum longCount;
-	double M,N,O,P;
+	double M, N, O, P;
 	Coordinate mu = getInsertLength(graph, cat);
-	double sigma = sqrt(getInsertLength_var(graph, cat));	
+	double sigma = sqrt(getInsertLength_var(graph, cat));
 	double result;
 
 	if (mu <= 0)
@@ -192,22 +196,22 @@ static IDnum expectedNumberOfConnections(IDnum IDA, Connection* connect, IDnum *
 		longCount = counts[cat][IDA + nodeCount(graph)];
 	}
 
-	D = connect->distance - (longLength + shortLength)/2;
+	D = connect->distance - (longLength + shortLength) / 2;
 
 	M = (D - mu) / sigma;
 	N = (D + shortLength - mu) / sigma;
 	O = (D + longLength - mu) / sigma;
-	P = (D + shortLength + longLength - mu) / sigma;	
+	P = (D + shortLength + longLength - mu) / sigma;
 
-	left = ((norm(M) - norm(N)) - M * normInt(M,N)) * sigma; 
-	middle = shortLength * normInt(N,O); 
-	right = ((norm(O) - norm(P)) - P * normInt(O,P)) * (-sigma);
+	left = ((norm(M) - norm(N)) - M * normInt(M, N)) * sigma;
+	middle = shortLength * normInt(N, O);
+	right = ((norm(O) - norm(P)) - P * normInt(O, P)) * (-sigma);
 
 	result = (longCount * (left + middle + right)) / longLength;
 
 	if (result > 0)
-		return result;
-	else 
+		return (IDnum) result;
+	else
 		return 0;
 }
 
@@ -240,7 +244,9 @@ static void destroyConnection(Connection * connect, IDnum nodeID)
 	deallocateConnection(connect);
 }
 
-static boolean testConnection(IDnum IDA, Connection* connect, IDnum ** counts) {
+static boolean testConnection(IDnum IDA, Connection * connect,
+			      IDnum ** counts)
+{
 	IDnum total = 0;
 	Category cat;
 
@@ -249,14 +255,16 @@ static boolean testConnection(IDnum IDA, Connection* connect, IDnum ** counts) {
 		return true;
 
 	// Destroy tenuous connections
-	if (connect->paired_count + connect->direct_count < UNRELIABLE_CONNECTION_CUTOFF)
-		return false; 
+	if (connect->paired_count + connect->direct_count <
+	    UNRELIABLE_CONNECTION_CUTOFF)
+		return false;
 
 	for (cat = 0; cat <= CATEGORIES; cat++)
-		total += expectedNumberOfConnections(IDA, connect, counts, cat);
+		total +=
+		    expectedNumberOfConnections(IDA, connect, counts, cat);
 
 	// Remove inconsistent connections
-	return connect->paired_count > total / 10; 
+	return connect->paired_count >= total / 10;
 }
 
 void detachImprobablePairs(ReadSet * sequences)
@@ -305,17 +313,12 @@ static IDnum *computeReadToNodeCounts()
 	IDnum readIndex, nodeIndex;
 	IDnum maxNodeIndex = 2 * nodeCount(graph) + 1;
 	IDnum maxReadIndex = sequenceCount(graph) + 1;
-	IDnum *readNodeCounts = calloc(maxReadIndex, sizeof(IDnum));
-	boolean *readMarker = calloc(maxReadIndex, sizeof(boolean));
+	IDnum *readNodeCounts = callocOrExit(maxReadIndex, IDnum);
+	boolean *readMarker = callocOrExit(maxReadIndex, boolean);
 	ShortReadMarker *nodeArray, *shortMarker;
 	PassageMarker *marker;
 	Node *node;
 	IDnum nodeReadCount;
-
-	if (readNodeCounts == NULL || readMarker == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
 
 	puts("Computing read to node mapping array sizes");
 
@@ -367,23 +370,13 @@ static ReadOccurence **allocateReadToNodeTables(IDnum * readNodeCounts)
 	IDnum readIndex;
 	IDnum maxReadIndex = sequenceCount(graph) + 1;
 	ReadOccurence **readNodes =
-	    calloc(maxReadIndex, sizeof(ReadOccurence *));
-
-	if (readNodes == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	    callocOrExit(maxReadIndex, ReadOccurence *);
 
 	for (readIndex = 1; readIndex < maxReadIndex; readIndex++) {
 		if (readNodeCounts[readIndex] != 0) {
 			readNodes[readIndex] =
-			    calloc(readNodeCounts[readIndex],
-				   sizeof(ReadOccurence));
-			if (readNodes[readIndex] == NULL
-			    && readNodeCounts[readIndex] > 0) {
-				puts("Calloc failure");
-				exit(1);
-			}
+			    callocOrExit(readNodeCounts[readIndex],
+				   ReadOccurence);
 			readNodeCounts[readIndex] = 0;
 		}
 	}
@@ -457,12 +450,7 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts)
 	ReadOccurence **readNodes =
 	    allocateReadToNodeTables(readNodeCounts);
 	boolean *readMarker =
-	    calloc(sequenceCount(graph) + 1, sizeof(boolean));
-
-	if (readMarker == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	    callocOrExit(sequenceCount(graph) + 1, boolean);
 
 	puts("Computing read to node mappings");
 
@@ -551,7 +539,8 @@ static Connection *createNewConnection(IDnum nodeID, IDnum node2ID,
 }
 
 static void readjustConnection(Connection * connect, Coordinate distance,
-			       double variance, IDnum direct_count, IDnum paired_count)
+			       double variance, IDnum direct_count,
+			       IDnum paired_count)
 {
 	connect->direct_count += direct_count;
 	connect->paired_count += paired_count;
@@ -579,10 +568,11 @@ static void createConnection(IDnum nodeID, IDnum node2ID,
 	Connection *connect = findConnection(nodeID, node2ID);
 
 	if (connect != NULL)
-		readjustConnection(connect, distance, variance, direct_count, paired_count);
+		readjustConnection(connect, distance, variance,
+				   direct_count, paired_count);
 	else
-		createNewConnection(nodeID, node2ID, direct_count, paired_count,
-				    distance, variance);
+		createNewConnection(nodeID, node2ID, direct_count,
+				    paired_count, distance, variance);
 }
 
 static void projectFromSingleRead(Node * node,
@@ -620,14 +610,14 @@ static void projectFromSingleRead(Node * node,
 		variance += length * length / 16;
 		createConnection(getNodeID(node), getNodeID(target), 1, 0,
 				 distance, variance);
-		createConnection(-getNodeID(node), -getNodeID(target), 1, 0,
-				 -distance, variance);
+		createConnection(-getNodeID(node), -getNodeID(target), 1,
+				 0, -distance, variance);
 	} else if (distance > 0) {
 		createConnection(getNodeID(node), getNodeID(target), 1, 0,
 				 distance, variance);
 	} else {
-		createConnection(-getNodeID(node), -getNodeID(target), 1, 0,
-				 -distance, variance);
+		createConnection(-getNodeID(node), -getNodeID(target), 1,
+				 0, -distance, variance);
 	}
 }
 
@@ -665,8 +655,8 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 		    getNodeLength(target) / 2;
 	}
 
-	createConnection(getNodeID(node), getNodeID(target), 0, 1, distance,
-			 variance);
+	createConnection(getNodeID(node), getNodeID(target), 0, 1,
+			 distance, variance);
 }
 
 static void projectFromShortRead(Node * node,
@@ -804,12 +794,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 {
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
-	scaffold = calloc(2 * nodes + 1, sizeof(Connection *));
-
-	if (scaffold == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	scaffold = callocOrExit(2 * nodes + 1, Connection *);
 
 	puts("Computing direct node to node mappings");
 
@@ -1121,8 +1106,9 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 				localConnect->frontReference =
 				    createNewConnection(nodeID,
 							-destinationID,
-							direct_count, 
-						        paired_count, distance,
+							direct_count,
+							paired_count,
+							distance,
 							variance);
 		} else
 			resetMiniConnection(destination, localConnect,
@@ -1626,9 +1612,10 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 								 getVirtualCoverage
 								 (candidate,
 								  cat));
-					incrementOriginalVirtualCoverage(node, cat,
-									 getOriginalVirtualCoverage
-									 (candidate, cat));
+					incrementOriginalVirtualCoverage
+					    (node, cat,
+					     getOriginalVirtualCoverage
+					     (candidate, cat));
 				}
 
 				if (getNodeStatus(candidate)) {
@@ -1883,23 +1870,26 @@ static void cleanMemory(ReadOccurence ** readNodes, IDnum * readNodeCounts,
 	free(lengths);
 }
 
-static IDnum ** countShortReads(Graph * graph) {
-	IDnum ** counts = calloc(CATEGORIES + 1, sizeof(IDnum*)); 
+static IDnum **countShortReads(Graph * graph)
+{
+	IDnum **counts = callocOrExit(CATEGORIES + 1, IDnum *);
 	Category cat;
 	IDnum nodeIndex;
 	IDnum nodes = nodeCount(graph);
-	Node * node;
-	ShortReadMarker * array, *marker;
+	Node *node;
+	ShortReadMarker *array, *marker;
 	IDnum readCount, readIndex, readID;
 
 	// Allocate memory where needed
-	for (cat = 0; cat <= CATEGORIES; cat++) 
+	for (cat = 0; cat <= CATEGORIES; cat++)
 		if (getInsertLength(graph, cat) > 0)
-			counts[cat] = calloc(2 * nodeCount(graph) + 1, sizeof(IDnum));
+			counts[cat] =
+			    callocOrExit(2 * nodeCount(graph) + 1,
+				   IDnum);
 
 	// Start fillin'
 	for (nodeIndex = 0; nodeIndex < 2 * nodes + 1; nodeIndex++) {
-		node = getNodeInGraph(graph, nodeIndex - nodes);	
+		node = getNodeInGraph(graph, nodeIndex - nodes);
 
 		if (node == NULL || !getUniqueness(node))
 			continue;
@@ -1907,15 +1897,74 @@ static IDnum ** countShortReads(Graph * graph) {
 		array = getNodeReads(node, graph);
 		readCount = getNodeReadCount(node, graph);
 		for (readIndex = 0; readIndex < readCount; readIndex++) {
-			marker = getShortReadMarkerAtIndex(array, readIndex);
+			marker =
+			    getShortReadMarkerAtIndex(array, readIndex);
 			readID = getShortReadMarkerID(marker);
 			cat = reads->categories[readID - 1];
-			if (cat % 2 == 1 && counts[cat/2] != NULL)
-				counts[cat/2][nodeIndex]++;
-		}	
+			if (cat % 2 == 1 && counts[cat / 2] != NULL)
+				counts[cat / 2][nodeIndex]++;
+		}
 	}
 
 	return counts;
+}
+
+void printConnections()
+{
+	IDnum maxNodeIndex = nodeCount(graph) * 2 + 1;
+	IDnum index;
+	Connection *connect, *next;
+	Node *node;
+	IDnum **counts = countShortReads(graph);
+	IDnum nodes = nodeCount(graph);
+
+	puts("CONNECT IDA IDB dcount pcount dist lengthA lengthB var countA countB coordA coordB real exp distance test");
+
+	for (index = 0; index < maxNodeIndex; index++) {
+		node = getNodeInGraph(graph, index - nodeCount(graph));
+		for (connect = scaffold[index]; connect != NULL;
+		     connect = next) {
+			next = connect->next;
+			if (getUniqueness(connect->destination)) {
+				printf
+				    ("CONNECT %li %li %li %li %li %li %li %f %li %li",
+				     index - nodeCount(graph),
+				     getNodeID(connect->destination),
+				     connect->direct_count,
+				     connect->paired_count,
+				     connect->distance,
+				     getNodeLength(node),
+				     getNodeLength(connect->destination),
+				     connect->variance,
+				     getNodeReadCount(node, graph),
+				     getNodeReadCount(connect->destination,
+						      graph));
+				if (markerCount(node) == 1
+				    && markerCount(connect->destination) ==
+				    1)
+					printf(" %li %li %li",
+					       getPassageMarkerFinish
+					       (getMarker(node)),
+					       getPassageMarkerFinish
+					       (getMarker
+						(connect->destination)),
+					       getPassageMarkerFinish
+					       (getMarker(node)) - 
+					       getPassageMarkerFinish
+					       (getMarker
+						(connect->destination)));
+				else
+					printf(" ? ?");
+				printf(" %li", expectedNumberOfConnections(index-nodeCount(graph), connect, counts, 0));
+				printf(" %li", connect->distance - (getNodeLength(node) + getNodeLength(connect->destination))/2);
+				if (testConnection
+				    (index - nodes, connect, counts))
+					puts(" OK");
+				else
+					puts(" NG");
+			}
+		}
+	}
 }
 
 static void removeUnreliableConnections()
@@ -1924,38 +1973,16 @@ static void removeUnreliableConnections()
 	IDnum index;
 	Connection *connect, *next;
 	Category cat;
-	IDnum ** counts = countShortReads(graph);
+	IDnum **counts = countShortReads(graph);
 	IDnum nodes = nodeCount(graph);
-
-	/*
-	   Node* node;
-	   puts("CONNECT IDA IDB dcount pcount dist lengthA lengthB var countA countB coordA coordB test");
-	   for (index = 0; index < maxNodeIndex; index++) {
-	   node = getNodeInGraph(graph, index - nodeCount(graph));
-	   for (connect = scaffold[index]; connect != NULL;
-	   connect = next) {
-	   next = connect->next;
-	   if (getUniqueness(connect->destination)) {
-	   printf("CONNECT %li %li %li %li %li %li %li %f %li %li", index - nodeCount(graph), getNodeID(connect->destination), connect->direct_count, connect->paired_count, connect->distance, getNodeLength(node), getNodeLength(connect->destination), connect->variance, getNodeReadCount(node, graph), getNodeReadCount(connect->destination, graph) );
-	if (markerCount(node) == 1 && markerCount(connect->destination) == 1)
-		printf(" %li %li", getPassageMarkerFinish(getMarker(node)), getPassageMarkerFinish(getMarker(connect->destination)));
-	else
-		printf(" ? ?");
-	if (testConnection(index - nodes, connect, counts))
-		puts(" OK");
-	else
-		puts(" NG");
-	   }
-	   }
-	   }
-	*/
 
 	for (index = 0; index < maxNodeIndex; index++) {
 		for (connect = scaffold[index]; connect != NULL;
 		     connect = next) {
 			next = connect->next;
-			if (!testConnection(index - nodes, connect, counts))
-				destroyConnection(connect, index-nodes);	
+			if (!testConnection
+			    (index - nodes, connect, counts))
+				destroyConnection(connect, index - nodes);
 		}
 	}
 
@@ -1967,8 +1994,7 @@ static void removeUnreliableConnections()
 }
 
 void exploitShortReadPairs(Graph * argGraph, ReadSet * argReads,
-			   boolean * dubious, double exp_cov,
-			   boolean force_jumps)
+			   boolean * dubious, boolean force_jumps)
 {
 	IDnum *readPairs;
 	Category *cats;
@@ -1981,7 +2007,6 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * argReads,
 	// Globals
 	graph = argGraph;
 	reads = argReads;
-	expected_coverage = exp_cov;
 	readPairs = reads->mateReads;
 	cats = reads->categories;
 
@@ -1996,11 +2021,7 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * argReads,
 
 	// Memory allocation
 	localScaffold =
-	    calloc((2 * nodeCount(graph) + 1), sizeof(MiniConnection));
-	if (localScaffold == NULL) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	    callocOrExit(2 * nodeCount(graph) + 1, MiniConnection);
 	// Prepare primary scaffold
 	readNodeCounts = computeReadToNodeCounts();
 	readNodes = computeReadToNodeMappings(readNodeCounts);
