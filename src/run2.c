@@ -44,6 +44,7 @@ static void printUsage()
 	puts("\t-ins_length_long <integer>\t: expected distance between two long paired-end reads (default: no read pairing)");
 	puts("\t-ins_length*_sd <integer>\t: est. standard deviation of respective dataset (default: 10\% of corresponding length)");
 	puts("\t\t[replace '*' by nothing, '2' or '_long' as necessary]");
+	puts("\t-scaffolding <yes|no>\t\t: scaffolding of contigs used paired end information (default: on)");
 	puts("\t-max_branch_length <integer>\t: maximum length in base pair of bubble (default: 100)");
 	puts("\t-max_divergence <floating-point>: maximum divergence rate between two branches in a bubble (default: 0.2)");
 	puts("\t-max_gap_count <integer>\t: maximum number of gaps allowed in the alignment of the two branches of a bubble (default: 3)");
@@ -71,6 +72,7 @@ int main(int argc, char **argv)
 	double expectedCoverage = -1;
 	int longMultCutoff = -1;
 	Coordinate minContigLength = -1;
+	Coordinate minContigKmerLength;
 	boolean *dubious = NULL;
 	Coordinate insertLength[CATEGORIES];
 	Coordinate insertLengthLong = -1;
@@ -85,6 +87,8 @@ int main(int argc, char **argv)
 	char *arg;
 	Coordinate *sequenceLengths = NULL;
 	Category cat;
+	boolean scaffolding = true;
+	int pebbleRounds = 1;
 
 	setProgramName("velvetg");
 
@@ -173,6 +177,9 @@ int main(int argc, char **argv)
 			sscanf(argv[arg_index], "%li", &std_dev_long);
 		} else if (strcmp(arg, "-read_trkg") == 0) {
 			readTracking =
+			    (strcmp(argv[arg_index], "yes") == 0);
+		} else if (strcmp(arg, "-scaffolding") == 0) {
+			scaffolding =
 			    (strcmp(argv[arg_index], "yes") == 0);
 		} else if (strcmp(arg, "-amos_file") == 0) {
 			exportAssembly =
@@ -272,6 +279,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	// Set insert lengths and their standard deviations
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		if (insertLength[cat] > -1 && std_dev[cat] < 0)
 			std_dev[cat] = insertLength[cat] / 10;
@@ -291,15 +299,10 @@ int main(int argc, char **argv)
 		puts("See manual for instructions on how to set the coverage cutoff parameter");
 	}
 
-	if (!readStartsAreActivated(graph)) {
-		removeLowCoverageNodes(graph, coverageCutoff);
-		removeHighCoverageNodes(graph, maxCoverageCutoff);
-	} else {
-		dubious =
-		    removeLowCoverageNodesAndDenounceDubiousReads(graph,
-								  coverageCutoff);
-		removeHighCoverageNodes(graph, maxCoverageCutoff);
-	}
+	dubious =
+	    removeLowCoverageNodesAndDenounceDubiousReads(graph,
+							  coverageCutoff);
+	removeHighCoverageNodes(graph, maxCoverageCutoff);
 	clipTipsHard(graph);
 
 	if (expectedCoverage > 0) {
@@ -312,26 +315,44 @@ int main(int argc, char **argv)
 				  sequences);
 
 		// Paired ends module
-		for (cat = 0; cat < CATEGORIES; cat++)
-			if (insertLength[cat] > -1)
+		for (cat = 0; cat < CATEGORIES; cat++) {
+			if (insertLength[cat] > -1) {
 				pairUpReads(sequences, 2 * cat + 1);
+				pebbleRounds++;
+			}
+		}
 
-		if (insertLengthLong > -1)
+		if (insertLengthLong > -1) {
 			pairUpReads(sequences, 2 * CATEGORIES + 1);
+			pebbleRounds++;
+		}
 
 		detachDubiousReads(sequences, dubious);
 		activateGapMarkers(graph);
-		exploitShortReadPairs(graph, sequences, dubious, true);
+		for ( ;pebbleRounds > 0; pebbleRounds--)
+			exploitShortReadPairs(graph, sequences, dubious, scaffolding);
 	} else {
 		puts("WARNING: NO EXPECTED COVERAGE PROVIDED");
 		puts("Velvet will be unable to resolve any repeats");
 		puts("See manual for instructions on how to set the expected coverage parameter");
 	}
 
-	if (dubious)
-		free(dubious);
+	free(dubious);
 
 	concatenateGraph(graph);
+
+	if (minContigLength < 2 * getWordLength(graph))
+		minContigKmerLength = getWordLength(graph);
+	else
+		minContigKmerLength = minContigLength - getWordLength(graph) + 1;		
+
+	strcpy(graphFilename, directory);
+	strcat(graphFilename, "/contigs.fa");
+	exportLongNodeSequences(graphFilename, graph, minContigKmerLength); 
+
+	strcpy(graphFilename, directory);
+	strcat(graphFilename, "/stats.txt");
+	displayGeneralStatistics(graph, graphFilename);
 
 	if (sequences == NULL) {
 		sequences = importReadSet(seqFilename);
@@ -339,40 +360,16 @@ int main(int argc, char **argv)
 	}
 
 	strcpy(graphFilename, directory);
-	strcat(graphFilename, "/contigs.fa");
-	if (minContigLength < 2 * getWordLength(graph))
-		exportLongNodeSequences(graphFilename, graph,
-					getWordLength(graph));
-	else
-		exportLongNodeSequences(graphFilename, graph,
-					minContigLength -
-					getWordLength(graph) + 1);
-
-	strcpy(graphFilename, directory);
 	strcat(graphFilename, "/LastGraph");
 	exportGraph(graphFilename, graph, sequences->tSequences);
-
-	strcpy(graphFilename, directory);
-	strcat(graphFilename, "/stats.txt");
-	displayGeneralStatistics(graph, graphFilename);
 
 	if (exportAssembly) {
 		strcpy(graphFilename, directory);
 		strcat(graphFilename, "/velvet_asm.afg");
-		if (minContigLength < 2 * getWordLength(graph))
-			exportAMOSContigs(graphFilename, graph,
-					  getWordLength(graph), sequences);
-		else
-			exportAMOSContigs(graphFilename, graph,
-					  minContigLength -
-					  getWordLength(graph) + 1,
-					  sequences);
+		exportAMOSContigs(graphFilename, graph, minContigKmerLength, sequences);
 	}
 
-	printf
-	    ("Final graph has %li nodes and n50 of %li, max %li, total %li\n",
-	     nodeCount(graph), n50(graph), maxLength(graph),
-	     totalAssemblyLength(graph));
+	logFinalStats(graph, minContigKmerLength, directory);
 
 	destroyGraph(graph);
 	free(graphFilename);

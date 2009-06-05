@@ -1944,12 +1944,16 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 {
 	IDnum index;
 	Node *node;
-	boolean *res = callocOrExit(sequenceCount(graph), boolean);
+	boolean denounceReads = readStartsAreActivated(graph);
+	boolean *res = NULL; 
 	ShortReadMarker *nodeArray, *shortMarker;
 	PassageMarker *marker;
 	IDnum maxIndex;
 	IDnum readID;
 	IDnum index2;
+		
+	if (denounceReads)
+		res = callocOrExit(sequenceCount(graph), boolean);
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -1966,10 +1970,12 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 							      index2);
 				readID = getShortReadMarkerID(shortMarker);
 				//printf("Dubious %li\n", readID);
-				if (readID > 0)
-					res[readID - 1] = true;
-				else
-					res[-readID - 1] = true;
+				if (denounceReads) {
+					if (readID > 0)
+						res[readID - 1] = true;
+					else
+						res[-readID - 1] = true;
+				}
 			}
 
 			nodeArray = getNodeReads(getTwinNode(node), graph);
@@ -1981,10 +1987,12 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 							      index2);
 				readID = getShortReadMarkerID(shortMarker);
 				//printf("Dubious %li\n", readID);
-				if (readID > 0)
-					res[readID - 1] = true;
-				else
-					res[-readID - 1] = true;
+				if (denounceReads) {
+					if (readID > 0)
+						res[readID - 1] = true;
+					else
+						res[-readID - 1] = true;
+				}
 			}
 
 			while ((marker = getMarker(node))) {
@@ -2323,8 +2331,8 @@ static void exportAMOSRead(FILE * outfile, TightString * tString,
 	char str[100];
 
 	fprintf(outfile, "{RED\n");
-	fprintf(outfile, "iid:%li\n", index + 1);
-	fprintf(outfile, "eid:%li\n", index + 1);
+	fprintf(outfile, "iid:%li\n", index);
+	fprintf(outfile, "eid:%li\n", index);
 	if (frg_index > 0)
 		fprintf(outfile, "frg:%li\n", frg_index);
 
@@ -2559,4 +2567,87 @@ Coordinate totalAssemblyLength(Graph * graph)
 	}
 
 	return total;
+}
+
+IDnum usedReads(Graph * graph, Coordinate minContigLength) 
+{
+	IDnum res = 0;
+	boolean * used = callocOrExit(sequenceCount(graph) + 1, boolean);
+	IDnum nodeID, readID;
+	Node * node;
+	PassageMarker * marker;
+	ShortReadMarker * shortReadArray, * shortReadMarker;
+	IDnum shortReadCount, shortReadIndex;
+
+	for(nodeID = 1; nodeID <= nodeCount(graph); nodeID++) {
+		node = getNodeInGraph(graph, nodeID);
+		if (node == NULL || getNodeLength(node) < minContigLength)
+			continue;
+		
+		// Long reads
+		for(marker = getMarker(node); marker != NULL; marker = getNextInNode(marker)) {
+			readID = getPassageMarkerSequenceID(marker);
+			if (readID < 0)
+				readID = -readID;
+			used[readID] = true;	
+		}	
+
+		// Short reads		
+		if (!readStartsAreActivated(graph))
+			continue;
+
+		shortReadArray = getNodeReads(node, graph);
+		shortReadCount = getNodeReadCount(node, graph);
+		for (shortReadIndex = 0; shortReadIndex < shortReadCount; shortReadIndex++) {
+			shortReadMarker = getShortReadMarkerAtIndex(shortReadArray, shortReadIndex);
+			readID = getShortReadMarkerID(shortReadMarker);
+			used[readID] = true;	
+		}
+		
+		shortReadArray = getNodeReads(getTwinNode(node), graph);
+		shortReadCount = getNodeReadCount(getTwinNode(node), graph);
+		for (shortReadIndex = 0; shortReadIndex < shortReadCount; shortReadIndex++) {
+			shortReadMarker = getShortReadMarkerAtIndex(shortReadArray, shortReadIndex);
+			readID = getShortReadMarkerID(shortReadMarker);
+			used[readID] = true;	
+		}
+	}
+
+	for (readID = 1; readID <= sequenceCount(graph); readID++) 
+		if (used[readID])
+			res++;
+
+	free(used);	
+
+	return res;
+}
+
+void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *directory)
+{
+	char *logFilename =
+	    mallocOrExit(strlen(directory) + 100, char);
+	char *statsLine = 
+	    mallocOrExit(5000, char);
+	FILE *logFile;
+
+	strcpy(logFilename, directory);
+	strcat(logFilename, "/Log");
+	logFile = fopen(logFilename, "a");
+
+	if (logFile == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not open file %s, exiting...\n",
+		       logFilename);
+
+	sprintf
+	    (statsLine, "Final graph has %li nodes and n50 of %li, max %li, total %li, using %li/%li reads\n",
+	     nodeCount(graph), n50(graph), maxLength(graph),
+	     totalAssemblyLength(graph), usedReads(graph, minContigKmerLength),
+	     sequenceCount(graph));
+
+	fprintf(logFile, "%s", statsLine);
+	fprintf(stdout, "%s", statsLine);
+
+	fclose(logFile);
+	free(logFilename);
+	free(statsLine);
 }

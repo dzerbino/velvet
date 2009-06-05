@@ -57,6 +57,12 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 void exportAMOSContigs(char *filename, Graph * graph,
 		       Coordinate cutoff_length, ReadSet * reads);
 
+IDnum usedReads(Graph * graph, Coordinate minContigLength); 
+
+Coordinate totalAssemblyLength(Graph * graph);
+
+void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *directory);
+
 ///////////////////////////////////////////////////////////////////
 // Dodgy functions
 ///////////////////////////////////////////////////////////////////
@@ -136,5 +142,4 @@ boolean isNatural(Graph * graph);
 
 void searchForHallidayJunction(Graph * graph);
 
-Coordinate totalAssemblyLength(Graph * graph);
 #endif

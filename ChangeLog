@@ -85,3 +85,10 @@ V 0.7.32
 
 V 0.7.33
 - Bug in Makefile
+
+V 0.7.34
+- Added number of reads used in contigs to final stats
+- Yet another bug in AMOS indexing
+- Final stats line conserved in log file
+- Optional scaffolding
+- Multiple rounds of Pebble to allow for very different insert lengths

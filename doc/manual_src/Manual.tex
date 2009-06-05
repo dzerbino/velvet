@@ -217,6 +217,13 @@ If you happen to have hashed paired long reads and you ordered them as explained
 		 (... other parameters ...)
 \end{verbatim}
 
+\textbf{Scaffolding} By default, Velvet will try to scaffold contigs that it cannot quite connect. This results in sequences of \emph{N}s in the contigs.fa file, which correspond to the estimated distance between two neighbouring contigs. If you do not want this scaffolding, you can turn it off with the following switch:
+
+\begin{verbatim}
+> ./velvetg output_directory/ -exp_cov 21 -ins_length_long 200
+		-scaffolding no (... other parameters ...)
+\end{verbatim}
+
 \textbf{Standard deviations} This is a more subtle point which you can ignore if you have only one dataset of paired-end reads or if the standard deviation (SD) of the insert lengths is roughly proportional to the expected length (e.g. if the insert-lengths are described as $length \pm p\%$).
 
 Velvet does not use the absolute values of the insert-length SDs, but their relative values. Therefore, you do not need to spend too much time on the estimation of the SDs, as long as you are consistent. You can then enter your own \emph{a priori} SD's. To do so simply indicate them as follows:
@@ -298,14 +305,6 @@ Partly for engineering issues and partly to avoid aberrant transformations, ther
 
 \begin{verbatim}
 > ./velvetg output_directory/ -max_branch_length 200 (...other parameters...)
-\end{verbatim} 
-
-\paragraph{Maximum indel count}
-
-Before comparing two sequences, Velvet compares their lengths, and, if they are too different, aborts the inspection. By default, this parameter is set to 3bp, but you can change it to, for example, 6bp:
-
-\begin{verbatim}
-> ./velvetg output_directory/ -max_indel_count 6 (...other parameters...)
 \end{verbatim} 
 
 \paragraph{Maximum divergence rate}
