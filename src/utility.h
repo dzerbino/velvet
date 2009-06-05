@@ -1,5 +1,5 @@
 /*
-Copyright 2009 Daniel Zerbino (zerbino@ebi.ac.uk)
+Copyright 2009 John Marshall (jm18@sanger.ac.uk) 
 
     This file is part of Velvet.
 
