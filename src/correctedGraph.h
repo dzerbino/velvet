@@ -30,6 +30,5 @@ void correctGraph(Graph * graph, Coordinate * sequenceLengths);
 // Black arts:
 void setMaxReadLength(int value);
 void setMaxGaps(int value);
-void setMaxIndels(int value);
 void setMaxDivergence(double value);
 #endif

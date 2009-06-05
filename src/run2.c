@@ -45,7 +45,6 @@ static void printUsage()
 	puts("\t-ins_length*_sd <integer>\t: est. standard deviation of respective dataset (default: 10\% of corresponding length)");
 	puts("\t\t[replace '*' by nothing, '2' or '_long' as necessary]");
 	puts("\t-max_branch_length <integer>\t: maximum length in base pair of bubble (default: 100)");
-	puts("\t-max_indel_count <integer>\t: maximum length difference allowed between the two branches of a bubble (default: 3)");
 	puts("\t-max_divergence <floating-point>: maximum divergence rate between two branches in a bubble (default: 0.2)");
 	puts("\t-max_gap_count <integer>\t: maximum number of gaps allowed in the alignment of the two branches of a bubble (default: 3)");
 	puts("\t-min_pair_count <integer>\t: minimum number of paired end connections to justify the scaffolding of two long contigs (default: 10)");
@@ -193,10 +192,6 @@ int main(int argc, char **argv)
 			sscanf(argv[arg_index], "%i", &arg_int);
 			setMaxReadLength(arg_int);
 			setLocalMaxReadLength(arg_int);
-		} else if (strcmp(arg, "-max_indel_count") == 0) {
-			sscanf(argv[arg_index], "%i", &arg_int);
-			setMaxIndels(arg_int);
-			setLocalMaxIndels(arg_int);
 		} else if (strcmp(arg, "-max_divergence") == 0) {
 			sscanf(argv[arg_index], "%lf", &arg_double);
 			setMaxDivergence(arg_double);

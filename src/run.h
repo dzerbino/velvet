@@ -42,6 +42,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "graphReConstruction.h"
 #include "concatenatedGraph.h"
 #include "correctedGraph.h"
+#include "locallyCorrectedGraph.h"
 
 // Repeat resolution
 #include "readCoherentGraph.h"

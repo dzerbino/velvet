@@ -36,6 +36,5 @@ void deactivateLocalCorrectionSettings();
 // Black arts:
 void setLocalMaxReadLength(int value);
 void setLocalMaxGaps(int value);
-void setLocalMaxIndels(int value);
 void setLocalMaxDivergence(double value);
 #endif

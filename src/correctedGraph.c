@@ -56,7 +56,6 @@ static int MAXREADLENGTH = 100;
 static int MAXNODELENGTH = 200;
 static double MAXDIVERGENCE = 0.2;
 static int MAXGAPS = 3;
-static int MAXINDELS = 3;
 
 static Time *times;
 static Node **previous;
@@ -2722,16 +2721,6 @@ void setMaxGaps(int value)
 		exit(1);
 	}
 	MAXGAPS = value;
-}
-
-void setMaxIndels(int value)
-{
-	if (value < 0) {
-		printf("Negative max indel count %i!\n", value);
-		puts("Exiting...");
-		exit(1);
-	}
-	MAXINDELS = value;
 }
 
 void setMaxDivergence(double value)
