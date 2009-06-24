@@ -92,3 +92,9 @@ V 0.7.34
 - Final stats line conserved in log file
 - Optional scaffolding
 - Multiple rounds of Pebble to allow for very different insert lengths
+
+V 0.7.35
+- Patched acceleration table bug (John Marshall)
+- Corrected error messages (John Marshall)
+- Crashing bug when using -cov_cutoff
+- --help option
