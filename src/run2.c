@@ -215,6 +215,9 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-long_mult_cutoff") == 0) {
 			sscanf(argv[arg_index], "%i", &longMultCutoff);
 			setMultiplicityCutoff(longMultCutoff);
+		} else if (strcmp(arg, "--help") == 0) {
+			printUsage();
+			return 0;	
 		} else {
 			printf("Unknown option: %s;\n", arg);
 			printUsage();

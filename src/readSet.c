@@ -369,7 +369,7 @@ ReadSet *readSolexaFile(char *filename)
 	if (file != NULL)
 		printf("Reading Solexa file %s\n", filename);
 	else
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	reads = newReadSet();
 
@@ -418,7 +418,7 @@ ReadSet *readElandFile(char *filename)
 	if (file != NULL)
 		printf("Reading Eland file %s\n", filename);
 	else
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	reads = newReadSet();
 
@@ -476,7 +476,7 @@ ReadSet *readFastQFile(char *filename)
 	if (file != NULL)
 		printf("Reading FastQ file %s\n", filename);
 	else
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	reads = newReadSet();
 
@@ -531,7 +531,7 @@ ReadSet *readFastQGZFile(char *filename)
 	if (file != NULL)
 		printf("Reading zipped FastQ file %s\n", filename);
 	else 
-		exitErrorf(EXIT_FAILURE, true, "Could not open zipped file %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open zipped file %s", filename);
 
 	reads = newReadSet();
 
@@ -587,7 +587,7 @@ ReadSet *readFastAFile(char *filename)
 	if (file != NULL)
 		printf("Reading FastA file %s;\n", filename);
 	else
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	reads = newReadSet();
 	// Count number of separate sequences
@@ -671,7 +671,7 @@ ReadSet *readFastAGZFile(char *filename)
 	if (file != NULL)
 		printf("Reading zipped FastA file %s;\n", filename);
 	else 
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	reads = newReadSet();
 	// Count number of separate sequences
@@ -748,7 +748,7 @@ ReadSet *readMAQGZFile(char *filename)
 	if (file != NULL)
 		printf("Reading zipped MAQ file %s;\n", filename);
 	else 
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	reads = newReadSet();
 
@@ -1017,7 +1017,7 @@ void importClippingData(char *filename, ReadSet * reads)
 	TightString **sequences = reads->tSequences;
 
 	if (file == NULL)
-		exitErrorf(EXIT_FAILURE, true, "Could not read %s, sorry.\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not read %s", filename);
 
 	puts("Importing clip data");
 
@@ -1148,7 +1148,7 @@ ReadSet *importReadSet(char *filename)
 	if (file != NULL)
 		printf("Reading read set file %s;\n", filename);
 	else
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	reads = newReadSet();
 
@@ -1234,8 +1234,7 @@ void logInstructions(int argc, char **argv, char *directory)
 	logFile = fopen(logFilename, "a");
 
 	if (logFile == NULL)
-		exitErrorf(EXIT_FAILURE, true, "Could not open file %s, exiting...\n",
-		       logFilename);
+		exitErrorf(EXIT_FAILURE, true, "Could not write to %s", logFilename);
 
 	fprintf(logFile, "%s", string);
 
@@ -1311,7 +1310,7 @@ Coordinate *getSequenceLengthsFromFile(char *filename, int wordLength)
 	if (file != NULL)
 		printf("Reading read set file %s;\n", filename);
 	else 
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	// Count number of separate sequences
 	sequenceCount = 0;

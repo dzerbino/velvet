@@ -215,7 +215,7 @@ void testForBizarreMarkers(Graph * graph)
 		for (marker = getMarker(node); marker != NULL;
 		     marker = getNextInNode(marker)) {
 			if (getTwinMarker(marker) == NULL) 
-				exitErrorf(EXIT_FAILURE, false, "Bizarre marker %s\n",
+				exitErrorf(EXIT_FAILURE, false, "Bizarre marker %s",
 				       readPassageMarker(marker));
 		}
 	}
@@ -1962,32 +1962,30 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 			continue;
 
 		if (getTotalCoverage(node) / getNodeLength(node) < minCov) {
-			nodeArray = getNodeReads(node, graph);
-			maxIndex = getNodeReadCount(node, graph);
-			for (index2 = 0; index2 < maxIndex; index2++) {
-				shortMarker =
-				    getShortReadMarkerAtIndex(nodeArray,
-							      index2);
-				readID = getShortReadMarkerID(shortMarker);
-				//printf("Dubious %li\n", readID);
-				if (denounceReads) {
+			if (denounceReads) {
+				nodeArray = getNodeReads(node, graph);
+				maxIndex = getNodeReadCount(node, graph);
+				for (index2 = 0; index2 < maxIndex; index2++) {
+					shortMarker =
+					    getShortReadMarkerAtIndex(nodeArray,
+								      index2);
+					readID = getShortReadMarkerID(shortMarker);
+					//printf("Dubious %li\n", readID);
 					if (readID > 0)
 						res[readID - 1] = true;
 					else
 						res[-readID - 1] = true;
 				}
-			}
 
-			nodeArray = getNodeReads(getTwinNode(node), graph);
-			maxIndex =
-			    getNodeReadCount(getTwinNode(node), graph);
-			for (index2 = 0; index2 < maxIndex; index2++) {
-				shortMarker =
-				    getShortReadMarkerAtIndex(nodeArray,
-							      index2);
-				readID = getShortReadMarkerID(shortMarker);
-				//printf("Dubious %li\n", readID);
-				if (denounceReads) {
+				nodeArray = getNodeReads(getTwinNode(node), graph);
+				maxIndex =
+				    getNodeReadCount(getTwinNode(node), graph);
+				for (index2 = 0; index2 < maxIndex; index2++) {
+					shortMarker =
+					    getShortReadMarkerAtIndex(nodeArray,
+								      index2);
+					readID = getShortReadMarkerID(shortMarker);
+					//printf("Dubious %li\n", readID);
 					if (readID > 0)
 						res[readID - 1] = true;
 					else
@@ -2371,7 +2369,7 @@ void exportAMOSContigs(char *filename, Graph * graph,
 	outfile = fopen(filename, "w");
 
 	if (outfile == NULL)
-		exitErrorf(EXIT_FAILURE, true, "Could not open AMOS file %s\n",
+		exitErrorf(EXIT_FAILURE, true, "Could not write to AMOS file %s",
 		       filename);
 
 	for (cat = 0; cat <= CATEGORIES; cat++)
@@ -2635,7 +2633,7 @@ void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *director
 	logFile = fopen(logFilename, "a");
 
 	if (logFile == NULL)
-		exitErrorf(EXIT_FAILURE, true, "Could not open file %s, exiting...\n",
+		exitErrorf(EXIT_FAILURE, true, "Could not write to %s",
 		       logFilename);
 
 	sprintf

@@ -122,11 +122,7 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 	}
 
 	// Allocating space
-	*insertionMarkers = calloc(totalCount, sizeof(InsertionMarker));
-	if (insertionMarkers == NULL && totalCount > 0) {
-		puts("Calloc failure");
-		exit(1);
-	}
+	*insertionMarkers = callocOrExit(totalCount, InsertionMarker);
 	*veryLastMarker = *insertionMarkers + totalCount;
 
 	// Pointing each node to its space      
@@ -334,7 +330,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	IDnum markerIndex, lastMarkerIndex;
 
 	if (file == NULL) 
-		exitErrorf(EXIT_FAILURE, true, "Could not read %s, sorry\n", sequenceFilename);
+		exitErrorf(EXIT_FAILURE, true, "Could not read %s", sequenceFilename);
 	// Reading sequence descriptor in first line
 	fgets(line, lineLength, file);
 

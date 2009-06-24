@@ -2169,7 +2169,7 @@ Graph *importGraph(char *filename)
 	Category cat;
 
 	if (file == NULL) 
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", filename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	printf("Reading graph file %s\n", filename);
 
@@ -2350,7 +2350,7 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	size_t arrayLength;
 
 	if (file == NULL)
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s\n", preGraphFilename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
 
 	printf("Reading pre-graph file %s\n", preGraphFilename);
 

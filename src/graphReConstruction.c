@@ -141,7 +141,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	Kmer header;
 
 	if (file == NULL)
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s, sorry\n", preGraphFilename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
 
 	// Count kmers
 	printf("Scanning pre-graph file %s for k-mers\n",
@@ -168,7 +168,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 		kmerTable->accelerationMask <<= (2 * wordLength -
 						 accelerationBits);
 		kmerTable->accelerationTable =
-		    callocOrExit(((size_t) 1) << accelerationBits,
+		    callocOrExit((((size_t) 1) << accelerationBits) + 1,
 			   IDnum);
 		accelPtr = kmerTable->accelerationTable;
 		kmerTable->accelerationShift =
@@ -202,7 +202,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	// Fill table
 	file = fopen(preGraphFilename, "r");
 	if (file == NULL)
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s, sorry.\n", preGraphFilename);
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
 
 	fgets(line, maxline, file);
 
@@ -286,7 +286,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 			}
 		}
 
-		while (lastHeader < ((Kmer) 1 << accelerationBits) - 1) {
+		while (lastHeader < (Kmer) 1 << accelerationBits) {
 			lastHeader++;
 			accelPtr++;
 			*accelPtr = kmerCount;
