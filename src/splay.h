@@ -35,14 +35,14 @@ void destroyAllSplayTrees();
 // Finds occurrence of kmer in the tree
 // If found, returns TRUE, and seqID and coordinate are accordingly modified
 // If not, a new leaf is added to the tree, with the seqID and position data
-boolean findOrInsertOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
+boolean findOrInsertOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
 					 Coordinate * position,
 					 SplayTree ** T);
 
-boolean placeOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
+boolean placeOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
 				  Coordinate * position, SplayTree ** T);
 
-void countOccurenceInSplayTree(Kmer kmer, SplayTree ** T, int increment);
+void countOccurenceInSplayTree(Kmer * kmer, SplayTree ** T, int increment);
 
 void filterAndExportSplayTree(FILE * file, SplayTree * T, int minCov,
 			      int maxCov);

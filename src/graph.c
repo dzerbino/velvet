@@ -28,6 +28,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "tightString.h"
 #include "passageMarker.h"
 #include "utility.h"
+#include "kmer.h"
 
 #define ADENINE 0
 #define CYTOSINE 1
@@ -2178,6 +2179,7 @@ Graph *importGraph(char *filename)
 	sscanf(line, "%li\t%li\t%i\n", &nodeCounter, &sequenceCount,
 	       &wordLength);
 	graph = emptyGraph(sequenceCount, wordLength);
+	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
 	printf("Graph has %li nodes and %li sequences\n", nodeCounter,
 	       sequenceCount);
@@ -2359,6 +2361,7 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	sscanf(line, "%li\t%li\t%i\n", &nodeCounter, &sequenceCount,
 	       &wordLength);
 	graph = emptyGraph(sequenceCount, wordLength);
+	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
 	printf("Graph has %li nodes and %li sequences\n", nodeCounter,
 	       sequenceCount);

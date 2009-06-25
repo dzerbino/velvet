@@ -30,6 +30,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "tightString.h"
 #include "recycleBin.h"
 #include "utility.h"
+#include "kmer.h"
 
 #define ADENINE 0
 #define CYTOSINE 1
@@ -51,9 +52,8 @@ struct kmerOccurenceTable_st {
 	KmerOccurence *kmerTable;
 	IDnum kmerTableSize;
 	IDnum *accelerationTable;
-	short int accelerationBits;
 	short int accelerationShift;
-	Kmer accelerationMask;
+	short int accelerationBits;
 };
 
 struct smallNodeList_st {
@@ -105,20 +105,30 @@ int compareKmerOccurences(void const *A, void const *B)
 	KmerOccurence *a = (KmerOccurence *) A;
 	KmerOccurence *b = (KmerOccurence *) B;
 
-	if (a->kmer < b->kmer)
+	if (compareKmers(&(a->kmer), &(b->kmer)) < 0)
 		return -1;
-	else if (a->kmer > b->kmer)
+	else if (compareKmers(&(a->kmer), &(b->kmer)) > 0)
 		return 1;
 	else
 		return 0;
 }
 
-static inline Kmer keyInAccelerationTable(Kmer kmer,
+static inline KmerKey keyInAccelerationTable(Kmer * kmer,
 					  KmerOccurenceTable * table)
 {
-	Kmer key = kmer;
-	key &= table->accelerationMask;
-	key >>= table->accelerationShift;
+	KmerKey key = 0;
+	Kmer copy;
+	int i;
+
+	copyKmers(&copy, kmer);
+	for (i = 0; i < table->accelerationShift; i+= 2)
+		popNucleotide(&copy);
+
+	for (i = 0; i < table->accelerationBits; i+= 2) {
+		key += popNucleotide(&copy) << table->accelerationBits;
+		key >>= 2;
+	}
+	
 	return key;
 }
 
@@ -130,15 +140,15 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	char line[MAXLINE];
 	int wordLength;
 	Coordinate nodeLength, lineLength, kmerCount;
-	Kmer word, antiWord, wordFilter;
+	Kmer word, antiWord;
 	KmerOccurenceTable *kmerTable = NULL;
 	KmerOccurence *kmerOccurences, *kmerOccurencePtr;
 	Coordinate kmerOccurenceIndex;
 	IDnum index;
 	IDnum nodeID = 0;
 	IDnum *accelPtr = NULL;
-	Kmer lastHeader = 0;
-	Kmer header;
+	KmerKey lastHeader = 0;
+	KmerKey header;
 
 	if (file == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
@@ -150,7 +160,6 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	// First  line
 	fgets(line, maxline, file);
 	sscanf(line, "%*i\t%*i\t%i\n", &wordLength);
-	wordFilter = (((Kmer) 1) << (2 * wordLength)) - 1;
 
 	// Initialize kmer occurence table:
 	kmerTable = mallocOrExit(1, KmerOccurenceTable);
@@ -162,11 +171,6 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 
 	if (accelerationBits > 0) {
 		kmerTable->accelerationBits = accelerationBits;
-		kmerTable->accelerationMask = ((Kmer) 1);
-		kmerTable->accelerationMask <<= accelerationBits;
-		kmerTable->accelerationMask--;
-		kmerTable->accelerationMask <<= (2 * wordLength -
-						 accelerationBits);
 		kmerTable->accelerationTable =
 		    callocOrExit((((size_t) 1) << accelerationBits) + 1,
 			   IDnum);
@@ -175,7 +179,6 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 		    (short int) 2 *wordLength - accelerationBits;
 	} else {
 		kmerTable->accelerationBits = 0;
-		kmerTable->accelerationMask = 0;
 		kmerTable->accelerationTable = NULL;
 		kmerTable->accelerationShift = 0;
 	}
@@ -215,41 +218,38 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 		nodeLength = lineLength - wordLength;
 
 		// Fill in the initial word : 
-		word = 0;
+		clearKmer(&word);
 		for (index = 0; index < wordLength - 1; index++) {
-			word <<= 2;
 			if (line[index] == 'A')
-				word += ADENINE;
+				pushNucleotide(&word, ADENINE);
 			else if (line[index] == 'C')
-				word += CYTOSINE;
+				pushNucleotide(&word, CYTOSINE);
 			else if (line[index] == 'G')
-				word += GUANINE;
+				pushNucleotide(&word, GUANINE);
 			else if (line[index] == 'T')
-				word += THYMINE;
+				pushNucleotide(&word, THYMINE);
 		}
 
 		// Scan through node
 		for (; index < lineLength - 1; index++) {
-			word <<= 2;
 			if (line[index] == 'A')
-				word += ADENINE;
+				pushNucleotide(&word, ADENINE);
 			else if (line[index] == 'C')
-				word += CYTOSINE;
+				pushNucleotide(&word, CYTOSINE);
 			else if (line[index] == 'G')
-				word += GUANINE;
+				pushNucleotide(&word, GUANINE);
 			else if (line[index] == 'T')
-				word += THYMINE;
-			word &= wordFilter;
+				pushNucleotide(&word, THYMINE);
 
-			antiWord = reverseComplement(word, wordLength);
+			reverseComplement(&antiWord, &word, wordLength);
 
-			if (word <= antiWord) {
-				kmerOccurencePtr->kmer = word;
+			if (compareKmers(&word, &antiWord) <= 0) {
+				copyKmers(&kmerOccurencePtr->kmer, &word);
 				kmerOccurencePtr->nodeID = nodeID;
 				kmerOccurencePtr->position =
 				    index - wordLength + 1;
 			} else {
-				kmerOccurencePtr->kmer = antiWord;
+				copyKmers(&kmerOccurencePtr->kmer, &antiWord);
 				kmerOccurencePtr->nodeID = -nodeID;
 				kmerOccurencePtr->position =
 				    lineLength - 2 - index;
@@ -276,7 +276,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 		     kmerOccurenceIndex < kmerCount;
 		     kmerOccurenceIndex++) {
 			header =
-			    keyInAccelerationTable(kmerOccurences
+			    keyInAccelerationTable(&kmerOccurences
 						   [kmerOccurenceIndex].
 						   kmer, kmerTable);
 			while (lastHeader < header) {
@@ -286,7 +286,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 			}
 		}
 
-		while (lastHeader < (Kmer) 1 << accelerationBits) {
+		while (lastHeader < (KmerKey) 1 << accelerationBits) {
 			lastHeader++;
 			accelPtr++;
 			*accelPtr = kmerCount;
@@ -296,12 +296,12 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	return kmerTable;
 }
 
-static KmerOccurence *findKmerOccurenceInSortedTable(Kmer kmer,
+static KmerOccurence *findKmerOccurenceInSortedTable(Kmer * kmer,
 						     KmerOccurenceTable *
 						     table)
 {
 	KmerOccurence *array = table->kmerTable;
-	Kmer key = keyInAccelerationTable(kmer, table);
+	KmerKey key = keyInAccelerationTable(kmer, table);
 	Coordinate leftIndex, rightIndex, middleIndex;
 
 	if (table->accelerationTable != NULL) {
@@ -315,13 +315,13 @@ static KmerOccurence *findKmerOccurenceInSortedTable(Kmer kmer,
 	while (true) {
 		middleIndex = (rightIndex + leftIndex) / 2;
 
-		if (leftIndex >= rightIndex) {
+		if (leftIndex >= rightIndex)
 			return NULL;
-		} else if ((array[middleIndex]).kmer == kmer) {
+		else if (compareKmers(&(array[middleIndex]).kmer, kmer) == 0) 
 			return &(array[middleIndex]);
-		} else if (leftIndex == middleIndex) {
+		else if (leftIndex == middleIndex)
 			return NULL;
-		} else if ((array[middleIndex]).kmer > kmer)
+		else if (compareKmers(&(array[middleIndex]).kmer, kmer) > 0)
 			rightIndex = middleIndex;
 		else
 			leftIndex = middleIndex;
@@ -332,17 +332,17 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 					    KmerOccurenceTable *
 					    kmerOccurences, Graph * graph,
 					    IDnum seqID, Category category,
-					    Kmer wordFilter,
 					    boolean readTracking)
 {
-	Kmer word = 0;
-	Kmer antiWord;
+	Kmer word, antiWord;
 	Coordinate readNucleotideIndex;
 	KmerOccurence *kmerOccurence;
 	int wordLength = getWordLength(graph);
 
 	Node *node;
 	Node *previousNode = NULL;
+
+	clearKmer(&word);
 
 	// Neglect any read which will not be short paired
 	if ((!readTracking && category % 2 == 0)
@@ -366,31 +366,27 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
-	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++) {
-		word <<= 2;
-		word += getNucleotide(readNucleotideIndex, tString);
-	}
+	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++) 
+		pushNucleotide(&word, getNucleotide(readNucleotideIndex, tString));
 
 	// Go through sequence
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
-		word <<= 2;
-		word &= wordFilter;
-		word += getNucleotide(readNucleotideIndex++, tString);
+		pushNucleotide(&word, getNucleotide(readNucleotideIndex++, tString));
 
 		// Compute reverse complement
-		antiWord = reverseComplement(word, wordLength);
+		reverseComplement(&antiWord, &word, wordLength);
 
 		// Search in table
-		if (word <= antiWord
+		if (compareKmers(&word, &antiWord) <= 0
 		    && (kmerOccurence =
-			findKmerOccurenceInSortedTable(word,
+			findKmerOccurenceInSortedTable(&word,
 						       kmerOccurences))) {
 			node =
 			    getNodeInGraph(graph, kmerOccurence->nodeID);
-		} else if (word > antiWord
+		} else if (compareKmers(&word, &antiWord) > 0
 			   && (kmerOccurence =
-			       findKmerOccurenceInSortedTable(antiWord,
+			       findKmerOccurenceInSortedTable(&antiWord,
 							      kmerOccurences)))
 		{
 			node =
@@ -418,11 +414,9 @@ static void threadSequenceThroughGraph(TightString * tString,
 				       KmerOccurenceTable * kmerOccurences,
 				       Graph * graph,
 				       IDnum seqID, Category category,
-				       Kmer wordFilter,
 				       boolean readTracking)
 {
-	Kmer word = 0;
-	Kmer antiWord;
+	Kmer word, antiWord;
 	Coordinate readNucleotideIndex;
 	Coordinate kmerIndex;
 	KmerOccurence *kmerOccurence;
@@ -435,38 +429,36 @@ static void threadSequenceThroughGraph(TightString * tString,
 	Coordinate coord;
 	Coordinate previousCoord = 0;
 
+	clearKmer(&word);
+
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < wordLength)
 		return;
 
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
-	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++) {
-		word <<= 2;
-		word += getNucleotide(readNucleotideIndex, tString);
-	}
+	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++)
+		pushNucleotide(&word, getNucleotide(readNucleotideIndex, tString));
 
 	// Go through sequence
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
-		word <<= 2;
-		word &= wordFilter;
-		word += getNucleotide(readNucleotideIndex++, tString);
+		pushNucleotide(&word, getNucleotide(readNucleotideIndex++, tString));
 
 		// Compute reverse complement
-		antiWord = reverseComplement(word, wordLength);
+		reverseComplement(&antiWord, &word, wordLength);
 
 		// Search in table
-		if (word <= antiWord
+		if (compareKmers(&word, &antiWord) <= 0
 		    && (kmerOccurence =
-			findKmerOccurenceInSortedTable(word,
+			findKmerOccurenceInSortedTable(&word,
 						       kmerOccurences))) {
 			node =
 			    getNodeInGraph(graph, kmerOccurence->nodeID);
 			coord = kmerOccurence->position;
-		} else if (word > antiWord
+		} else if (compareKmers(&word, &antiWord) > 0
 			   && (kmerOccurence =
-			       findKmerOccurenceInSortedTable(antiWord,
+			       findKmerOccurenceInSortedTable(&antiWord,
 							      kmerOccurences)))
 		{
 			node =
@@ -558,7 +550,6 @@ static void fillUpGraph(ReadSet * reads,
 			boolean readTracking)
 {
 	IDnum readIndex;
-	Kmer wordFilter = (((Kmer) 1) << (2 * getWordLength(graph))) - 1;
 	Category category;
 
 	resetNodeStatus(graph);
@@ -569,7 +560,7 @@ static void fillUpGraph(ReadSet * reads,
 						tSequences[readIndex],
 						kmerOccurences,
 						graph, readIndex + 1,
-						category, wordFilter,
+						category, 
 						readTracking);
 	}
 
@@ -585,7 +576,7 @@ static void fillUpGraph(ReadSet * reads,
 		threadSequenceThroughGraph(reads->tSequences[readIndex],
 					   kmerOccurences,
 					   graph, readIndex + 1, category,
-					   wordFilter, readTracking);
+					   readTracking);
 	}
 
 	orderNodeReadStartArrays(graph);

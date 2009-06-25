@@ -28,19 +28,18 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "tightString.h"
 #include "crc.h"
 #include "utility.h"
+#include "kmer.h"
 
 struct splayTable_st {
 	SplayTree **table;
 	IDnum lastIndex;
 	int WORDLENGTH;
-	Kmer WORDFILTER;
 };
 
 SplayTable *newSplayTable(int WORDLENGTH)
 {
 	SplayTable *splayTable = mallocOrExit(1, SplayTable);
 	splayTable->WORDLENGTH = WORDLENGTH;
-	splayTable->WORDFILTER = (((Kmer) 1) << (2 * WORDLENGTH)) - 1;
 	splayTable->table = callocOrExit(CRC_HASH_BUCKETS, SplayTree *);
 	splayTable->lastIndex = 0;
 	return splayTable;
@@ -56,12 +55,12 @@ void destroySplayTable(SplayTable * splayTable)
 	puts("Splay table destroyed");
 }
 
-static int hash_kmer(Kmer kmer)
+static int hash_kmer(Kmer * kmer)
 {
-	return crc32_v((char *) &kmer, sizeof(Kmer));
+	return crc32_v((char *) kmer, sizeof(Kmer));
 }
 
-static boolean findOrInsertOccurenceInSplayTable(Kmer kmer, IDnum * seqID,
+static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
 						 Coordinate * position,
 						 SplayTable * table)
 {
@@ -81,10 +80,9 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	IDnum currentIndex;
 	Coordinate readNucleotideIndex = 0;
 	Coordinate writeNucleotideIndex = 0;
-	Kmer word = 0;
-	Kmer antiWord = 0;
+	Kmer word;
+	Kmer antiWord;
 	boolean annotationClosed = true;
-	unsigned char nucleotide;
 	IDnum sequenceID;
 	Coordinate coord;
 	boolean found;
@@ -92,6 +90,9 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	Coordinate start = 0;
 	Coordinate finish = 0;
 	IDnum referenceSequenceID = 0;
+
+	clearKmer(&word);
+	clearKmer(&antiWord);
 
 	table->lastIndex++;
 
@@ -106,35 +107,28 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
 	     readNucleotideIndex < table->WORDLENGTH - 1;
-	     readNucleotideIndex++) {
-		word <<= 2;
-		nucleotide = getNucleotide(readNucleotideIndex, tString);
-		word += nucleotide;
-	}
+	     readNucleotideIndex++) 
+		pushNucleotide(&word, getNucleotide(readNucleotideIndex, tString));
 
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
-		nucleotide = getNucleotide(readNucleotideIndex, tString);
-		readNucleotideIndex++;
-		word <<= 2;
-		word &= table->WORDFILTER;
-		word += nucleotide;
+		pushNucleotide(&word, getNucleotide(readNucleotideIndex++, tString));
 
 		sequenceID = currentIndex;
 		coord = writeNucleotideIndex;
 
-		antiWord = reverseComplement(word, table->WORDLENGTH);
+		reverseComplement(&antiWord, &word, table->WORDLENGTH);
 
-		if (word <= antiWord) {
+		if (compareKmers(&word, &antiWord) <= 0) {
 			found =
-			    findOrInsertOccurenceInSplayTable(word,
+			    findOrInsertOccurenceInSplayTable(&word,
 							      &sequenceID,
 							      &coord,
 							      table);
 		} else {
 			sequenceID = -sequenceID;
 			found =
-			    findOrInsertOccurenceInSplayTable(antiWord,
+			    findOrInsertOccurenceInSplayTable(&antiWord,
 							      &sequenceID,
 							      &coord,
 							      table);
@@ -244,11 +238,13 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 void inputMaskIntoSplayTable(TightString * tString, SplayTable * table)
 {
 	Coordinate readNucleotideIndex = 0;
-	Kmer word = 0;
-	Kmer antiWord = 0;
-	unsigned char nucleotide;
+	Kmer word;
+	Kmer antiWord;
 	IDnum sequenceID = 0;
 	Coordinate coord = 0;
+
+	clearKmer(&word);
+	clearKmer(&antiWord);
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
@@ -258,28 +254,21 @@ void inputMaskIntoSplayTable(TightString * tString, SplayTable * table)
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
 	     readNucleotideIndex < table->WORDLENGTH - 1;
-	     readNucleotideIndex++) {
-		word <<= 2;
-		nucleotide = getNucleotide(readNucleotideIndex, tString);
-		word += nucleotide;
-	}
+	     readNucleotideIndex++)
+		pushNucleotide(&word, getNucleotide(readNucleotideIndex, tString));
 
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
-		nucleotide = getNucleotide(readNucleotideIndex, tString);
-		readNucleotideIndex++;
-		word <<= 2;
-		word &= table->WORDFILTER;
-		word += nucleotide;
+		pushNucleotide(&word, getNucleotide(readNucleotideIndex++, tString));
 
-		antiWord = reverseComplement(word, table->WORDLENGTH);
+		reverseComplement(&antiWord, &word, table->WORDLENGTH);
 
-		if (word <= antiWord)
-			findOrInsertOccurenceInSplayTable(word,
+		if (compareKmers(&word, &antiWord) <= 0)
+			findOrInsertOccurenceInSplayTable(&word,
 							  &sequenceID,
 							  &coord, table);
 		else
-			findOrInsertOccurenceInSplayTable(antiWord,
+			findOrInsertOccurenceInSplayTable(&antiWord,
 							  &sequenceID,
 							  &coord, table);
 	}

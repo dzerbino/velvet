@@ -960,15 +960,11 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 		arrayLength++;
 
 	res = callocOrExit(arrayLength, Descriptor);
-	for (index = 0; index < arrayLength; index++)
-		res[index] = 0;
 
-	kmerCopy = *initialKmer;
-	for (index = wordLength - 2; index >= 0; index--) {
-		writeNucleotideInDescriptor_pg((char) (kmerCopy & 3), res,
+	copyKmers(&kmerCopy, initialKmer);
+	for (index = wordLength - 2; index >= 0; index--)
+		writeNucleotideInDescriptor_pg(popNucleotide(&kmerCopy), res,
 					       index);
-		kmerCopy >>= 2;
-	}
 
 	for (index = wordLength - 1; index < totalLength; index++) {
 		letter = getc(file);
@@ -995,8 +991,7 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 		}
 
 		writeNucleotideInDescriptor_pg(nucleotide, res, index);
-		(*initialKmer) <<= 2;
-		(*initialKmer) += nucleotide;
+		pushNucleotide(initialKmer, nucleotide);
 	}
 
 	//printf(" ");

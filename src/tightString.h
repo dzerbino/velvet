@@ -90,13 +90,10 @@ void trimTightStringArraySanger(TightString ** tStringArray,
 				IDnum arrayLength, Coordinate minLength,
 				Coordinate maxLength);
 
-Kmer reverseComplement(Kmer word, int WORDLENGTH);
-
 void clipTightString(TightString * sequence, Coordinate start,
 		     Coordinate finish);
 
 // Exports an array of sequences under FastA format
 void exportSequenceArray(char *filename, TightString ** array,
 			 IDnum sequenceCount);
-
 #endif

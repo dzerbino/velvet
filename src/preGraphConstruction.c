@@ -30,6 +30,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "readSet.h"
 #include "concatenatedPreGraph.h"
 #include "utility.h"
+#include "kmer.h"
 
 #define ADENINE 0
 #define CYTOSINE 1
@@ -354,7 +355,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 
 		// Reading first (k-1) nucleotides
 		tooShort = false;
-		initialKmer = 0;
+		clearKmer(&initialKmer);
 		//printf("Initial kmer: ");
 		for (readIndex = 0; readIndex < WORDLENGTH - 1;
 		     readIndex++) {
@@ -365,20 +366,16 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			//printf("%c", c);      
 			switch (c) {
 			case 'A':
-				initialKmer <<= 2;
-				initialKmer += ADENINE;
+				pushNucleotide(&initialKmer, ADENINE);
 				break;
 			case 'C':
-				initialKmer <<= 2;
-				initialKmer += CYTOSINE;
+				pushNucleotide(&initialKmer, CYTOSINE);
 				break;
 			case 'G':
-				initialKmer <<= 2;
-				initialKmer += GUANINE;
+				pushNucleotide(&initialKmer, GUANINE);
 				break;
 			case 'T':
-				initialKmer <<= 2;
-				initialKmer += THYMINE;
+				pushNucleotide(&initialKmer, THYMINE);
 				break;
 			default:
 				printf
@@ -446,20 +443,16 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 					//printf("(%c)", c);
 					switch (c) {
 					case 'A':
-						initialKmer <<= 2;
-						initialKmer += ADENINE;
+						pushNucleotide(&initialKmer, ADENINE);
 						break;
 					case 'C':
-						initialKmer <<= 2;
-						initialKmer += CYTOSINE;
+						pushNucleotide(&initialKmer, CYTOSINE);
 						break;
 					case 'G':
-						initialKmer <<= 2;
-						initialKmer += GUANINE;
+						pushNucleotide(&initialKmer, GUANINE);
 						break;
 					case 'T':
-						initialKmer <<= 2;
-						initialKmer += THYMINE;
+						pushNucleotide(&initialKmer, THYMINE);
 						break;
 					default:
 						printf

@@ -427,28 +427,6 @@ void destroyTightStringArray(TightString ** array, IDnum sequenceCount)
 	free(array);
 }
 
-//Reverses a word into its Watson-Crick reverse complement
-Kmer reverseComplement(Kmer word, int WORDLENGTH)
-{
-	int index;
-	Kmer revComp = 0;
-	Kmer copy = word;
-	Nucleotide nucleotide;
-
-	for (index = 0; index < WORDLENGTH; index++) {
-		nucleotide = (char) (copy & 3);
-		revComp <<= 2;
-#ifndef COLOR
-		revComp += 3 - nucleotide;
-#else
-		revComp += nucleotide;
-#endif
-		copy >>= 2;
-	}
-
-	return revComp;
-}
-
 void setTightStringLength(TightString * tString, Coordinate length)
 {
 	Coordinate newArrayLength = length / 4;

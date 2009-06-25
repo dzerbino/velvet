@@ -108,6 +108,12 @@ int main(int argc, char **argv)
 		printUsage();
 		return 1;
 	}
+
+	if (strcmp(argv[1], "--help") == 0) {
+		printUsage();
+		return 0;
+	}
+
 	// Memory allocation 
 	directory = argv[1];
 	graphFilename = mallocOrExit(strlen(directory) + 100, char);

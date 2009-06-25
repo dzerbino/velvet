@@ -28,6 +28,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "tightString.h"
 #include "roadMap.h"
 #include "utility.h"
+#include "kmer.h"
 
 #ifndef NULL
 #define NULL 0
@@ -111,6 +112,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 	file = fopen(filename, "r");
 	fgets(line, maxline, file);
 	sscanf(line, "%li\t%i\n", &sequenceCount, &(result->WORDLENGTH));
+	resetWordFilter(result->WORDLENGTH);
 	result->length = sequenceCount;
 	array = mallocOrExit(sequenceCount, RoadMap);
 	result->array = array;

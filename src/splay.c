@@ -23,6 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #include "globals.h"
 #include "recycleBin.h"
+#include "kmer.h"
 
 #define CHUNKSIZE 10000
 
@@ -107,7 +108,7 @@ static SplayNode *SingleRotateWithRight(SplayNode * K1)
 /* Top-down splay procedure, */
 /* not requiring kmer to be in tree */
 
-static SplayTree *Splay(Kmer kmer, SplayTree * T)
+static SplayTree *Splay(Kmer * kmer, SplayTree * T)
 {
 	SplayNode Header;
 	SplayNode *LeftTreeMax, *RightTreeMin;
@@ -118,11 +119,11 @@ static SplayTree *Splay(Kmer kmer, SplayTree * T)
 	Header.left = Header.right = NULL;
 	LeftTreeMax = RightTreeMin = &Header;
 
-	while (kmer != T->kmer) {
-		if (kmer < T->kmer) {
+	while (compareKmers(kmer, &(T->kmer))) {
+		if (compareKmers(kmer, &(T->kmer)) < 0) {
 			if (T->left == NULL)
 				break;
-			if (kmer < T->left->kmer)
+			if (compareKmers(kmer, &(T->left->kmer)) < 0)
 				T = SingleRotateWithLeft(T);
 			if (T->left == NULL)
 				break;
@@ -133,7 +134,7 @@ static SplayTree *Splay(Kmer kmer, SplayTree * T)
 		} else {
 			if (T->right == NULL)
 				break;
-			if (kmer > T->right->kmer)
+			if (compareKmers(kmer, &(T->right->kmer)) < 0)
 				T = SingleRotateWithRight(T);
 			if (T->right == NULL)
 				break;
@@ -153,35 +154,35 @@ static SplayTree *Splay(Kmer kmer, SplayTree * T)
 	return T;
 }
 
-Kmer findInTree(Kmer X, SplayTree ** T)
+Kmer * findInTree(Kmer * X, SplayTree ** T)
 {
 	*T = Splay(X, *T);
-	return (*T)->kmer;
+	return &((*T)->kmer);
 }
 
-void insertIntoTree(Kmer kmer, SplayTree ** T)
+void insertIntoTree(Kmer * kmer, SplayTree ** T)
 {
 	SplayNode *newNode;
 
 	if (*T == NULL) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->left = newNode->right = NULL;
 		*T = newNode;
 		return;
 	}
 
 	*T = Splay(kmer, *T);
-	if (kmer < (*T)->kmer) {
+	if (compareKmers(kmer, &((*T)->kmer)) < 0) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->left = (*T)->left;
 		newNode->right = *T;
 		(*T)->left = NULL;
 		*T = newNode;
-	} else if ((*T)->kmer < kmer) {
+	} else if (compareKmers(&((*T)->kmer), kmer) < 0) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->right = (*T)->right;
 		newNode->left = *T;
 		(*T)->right = NULL;
@@ -190,14 +191,14 @@ void insertIntoTree(Kmer kmer, SplayTree ** T)
 }
 
 boolean
-findOrInsertOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
+findOrInsertOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
 				 Coordinate * position, SplayTree ** T)
 {
 	SplayNode *newNode;
 
 	if (*T == NULL) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->seqID = *seqID;
 		newNode->position = *position;
 
@@ -209,9 +210,9 @@ findOrInsertOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
 	}
 
 	*T = Splay(kmer, *T);
-	if (kmer < (*T)->kmer) {
+	if (compareKmers(kmer, &((*T)->kmer)) < 0) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->seqID = *seqID;
 		newNode->position = *position;
 
@@ -222,9 +223,9 @@ findOrInsertOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
 		*T = newNode;
 
 		return false;
-	} else if ((*T)->kmer < kmer) {
+	} else if (compareKmers(kmer, &((*T)->kmer)) > 0) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->seqID = *seqID;
 		newNode->position = *position;
 
@@ -244,7 +245,7 @@ findOrInsertOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
 }
 
 boolean
-placeOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
+placeOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
 			  Coordinate * position, SplayTree ** T)
 {
 	SplayNode *newNode;
@@ -253,7 +254,7 @@ placeOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
 
 	if (*T == NULL) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->seqID = *seqID;
 		newNode->position = *position;
 
@@ -265,9 +266,9 @@ placeOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
 	}
 
 	*T = Splay(kmer, *T);
-	if (kmer < (*T)->kmer) {
+	if (compareKmers(kmer, &((*T)->kmer)) < 0) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->seqID = *seqID;
 		newNode->position = *position;
 
@@ -278,9 +279,9 @@ placeOccurenceInSplayTree(Kmer kmer, IDnum * seqID,
 		*T = newNode;
 
 		return false;
-	} else if ((*T)->kmer < kmer) {
+	} else if (compareKmers(&((*T)->kmer), kmer) < 0) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->seqID = *seqID;
 		newNode->position = *position;
 
@@ -308,7 +309,7 @@ void printTree(SplayTree * T)
 		return;
 
 	printTree(T->left);
-	printf("%lli\n", T->kmer);
+	printKmer(&(T->kmer));
 	printTree(T->right);
 }
 
@@ -316,33 +317,42 @@ void printTree(SplayTree * T)
 
 int test(int argc, char **argv)
 {
-	int i;
 	SplayTree *T = newSplayTree();
 	puts("Hello, world");
+	Kmer k;
 
 	puts("---TREE---");
 	printTree(T);
-	insertIntoTree(1, &T);
+	clearKmer(&k);
+	pushNucleotide(&k, 1);
+	insertIntoTree(&k, &T);
 	puts("---TREE---");
 	printTree(T);
-	insertIntoTree(3, &T);
+	clearKmer(&k);
+	pushNucleotide(&k, 3);
+	insertIntoTree(&k, &T);
 	puts("---TREE---");
 	printTree(T);
-	insertIntoTree(13, &T);
+	clearKmer(&k);
+	pushNucleotide(&k, 13);
+	insertIntoTree(&k, &T);
 	puts("---TREE---");
 	printTree(T);
-	insertIntoTree(5, &T);
+	clearKmer(&k);
+	pushNucleotide(&k, 5);
+	insertIntoTree(&k, &T);
 	puts("---TREE---");
 	printTree(T);
-	insertIntoTree(7, &T);
+	clearKmer(&k);
+	pushNucleotide(&k, 7);
+	insertIntoTree(&k, &T);
 	puts("---TREE---");
 	printTree(T);
-	insertIntoTree(2, &T);
+	clearKmer(&k);
+	pushNucleotide(&k, 2);
+	insertIntoTree(&k, &T);
 	puts("---TREE---");
 	printTree(T);
-
-	for (i = 1; i < 15; i++)
-		printf("Test with %i: %lli\n", i, findInTree(i, &T));
 
 	destroySplayTree(T);
 
@@ -350,13 +360,13 @@ int test(int argc, char **argv)
 }
 
 
-void countOccurenceInSplayTree(Kmer kmer, SplayTree ** T, int increment)
+void countOccurenceInSplayTree(Kmer * kmer, SplayTree ** T, int increment)
 {
 	SplayNode *newNode;
 
 	if (*T == NULL) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->position = increment;
 
 		newNode->left = newNode->right = NULL;
@@ -367,9 +377,9 @@ void countOccurenceInSplayTree(Kmer kmer, SplayTree ** T, int increment)
 	}
 
 	*T = Splay(kmer, *T);
-	if (kmer < (*T)->kmer) {
+	if (compareKmers(kmer, &((*T)->kmer)) < 0) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->position = increment;
 
 		newNode->left = (*T)->left;
@@ -377,9 +387,9 @@ void countOccurenceInSplayTree(Kmer kmer, SplayTree ** T, int increment)
 		(*T)->left = NULL;
 
 		*T = newNode;
-	} else if ((*T)->kmer < kmer) {
+	} else if (compareKmers(kmer, &((*T)->kmer)) > 0) {
 		newNode = allocateSplayNode();
-		newNode->kmer = kmer;
+		copyKmers(&(newNode->kmer), kmer);
 		newNode->position = increment;
 
 		newNode->right = (*T)->right;
@@ -403,7 +413,7 @@ void filterAndExportSplayTree(FILE * file, SplayTree * T, int minCov,
 	filterAndExportSplayTree(file, T->right, minCov, maxCov);
 	if ((minCov == -1 || T->position >= minCov)
 	    && (maxCov == -1 || T->position <= maxCov))
-		fprintf(file, "%lli\n", T->kmer);
+		printKmer(&(T->kmer));
 }
 
 void displaySplayTreeMemory()

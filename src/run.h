@@ -26,6 +26,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "utility.h"
 
 // Datastructures
+#include "kmer.h"
 #include "readSet.h"
 #include "tightString.h"
 #include "roadMap.h"

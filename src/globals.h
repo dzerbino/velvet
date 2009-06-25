@@ -32,9 +32,11 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #define VERSION_NUMBER 0
 #define RELEASE_NUMBER 7
-#define UPDATE_NUMBER 35
+#define UPDATE_NUMBER 36
 
 #define CATEGORIES 2
+
+#define MAXKMERLENGTH 31 
 
 #define MAXLINE 1000000
 
@@ -67,10 +69,13 @@ typedef long IDnum;
 typedef long Coordinate;
 typedef short int ShortLength;
 typedef double Time;
-typedef unsigned long long Kmer;
 typedef unsigned char Quality;
 typedef double Probability;
 typedef signed char Category;
+
+// Atomic word
+typedef struct kmer_st Kmer;
+typedef long long KmerKey;
 
 // Just a sequence string, but with just two bits per character
 typedef struct tString_st TightString;

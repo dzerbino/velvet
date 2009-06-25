@@ -87,11 +87,11 @@ int main(int argc, char **argv)
 
 	hashLength = atoi(argv[2]);
 
-	if (hashLength > 31) {
+	if (hashLength > MAXKMERLENGTH) {
 		printf
-		    ("Velvet can't handle k-mers as long as %i! We'll stick to 31 if you don't mind.\n",
-		     hashLength);
-		hashLength = 31;
+		    ("Velvet can't handle k-mers as long as %i! We'll stick to %i if you don't mind.\n",
+		     hashLength, MAXKMERLENGTH);
+		hashLength = MAXKMERLENGTH;
 	} else if (hashLength <= 0) {
 		printf("Invalid hash length: %s\n", argv[2]);
 		printUsage();
@@ -102,6 +102,7 @@ int main(int argc, char **argv)
 		     hashLength, hashLength - 1);
 		hashLength--;
 	}
+	resetWordFilter(hashLength);
 
 	dir = opendir(directory);
 
