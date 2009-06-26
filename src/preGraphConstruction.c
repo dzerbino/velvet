@@ -39,8 +39,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 // Internal structure used to mark the ends of an Annotation
 struct insertionMarker_st {
-	boolean isStart;
 	Annotation *annot;
+	boolean isStart;
 };
 
 Coordinate getInsertionMarkerPosition(InsertionMarker * marker)
@@ -102,7 +102,7 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 	// Counting insertion markers
 	for (sequenceIndex = 1; sequenceIndex < sequenceCounter + 1;
 	     sequenceIndex++) {
-		//printf("Going through sequence %li\n", sequenceIndex);
+		//printf("Going through sequence %d\n", sequenceIndex);
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
 		lastAnnotIndex = getAnnotationCount(rdmap);
 
@@ -139,7 +139,7 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 	annot = rdmaps->annotations;
 	for (sequenceIndex = 1; sequenceIndex < sequenceCounter + 1;
 	     sequenceIndex++) {
-		//printf("Going through sequence %li\n", sequenceIndex);
+		//printf("Going through sequence %d\n", sequenceIndex);
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
 		lastAnnotIndex = getAnnotationCount(rdmap);
 
@@ -340,7 +340,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex <= sequenceCount_pg(preGraph);
 	     sequenceIndex++) {
 		if (sequenceIndex % 100000 == 0)
-			printf("Sequence %li / %li\n", sequenceIndex,
+			printf("Sequence %d / %d\n", sequenceIndex,
 			       sequenceCount_pg(preGraph));
 
 		while (line[0] != '>')
@@ -387,7 +387,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		//puts("");
 
 		if (tooShort) {
-			//printf("Skipping short read.. %li\n", sequenceIndex);
+			//printf("Skipping short read.. %d\n", sequenceIndex);
 			chains[sequenceIndex] = preNodeCounter;
 			fgets(line, lineLength, file);
 			continue;
@@ -580,7 +580,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex++) {
 
 		if (sequenceIndex % 100000 == 0)
-			printf("Connecting %li / %li\n", sequenceIndex,
+			printf("Connecting %d / %d\n", sequenceIndex,
 			       sequenceCount_pg(preGraph));
 
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
@@ -661,7 +661,7 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 	countPreNodes(rdmapArray, preGraph, markerCounters,
 		      insertionMarkers, veryLastMarker);
 
-	printf("%li preNodes counted, creating them now\n",
+	printf("%d preNodes counted, creating them now\n",
 	       preNodeCount_pg(preGraph));
 	createPreNodes(rdmapArray, preGraph, markerCounters,
 		       insertionMarkers, veryLastMarker, chains,

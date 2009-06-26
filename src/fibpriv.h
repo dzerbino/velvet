@@ -56,14 +56,14 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
  * specific node operations
  */
 struct fibheap_el {
-	int fhe_degree;
-	boolean fhe_mark;
 	FibHeapNode *fhe_p;
 	FibHeapNode *fhe_child;
 	FibHeapNode *fhe_left;
 	FibHeapNode *fhe_right;
-	Coordinate fhe_key;
 	void *fhe_data;
+	Coordinate fhe_key;
+	int fhe_degree;
+	boolean fhe_mark;
 };
 
 static FibHeapNode *fhe_newelem(struct fibheap *);

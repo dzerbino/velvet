@@ -186,6 +186,6 @@ void clipTips_pg(PreGraph * preGraph)
 	}
 
 	concatenatePreGraph_pg(preGraph);
-	printf("%li tips cut off\n", counter);
-	printf("%li nodes left\n", preNodeCount_pg(preGraph));
+	printf("%d tips cut off\n", counter);
+	printf("%d nodes left\n", preNodeCount_pg(preGraph));
 }

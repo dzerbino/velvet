@@ -42,13 +42,13 @@ typedef struct readOccurence_st ReadOccurence;
 
 struct connection_st {
 	Node *destination;
-	IDnum direct_count;
-	IDnum paired_count;
-	Coordinate distance;
-	double variance;
 	Connection *next;
 	Connection *previous;
 	Connection *twin;
+	Coordinate distance;
+	double variance;
+	IDnum direct_count;
+	IDnum paired_count;
 };
 
 struct miniConnection_st {
@@ -60,9 +60,9 @@ struct miniConnection_st {
 };
 
 struct readOccurence_st {
-	IDnum nodeID;
 	Coordinate position;
 	Coordinate offset;
+	IDnum nodeID;
 };
 
 // Global params
@@ -800,7 +800,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++) {
 		if (nodeID % 10000 == 0)
-			printf("Scaffolding node %li\n", nodeID);
+			printf("Scaffolding node %d\n", nodeID);
 
 		projectFromNode(nodeID, readNodes, readNodeCounts,
 				readPairs, cats, dubious, lengths);
@@ -1927,7 +1927,7 @@ void printConnections()
 			next = connect->next;
 			if (getUniqueness(connect->destination)) {
 				printf
-				    ("CONNECT %li %li %li %li %li %li %li %f %li %li",
+				    ("CONNECT %d %d %d %d %ld %ld %ld %f %d %d",
 				     index - nodeCount(graph),
 				     getNodeID(connect->destination),
 				     connect->direct_count,
@@ -1942,7 +1942,7 @@ void printConnections()
 				if (markerCount(node) == 1
 				    && markerCount(connect->destination) ==
 				    1)
-					printf(" %li %li %li",
+					printf(" %ld %ld %ld",
 					       getPassageMarkerFinish
 					       (getMarker(node)),
 					       getPassageMarkerFinish
@@ -1955,8 +1955,8 @@ void printConnections()
 						(connect->destination)));
 				else
 					printf(" ? ?");
-				printf(" %li", expectedNumberOfConnections(index-nodeCount(graph), connect, counts, 0));
-				printf(" %li", connect->distance - (getNodeLength(node) + getNodeLength(connect->destination))/2);
+				printf(" %d", expectedNumberOfConnections(index-nodeCount(graph), connect, counts, 0));
+				printf(" %ld", connect->distance - (getNodeLength(node) + getNodeLength(connect->destination))/2);
 				if (testConnection
 				    (index - nodes, connect, counts))
 					puts(" OK");

@@ -46,9 +46,9 @@ static const Time SIM[4][4] = {
 typedef struct tkt_st Ticket;
 
 struct tkt_st {
+	Ticket *next;
 	IDnum id_a;
 	IDnum id_b;
-	Ticket *next;
 };
 
 //Global variables used throughout this procedure(internal use only !)
@@ -155,7 +155,7 @@ static boolean isPreviousToNode(Node * previous, Node * target)
 	Node *previousNode = NULL;
 	Time targetTime = getNodeTime(target);
 
-	//printf("Testing if %li is previous to %li\n", getNodeID(previous), getNodeID(target));
+	//printf("Testing if %ld is previous to %ld\n", getNodeID(previous), getNodeID(target));
 
 	while (true) {
 		if (currentNode == previous)
@@ -184,7 +184,7 @@ static void concatenateCommonTodoLists(Node * nodeA, Node * nodeB)
 	IDnum indexA, indexB;
 	IDnum nodes = nodeCount(graph);
 
-	//printf("Merging todo list %li into %li\n", getNodeID(nodeB),
+	//printf("Merging todo list %ld into %ld\n", getNodeID(nodeB),
 	//       getNodeID(nodeA));
 
 	if (*listB == NULL)
@@ -297,7 +297,7 @@ static void concatenateTodoListIntoActive(Node * nodeB)
 	IDnum activeID = getNodeID(activeNode);
 	IDnum indexB, indexA;
 
-	//printf("Merging todo list %li into active node %li\n",
+	//printf("Merging todo list %ld into active node %ld\n",
 	//       getNodeID(nodeB), getNodeID(activeNode));
 
 	if (*listB == NULL)
@@ -543,7 +543,7 @@ extractSequence(PassageMarker * path, TightString * sequence)
 	Coordinate seqLength = 0;
 	Coordinate writeIndex = 0;
 
-	//printf("Extracting sequence %li ... ", pathLength);
+	//printf("Extracting sequence %ld ... ", pathLength);
 
 	//Measure length
 	for (marker = getNextInSequence(path); !isTerminal(marker);
@@ -1394,14 +1394,14 @@ static void remapNodeTimesOntoForwardMiddlePath(Node * source,
 	Node *previousNode = getNodePrevious(source);
 	Time targetTime;
 
-	//printf("Remapping times from %li to %li\n", getNodeID(previousNode), getNodeID(source));
+	//printf("Remapping times from %ld to %ld\n", getNodeID(previousNode), getNodeID(source));
 
 	for (marker = path; getNode(marker) != source;
 	     marker = getNextInSequence(marker)) {
 		target = getNode(marker);
 		targetTime = getNodeTime(target);
 
-		//printf("Through %li\n", getNodeID(target));
+		//printf("Through %ld\n", getNodeID(target));
 
 		if (targetTime == -1
 		    || targetTime > nodeTime
@@ -1428,7 +1428,7 @@ static void remapNodeTimesOntoTwinMiddlePath(Node * source,
 	PassageMarker *limit = getTwinMarker(getPreviousInSequence(path));
 	Time nodeTime = getNodeTime(getNode(limit));
 
-	//printf("Remapping times from twins %li to %li\n", getNodeID(previousNode), getNodeID(getNode(limit)));
+	//printf("Remapping times from twins %ld to %ld\n", getNodeID(previousNode), getNodeID(getNode(limit)));
 
 	// Revving up
 	marker = path;
@@ -1442,7 +1442,7 @@ static void remapNodeTimesOntoTwinMiddlePath(Node * source,
 		target = getNode(marker);
 		targetTime = getNodeTime(target);
 
-		//printf("Through %li\n", getNodeID(target));
+		//printf("Through %ld\n", getNodeID(target));
 
 		if (targetTime == -1
 		    || targetTime > nodeTime
@@ -1484,7 +1484,7 @@ static void remapNodeOntoNeighbour(Node * source,
 				   Node * target,
 				   PassageMarker * targetMarker)
 {
-	//printf("Remapping node %li onto middle path %li\n", getNodeID(source), getNodeID(target));
+	//printf("Remapping node %ld onto middle path %ld\n", getNodeID(source), getNodeID(target));
 	remapNodeMarkersOntoNeighbour(source, sourceMarker, target,
 				      targetMarker);
 
@@ -1512,7 +1512,7 @@ static void remapBackOfNodeDescriptorOntoNeighbour(Node * source,
 						   boolean slowToFast,
 						   Coordinate offset)
 {
-	//printf("Splitting node descriptor %li // %li\n", getNodeLength(source), offset);
+	//printf("Splitting node descriptor %ld // %ld\n", getNodeLength(source), offset);
 
 	if (slowToFast)
 		splitNodeDescriptor(source, NULL, offset);
@@ -1571,7 +1571,7 @@ remapBackOfNodeOntoNeighbour(Node * source, PassageMarker * sourceMarker,
 			     boolean slowToFast)
 {
 	Coordinate offset;
-	//printf("Remapping node %li onto middle path\n", getNodeID(node));
+	//printf("Remapping node %ld onto middle path\n", getNodeID(node));
 
 	offset =
 	    remapBackOfNodeMarkersOntoNeighbour(source, sourceMarker,
@@ -1632,7 +1632,7 @@ static void remapEmptyPathMarkersOntoMiddlePathSimple(PassageMarker *
 	    commonNodeReads(getTwinNode(start), getTwinNode(finish), graph,
 			    &twinIntersectionLength);
 
-	//printf("SIMPLE %li\t%li\t%i\t%i\n", markerCount(finish),
+	//printf("SIMPLE %ld\t%ld\t%i\t%i\n", markerCount(finish),
 	//       getNodeID(finish), arcCount(finish),
 	//       arcCount(getTwinNode(finish)));
 
@@ -1767,7 +1767,7 @@ static void remapEmptyPathMarkersOntoMiddlePathDevious(PassageMarker *
 	boolean untouchable = false;
 	Coordinate markerStart;
 
-	printf("DEVIOUS %li\t%li\t%i\t%i\n", markerCount(finish),
+	printf("DEVIOUS %d\t%d\t%i\t%i\n", markerCount(finish),
 	       getNodeID(finish), arcCount(finish),
 	       arcCount(getTwinNode(finish)));
 
@@ -2011,7 +2011,7 @@ static void concatenateNodesAndVaccinate(Node * nodeA, Node * nodeB,
 	Arc *arc;
 	Category cat;
 
-	//printf("Concatenating nodes %li and %li\n", getNodeID(nodeA), getNodeID(nodeB));
+	//printf("Concatenating nodes %ld and %ld\n", getNodeID(nodeA), getNodeID(nodeB));
 	// Arc management:
 	// Freeing useless arcs
 	while (getArc(nodeA) != NULL)
@@ -2412,7 +2412,7 @@ static void tourBusNode(Node * node)
 
 	dbgCounter++;
 	if (dbgCounter % 1000 == 0) {
-		printf("%li nodes visited\n", dbgCounter);
+		printf("%d nodes visited\n", dbgCounter);
 		fflush(stdout);
 	}
 
@@ -2544,7 +2544,7 @@ void clipTips(Graph * graph)
 	}
 
 	concatenateGraph(graph);
-	printf("%li nodes left\n", nodeCount(graph));
+	printf("%d nodes left\n", nodeCount(graph));
 }
 
 void clipTipsHard(Graph * graph)
@@ -2597,7 +2597,7 @@ void clipTipsHard(Graph * graph)
 	}
 
 	concatenateGraph(graph);
-	printf("%li nodes left\n", nodeCount(graph));
+	printf("%d nodes left\n", nodeCount(graph));
 }
 
 static void tourBus(Node * startingPoint)
@@ -2605,7 +2605,7 @@ static void tourBus(Node * startingPoint)
 	Node *currentNode = startingPoint;
 	IDnum nodeID = getNodeID(startingPoint) + nodeCount(graph);
 
-	//printf("Tour bus from node %li...\n", getNodeID(startingPoint));
+	//printf("Tour bus from node %ld...\n", getNodeID(startingPoint));
 
 	times[nodeID] = 0;
 	previous[nodeID] = currentNode;

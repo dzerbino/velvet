@@ -50,7 +50,7 @@ static void surveyPath(PassageMarker * marker)
 			realLength = getPassageMarkerFinish(current);
 	}
 
-	printf("SURVEY %li %li %li\n", getAbsolutePassMarkerSeqID(marker),
+	printf("SURVEY %d %ld %ld\n", getAbsolutePassMarkerSeqID(marker),
 	       realLength, length);
 }
 
@@ -315,7 +315,7 @@ IDnum nodeMultiplicity(Node * node)
 char *nodeStatistics(Node * node)
 {
 	char *s = mallocOrExit(100, char);
-	sprintf(s, "NODE %li\t%li\t%i\t%i\t%li", getNodeID(node),
+	sprintf(s, "NODE %d\t%ld\t%i\t%i\t%d", getNodeID(node),
 		getNodeLength(node), simpleArcCount(node),
 		simpleArcCount(getTwinNode(node)), nodeMultiplicity(node));
 	return s;
@@ -446,7 +446,7 @@ boolean isSNP(Node * node, IDnum firstStrain, int WORDLENGTH)
 		position = getPassageMarkerFinish(getMarker(node));
 	}
 
-	printf("SNP\t%li\t%li\n", position, sequence);
+	printf("SNP\t%ld\t%d\n", position, sequence);
 
 	return true;
 }
@@ -499,9 +499,9 @@ void chainSawCorrection(Graph * graph, int minMult)
 		}
 	}
 
-	printf("%li dubious nodes removed\n", removed);
+	printf("%d dubious nodes removed\n", removed);
 	concatenateGraph(graph);
-	printf("%li node in the end\n", nodeCount(graph));
+	printf("%d node in the end\n", nodeCount(graph));
 }
 
 void grossErrorRemoval(Graph * graph, IDnum firstStrain)
@@ -524,9 +524,9 @@ void grossErrorRemoval(Graph * graph, IDnum firstStrain)
 		}
 	}
 
-	printf("%li dubious nodes removed\n", removed);
+	printf("%d dubious nodes removed\n", removed);
 	concatenateGraph(graph);
-	printf("%li node in the end\n", nodeCount(graph));
+	printf("%d node in the end\n", nodeCount(graph));
 }
 
 IDnum countSNPs(Graph * graph, IDnum firstStrain, int WORDLENGTH)
@@ -735,8 +735,8 @@ Coordinate readCoverage(Node * node)
 	for (marker = getMarker(node); marker != NULL;
 	     marker = getNextInNode(marker)) {
 		if (getTwinMarker(marker) == NULL) {
-			printf("Node %li screwed up\n", getNodeID(node));
-			printf("Sequence %li\n",
+			printf("Node %d screwed up\n", getNodeID(node));
+			printf("Sequence %d\n",
 			       getPassageMarkerSequenceID(marker));
 			abort();
 		}
@@ -769,7 +769,7 @@ Coordinate newReadCoverage(Node * node, IDnum firstStrain)
 		if (getAbsolutePassMarkerSeqID(marker) >= firstStrain) {
 			sum += getPassageMarkerLength(marker);
 			if (getPassageMarkerLength(marker) < 0)
-				printf("Bizarre marker %li at node %li\n",
+				printf("Bizarre marker %d at node %d\n",
 				       getPassageMarkerSequenceID(marker),
 				       getNodeID(node));
 		}
@@ -826,7 +826,7 @@ void displayGeneralStatistics(Graph * graph, char *filename)
 		if (node == NULL)
 			continue;
 		fprintf
-		    (outfile, "%li\t%li\t%i\t%i",
+		    (outfile, "%d\t%ld\t%i\t%i",
 		     getNodeID(node), getNodeLength(node), arcCount(node),
 		     arcCount(getTwinNode(node)));
 
@@ -913,7 +913,7 @@ void destroyStrainSpecificIslands(Graph * graph, IDnum firstStrain)
 	}
 
 	// Renumber graph nodes
-	printf("Removed %li nodes \n", counter);
+	printf("Removed %d nodes \n", counter);
 	renumberNodes(graph);
 }
 
@@ -945,7 +945,7 @@ void displayStrainOnlySequences(Graph * graph, IDnum firstStrain,
 			readID =
 			    getPassageMarkerSequenceID(getMarker(node));
 			readCoord = getPassageMarkerStart(getMarker(node));
-			fprintf(outfile, "> UNIQUE SEQUENCE %li; %li\n",
+			fprintf(outfile, "> UNIQUE SEQUENCE %d; %ld\n",
 				readID, readCoord);
 
 			start = 0;
@@ -971,7 +971,7 @@ void displayStrainOnlyDescriptors(Graph * graph, IDnum firstStrain)
 	destroyStrainSpecificIslands(graph, firstStrain);
 
 	for (nodeIndex = 1; nodeIndex <= nodeCount(graph); nodeIndex++) {
-		printf("node %li from %li\n", nodeIndex, nodeCount(graph));
+		printf("node %d from %d\n", nodeIndex, nodeCount(graph));
 		node = getNodeInGraph(graph, nodeIndex);
 
 		if (isOnlyStrain(node, firstStrain)) {
@@ -1016,12 +1016,12 @@ void displayLocalBreakpoint(PassageMarker * strainMarker,
 	if (destination2A == NULL)
 		return;
 
-	printf("Lengths %li %li\n", getNodeLength(destinationA),
+	printf("Lengths %ld %ld\n", getNodeLength(destinationA),
 	       getNodeLength(destination2A));
 
 	// Hop to another genomic node
 //      if (getNodeLength(destinationA) > 24) {
-	//printf("wrong length %li %li\n", getNodeLength(destination) , getNodeID(destination));
+	//printf("wrong length %d %d\n", getNodeLength(destination) , getNodeID(destination));
 //              return;
 //      }
 
@@ -1060,8 +1060,8 @@ void displayLocalBreakpoint(PassageMarker * strainMarker,
 	strainDestination[localID + nodeCount] = destination;
 	genomeDestination[localID + nodeCount] = destination2;
 
-//      printf("Assigning %p and %p to %li\n", destination, destination2, localID);
-	printf("lengths %li\t%li\n", getNodeLength(destinationA),
+//      printf("Assigning %p and %p to %d\n", destination, destination2, localID);
+	printf("lengths %ld\t%ld\n", getNodeLength(destinationA),
 	       getNodeLength(destination2A));
 
 	// Detect translocation
@@ -1075,7 +1075,7 @@ void displayLocalBreakpoint(PassageMarker * strainMarker,
 		}
 
 	if (isTranslocation) {
-		printf("BREAK TRANS\t%li\t%li\t%li\t%li\n",
+		printf("BREAK TRANS\t%d\t%ld\t%ld\t%ld\n",
 		       getAbsolutePassMarkerSeqID(genomeMarker),
 		       getPassageMarkerStart(genomeMarker),
 		       getNodeLength(destinationA),
@@ -1084,7 +1084,7 @@ void displayLocalBreakpoint(PassageMarker * strainMarker,
 		return;
 	}
 	// Detect breakpoint
-	printf("BREAK INTRA\t%li\t%li\t%li\t%li\n",
+	printf("BREAK INTRA\t%d\t%ld\t%ld\t%ld\n",
 	       getAbsolutePassMarkerSeqID(genomeMarker),
 	       getPassageMarkerStart(genomeMarker),
 	       getNodeLength(destinationA), getNodeLength(destination2A));
@@ -1174,7 +1174,7 @@ void displayBreakpoints(Graph * graph, IDnum firstStrain)
 	}
 
 
-	printf("%li\t%li\t%li\n", counters[0], counters[1], counters[2]);
+	printf("%d\t%d\t%d\n", counters[0], counters[1], counters[2]);
 	free(strainDestination);
 	free(genomeDestination);
 }
@@ -1205,7 +1205,7 @@ void exportArcSequence(Arc * arc, FILE * outfile, int WORDLENGTH,
 	appendNodeSequence(getDestination(arc), output,
 			   getNodeLength(getOrigin(arc)));
 	str = readTightString(output);
-	fprintf(outfile, "> ARC from NODE %li", getNodeID(getOrigin(arc)));
+	fprintf(outfile, "> ARC from NODE %d", getNodeID(getOrigin(arc)));
 	fprintf(outfile, "%s\n", str);
 	destroyTightString(output);
 	free(str);
@@ -1306,7 +1306,7 @@ void exportLongNodeSequences(char *filename, Graph * graph,
 			continue;
 
 		tString = expandNode(node, WORDLENGTH);
-		fprintf(outfile, ">NODE_%li_length_%li_cov_%f\n",
+		fprintf(outfile, ">NODE_%d_length_%ld_cov_%f\n",
 			nodeIndex, getNodeLength(node),
 			(getVirtualCoverage(node, 0)
 			 + getVirtualCoverage(node, 1)
@@ -1380,10 +1380,10 @@ void exportMediumNodeSequences(char* filename, Graph * graph, Coordinate minLeng
 				 &specificity, WORDLENGTH);
 
 		fprintf(outfile,
-			"> MEDIUM NODE %li, Sensitivity = %f, Specificity = %f\n",
+			"> MEDIUM NODE %d, Sensitivity = %f, Specificity = %f\n",
 			nodeIndex, sensitivity, specificity);
 		printf
-		    ("> MEDIUM NODE %li, Sensitivity = %f, Specificity = %f\n",
+		    ("> MEDIUM NODE %d, Sensitivity = %f, Specificity = %f\n",
 		     nodeIndex, sensitivity, specificity);
 
 		start = 0;
@@ -1701,7 +1701,7 @@ void destroyDisconnectedElements(Graph * graph)
 		if (node == NULL || getNodeStatus(node))
 			continue;
 		domainSize = connectDomain(node);
-		printf("CONNECT\t%li\n", domainSize);
+		printf("CONNECT\t%ld\n", domainSize);
 		insertNodeIntoHeap(heap, domainSize, node);
 		domainSizes[index] = domainSize;
 	}
@@ -1765,7 +1765,7 @@ void measureTangleSizes(Graph * graph, Coordinate maxLength)
 		if (node == NULL || getNodeStatus(node))
 			continue;
 		domainSize = connectDomainNodeCount(node);
-		printf("CONNECT\t%li\n", domainSize);
+		printf("CONNECT\t%ld\n", domainSize);
 	}
 
 	puts("Done");
@@ -1891,7 +1891,7 @@ void contigStats(Node ** contigs, IDnum readCount)
 	for (index = 0; index <= readCount; index++) {
 		if (contigs[index] != NULL) {
 			node = contigs[index];
-			printf("CONTIG %li\n", getNodeLength(node));
+			printf("CONTIG %ld\n", getNodeLength(node));
 			insertNodeIntoHeap(heap, getNodeLength(node),
 					   node);
 			totalLength += getNodeLength(node);
@@ -1908,7 +1908,7 @@ void contigStats(Node ** contigs, IDnum readCount)
 	}
 
 	destroyHeap(heap);
-	printf("N50 %li Total %li\n", getNodeLength(node), totalLength);
+	printf("N50 %ld Total %ld\n", getNodeLength(node), totalLength);
 }
 
 void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
@@ -1970,7 +1970,7 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 					    getShortReadMarkerAtIndex(nodeArray,
 								      index2);
 					readID = getShortReadMarkerID(shortMarker);
-					//printf("Dubious %li\n", readID);
+					//printf("Dubious %d\n", readID);
 					if (readID > 0)
 						res[readID - 1] = true;
 					else
@@ -1985,7 +1985,7 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 					    getShortReadMarkerAtIndex(nodeArray,
 								      index2);
 					readID = getShortReadMarkerID(shortMarker);
-					//printf("Dubious %li\n", readID);
+					//printf("Dubious %d\n", readID);
 					if (readID > 0)
 						res[readID - 1] = true;
 					else
@@ -2100,10 +2100,10 @@ static void exportAMOSLib(FILE * outfile, Graph * graph, Category cat)
 		return;
 
 	fprintf(outfile, "{LIB\n");
-	fprintf(outfile, "iid:%hi\n", cat + 1);
+	fprintf(outfile, "iid:%d\n", cat + 1);
 	fprintf(outfile, "{DST\n");
-	fprintf(outfile, "mea:%li\n", distance);
-	fprintf(outfile, "std:%li\n", (long int) sqrt(variance));
+	fprintf(outfile, "mea:%ld\n", distance);
+	fprintf(outfile, "std:%ld\n", (long int) sqrt(variance));
 	fprintf(outfile, "}\n");
 	fprintf(outfile, "}\n");
 }
@@ -2142,13 +2142,13 @@ static void exportAMOSMarker(FILE * outfile, PassageMarker * marker,
 		sequenceStart += wordShift;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getAbsolutePassMarkerSeqID(marker));
+	fprintf(outfile, "src:%d\n", getAbsolutePassMarkerSeqID(marker));
 	if (getStartOffset(marker) > start)
-		fprintf(outfile, "off:%li\n",
+		fprintf(outfile, "off:%ld\n",
 			getStartOffset(marker) - start);
 	else
 		fprintf(outfile, "off:0\n");
-	fprintf(outfile, "clr:%li,%li\n", sequenceStart, sequenceFinish);
+	fprintf(outfile, "clr:%ld,%ld\n", sequenceStart, sequenceFinish);
 	fprintf(outfile, "}\n");
 }
 
@@ -2169,9 +2169,9 @@ static void exportAMOSShortMarker(FILE * outfile, ShortReadMarker * marker,
 		return;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker));
-	fprintf(outfile, "off:%li\n", offset - start);
-	fprintf(outfile, "clr:0,%li\n", getLength(sequence));
+	fprintf(outfile, "src:%d\n", getShortReadMarkerID(marker));
+	fprintf(outfile, "off:%ld\n", offset - start);
+	fprintf(outfile, "clr:0,%ld\n", getLength(sequence));
 	fprintf(outfile, "}\n");
 }
 
@@ -2197,9 +2197,9 @@ static void exportAMOSReverseShortMarker(FILE * outfile,
 		return;
 
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%li\n", getShortReadMarkerID(marker));
-	fprintf(outfile, "off:%li\n", offset - start);
-	fprintf(outfile, "clr:%li,0\n", getLength(sequence));
+	fprintf(outfile, "src:%d\n", getShortReadMarkerID(marker));
+	fprintf(outfile, "off:%ld\n", offset - start);
+	fprintf(outfile, "clr:%ld,0\n", getLength(sequence));
 	fprintf(outfile, "}\n");
 }
 
@@ -2219,8 +2219,8 @@ static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
 	Coordinate length = contigFinish - contigStart + wordShift;
 
 	fprintf(outfile, "{CTG\n");
-	fprintf(outfile, "iid:%li\n", iid);
-	fprintf(outfile, "eid:%li-%li\n", getNodeID(node), internalIndex);
+	fprintf(outfile, "iid:%d\n", iid);
+	fprintf(outfile, "eid:%d-%d\n", getNodeID(node), internalIndex);
 
 	fprintf(outfile, "seq:\n");
 	for (start = 0; start <= length; start += 60) {
@@ -2301,22 +2301,22 @@ static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
 	start = 0;
 
 	fprintf(outfile, "{SCF\n");
-	fprintf(outfile, "eid:%li\n", getNodeID(node));
+	fprintf(outfile, "eid:%d\n", getNodeID(node));
 	for (gap = getGap(node, graph); gap; gap = getNextGap(gap)) {
 		finish = getGapStart(gap);
 		fprintf(outfile, "{TLE\n");
-		fprintf(outfile, "off:%li\n", start);
-		fprintf(outfile, "clr:0,%li\n",
-			finish - start + wordShift);
-		fprintf(outfile, "src:%li\n", contigIndex++);
+		fprintf(outfile, "off:%ld\n", start);
+		fprintf(outfile, "clr:0,%ld\n",
+			finish - start + (Coordinate) wordShift);
+		fprintf(outfile, "src:%d\n", contigIndex++);
 		fprintf(outfile, "}\n");
 		start = getGapFinish(gap);
 	}
 	finish = getNodeLength(node);
 	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "off:%li\n", start);
-	fprintf(outfile, "clr:0,%li\n", finish - start);
-	fprintf(outfile, "src:%li\n", contigIndex++);
+	fprintf(outfile, "off:%ld\n", start);
+	fprintf(outfile, "clr:0,%ld\n", finish - start);
+	fprintf(outfile, "src:%d\n", contigIndex++);
 	fprintf(outfile, "}\n");
 
 	fprintf(outfile, "}\n");
@@ -2329,10 +2329,10 @@ static void exportAMOSRead(FILE * outfile, TightString * tString,
 	char str[100];
 
 	fprintf(outfile, "{RED\n");
-	fprintf(outfile, "iid:%li\n", index);
-	fprintf(outfile, "eid:%li\n", index);
+	fprintf(outfile, "iid:%d\n", index);
+	fprintf(outfile, "eid:%d\n", index);
 	if (frg_index > 0)
-		fprintf(outfile, "frg:%li\n", frg_index);
+		fprintf(outfile, "frg:%d\n", frg_index);
 
 	fprintf(outfile, "seq:\n");
 	start = 0;
@@ -2380,12 +2380,12 @@ void exportAMOSContigs(char *filename, Graph * graph,
 		    getInsertLength(graph,
 				    reads->categories[index - 1]) >= 0) {
 			fprintf(outfile, "{FRG\n");
-			fprintf(outfile, "lib:%hi\n",
+			fprintf(outfile, "lib:%d\n",
 				(reads->categories[index - 1] / 2) + 1);
-			fprintf(outfile, "rds:%li,%li\n", index,
+			fprintf(outfile, "rds:%d,%d\n", index,
 				index + 1);
-			fprintf(outfile, "eid:%li\n", index);
-			fprintf(outfile, "iid:%li\n", index);
+			fprintf(outfile, "eid:%d\n", index);
+			fprintf(outfile, "iid:%d\n", index);
 			fprintf(outfile, "typ:I\n");
 			fprintf(outfile, "}\n");
 			index++;
@@ -2492,7 +2492,7 @@ static void checkNodeForHallidayJunction(Node * node, Graph * graph)
 		if (nodeC == NULL || nodeC == node
 		    || simpleArcCount(nodeC) != 2
 		    || !isUniqueBasic(nodeC)) {
-			printf("NO %li %li %li %li\n", getNodeID(node),
+			printf("NO %d %d %d %d\n", getNodeID(node),
 			       getNodeID(nodeA), getNodeID(nodeB),
 			       getNodeID(nodeC));
 			return;
@@ -2529,7 +2529,7 @@ static void checkNodeForHallidayJunction(Node * node, Graph * graph)
 	if (nodeD != nodeC && nodeD != node)
 		return;
 
-	printf("JOHNNY HALLIDAY JUNCTION %li %li %li %li\n",
+	printf("JOHNNY HALLIDAY JUNCTION %d %d %d %d\n",
 	       getNodeID(node), getNodeID(nodeC), getNodeID(nodeA),
 	       getNodeID(nodeB));
 }
@@ -2637,7 +2637,7 @@ void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *director
 		       logFilename);
 
 	sprintf
-	    (statsLine, "Final graph has %li nodes and n50 of %li, max %li, total %li, using %li/%li reads\n",
+	    (statsLine, "Final graph has %d nodes and n50 of %ld, max %ld, total %ld, using %d/%d reads\n",
 	     nodeCount(graph), n50(graph), maxLength(graph),
 	     totalAssemblyLength(graph), usedReads(graph, minContigKmerLength),
 	     sequenceCount(graph));

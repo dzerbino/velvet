@@ -22,7 +22,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define _READSET_H_
 
 struct readSet_st {
-	IDnum readCount;
 	char **sequences;
 	TightString **tSequences;
 	char **labels;
@@ -30,6 +29,7 @@ struct readSet_st {
 	Probability **kmerProbabilities;
 	IDnum *mateReads;
 	Category *categories;
+	IDnum readCount;
 };
 
 ReadSet *newReadSet();

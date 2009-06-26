@@ -40,11 +40,11 @@ union positionPtr {
 };
 
 struct annotation_st {
-	IDnum sequenceID;	// 32
 	Coordinate position;	// 32
 	union positionPtr start;	// 32
 	union positionPtr finish;	// 32
 	Coordinate length;	// 32
+	IDnum sequenceID;	// 32
 };
 
 struct roadmap_st {
@@ -111,7 +111,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 
 	file = fopen(filename, "r");
 	fgets(line, maxline, file);
-	sscanf(line, "%li\t%i\n", &sequenceCount, &(result->WORDLENGTH));
+	sscanf(line, "%d\t%i\n", &sequenceCount, &(result->WORDLENGTH));
 	resetWordFilter(result->WORDLENGTH);
 	result->length = sequenceCount;
 	array = mallocOrExit(sequenceCount, RoadMap);
@@ -133,7 +133,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 			rdmap = getRoadMapInArray(result, rdmapIndex++);
 			rdmap->annotationCount = 0;
 		} else {
-			sscanf(line, "%li\t%li\t%li\t%li\n", &seqID,
+			sscanf(line, "%d\t%ld\t%ld\t%ld\n", &seqID,
 			       &position, &start, &finish);
 			nextAnnotation->sequenceID = seqID;
 			nextAnnotation->position = position;
@@ -151,7 +151,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 		}
 	}
 
-	printf("%li roadmaps reads\n", rdmapIndex);
+	printf("%d roadmaps reads\n", rdmapIndex);
 
 	fclose(file);
 	free(line);

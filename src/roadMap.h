@@ -24,10 +24,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 
 struct roadMapArray_st {
-	IDnum length;
 	RoadMap *array;
-	int WORDLENGTH;
 	Annotation *annotations;
+	IDnum length;
+	int WORDLENGTH;
 };
 
 ////////////////////////////////////////////////////////////////////

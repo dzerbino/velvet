@@ -90,6 +90,7 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	Coordinate start = 0;
 	Coordinate finish = 0;
 	IDnum referenceSequenceID = 0;
+	Nucleotide nucleotide;
 
 	clearKmer(&word);
 	clearKmer(&antiWord);
@@ -97,7 +98,7 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	table->lastIndex++;
 
 	currentIndex = table->lastIndex;
-	fprintf(file, "ROADMAP %li\n", currentIndex);
+	fprintf(file, "ROADMAP %d\n", currentIndex);
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
@@ -107,17 +108,28 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
 	     readNucleotideIndex < table->WORDLENGTH - 1;
-	     readNucleotideIndex++) 
-		pushNucleotide(&word, getNucleotide(readNucleotideIndex, tString));
+	     readNucleotideIndex++) { 
+		nucleotide = getNucleotide(readNucleotideIndex, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
+	}
 
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
-		pushNucleotide(&word, getNucleotide(readNucleotideIndex++, tString));
+		nucleotide = getNucleotide(readNucleotideIndex++, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
 
 		sequenceID = currentIndex;
 		coord = writeNucleotideIndex;
-
-		reverseComplement(&antiWord, &word, table->WORDLENGTH);
 
 		if (compareKmers(&word, &antiWord) <= 0) {
 			found =
@@ -138,7 +150,7 @@ void inputSequenceIntoSplayTable(TightString * tString,
 		if (!found) {
 			writeNucleotideIndex++;
 			if (!annotationClosed)
-				fprintf(file, "%li\t%li\t%li\t%li\n",
+				fprintf(file, "%d\t%ld\t%ld\t%ld\n",
 					referenceSequenceID, position,
 					start, finish);
 			annotationClosed = true;
@@ -172,7 +184,7 @@ void inputSequenceIntoSplayTable(TightString * tString,
 			}
 			// Previous non corresponding annotation
 			else {
-				fprintf(file, "%li\t%li\t%li\t%li\n",
+				fprintf(file, "%d\t%ld\t%ld\t%ld\n",
 					referenceSequenceID, position,
 					start, finish);
 
@@ -189,7 +201,7 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	}
 
 	if (!annotationClosed)
-		fprintf(file, "%li\t%li\t%li\t%li\n", referenceSequenceID,
+		fprintf(file, "%d\t%ld\t%ld\t%ld\n", referenceSequenceID,
 			position, start, finish);
 
 	destroyTightString(tString);
@@ -210,7 +222,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	else
 		printf("Writing into roadmap file %s...\n", filename);
 
-	fprintf(outfile, "%li\t%i\n", sequenceCount, table->WORDLENGTH);
+	fprintf(outfile, "%d\t%i\n", sequenceCount, table->WORDLENGTH);
 
 	if (reads->tSequences == NULL)
 		convertSequences(reads);
@@ -220,7 +232,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	puts("Inputting sequences...");
 	for (index = 0; index < sequenceCount; index++) {
 		if (index % 100000 == 0) {
-			printf("Inputting sequence %li / %li\n", index,
+			printf("Inputting sequence %d / %d\n", index,
 			       sequenceCount);
 			fflush(stdout);
 		}
@@ -242,6 +254,7 @@ void inputMaskIntoSplayTable(TightString * tString, SplayTable * table)
 	Kmer antiWord;
 	IDnum sequenceID = 0;
 	Coordinate coord = 0;
+	Nucleotide nucleotide;
 
 	clearKmer(&word);
 	clearKmer(&antiWord);
@@ -254,14 +267,25 @@ void inputMaskIntoSplayTable(TightString * tString, SplayTable * table)
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
 	     readNucleotideIndex < table->WORDLENGTH - 1;
-	     readNucleotideIndex++)
-		pushNucleotide(&word, getNucleotide(readNucleotideIndex, tString));
+	     readNucleotideIndex++) {
+		nucleotide = getNucleotide(readNucleotideIndex, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
+	}
 
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
-		pushNucleotide(&word, getNucleotide(readNucleotideIndex++, tString));
-
-		reverseComplement(&antiWord, &word, table->WORDLENGTH);
+		nucleotide = getNucleotide(readNucleotideIndex++, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
 
 		if (compareKmers(&word, &antiWord) <= 0)
 			findOrInsertOccurenceInSplayTable(&word,

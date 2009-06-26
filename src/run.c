@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 
 	allSequences = parseDataAndReadFiles(argc - 2, &(argv[2]));
 
-	printf("%li sequences in total.\n", allSequences->readCount);
+	printf("%i sequences in total.\n", allSequences->readCount);
 
 	strcpy(filename, directory);
 	strcat(filename, "/Sequences");

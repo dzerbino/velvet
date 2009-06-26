@@ -48,10 +48,10 @@ typedef struct chunk_st {
 
 struct recycleBin_st {
 	Chunk *chunk_list;
+	RecycleBin_Node *recycle;
+	size_t node_size;
 	int chunk_pos;
 	int nodes_per_chunk;
-	size_t node_size;
-	RecycleBin_Node *recycle;
 };
 
 RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)

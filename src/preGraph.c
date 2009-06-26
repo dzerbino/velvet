@@ -38,11 +38,11 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 typedef unsigned char Descriptor;
 
 struct preArc_st {
+	PreArc *nextLeft;
+	PreArc *nextRight;
 	IDnum multiplicity;
 	IDnum preNodeIDLeft;
 	IDnum preNodeIDRight;
-	PreArc *nextLeft;
-	PreArc *nextRight;
 };
 
 struct preNode_st {
@@ -53,9 +53,9 @@ struct preNode_st {
 };
 
 struct preGraph_st {
+	PreNode *preNodes;
 	IDnum sequenceCount;
 	IDnum preNodeCount;
-	PreNode *preNodes;
 	int wordLength;
 };
 
@@ -293,7 +293,7 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 	PreNode *preNode;
 	IDnum ID = preNodeID;
 
-	//printf("Destroying %li\n and twin %li\n", getPreNodeID(preNode), getPreNodeID(twin));
+	//printf("Destroying %ld\n and twin %ld\n", getPreNodeID(preNode), getPreNodeID(twin));
 
 	if (ID < 0)
 		ID = -ID;
@@ -479,16 +479,16 @@ static inline Descriptor *mergeDescriptors_pg(Descriptor * descr,
 
 		/*switch ((readCopy & 3)) {
 		   case ADENINE:
-		   printf("A%li", index);
+		   printf("A%ld", index);
 		   break;
 		   case CYTOSINE:
-		   printf("C%li", index);
+		   printf("C%ld", index);
 		   break;
 		   case GUANINE:
-		   printf("G%li", index);
+		   printf("G%ld", index);
 		   break;
 		   case THYMINE:
-		   printf("T%li", index);
+		   printf("T%ld", index);
 		   break;
 		   } */
 		readCopy >>= 2;
@@ -517,19 +517,19 @@ static inline Descriptor *mergeDescriptors_pg(Descriptor * descr,
 		(*writePtr) += (readCopy & 3) << 6;
 		/*switch ((readCopy & 3)) {
 		   case ADENINE:
-		   printf("A%li", index);
+		   printf("A%ld", index);
 		   break;
 		   case CYTOSINE:
-		   printf("C%li", index);
+		   printf("C%ld", index);
 		   break;
 		   case GUANINE:
-		   printf("G%li", index);
+		   printf("G%ld", index);
 		   break;
 		   case THYMINE:
-		   printf("T%li", index);
+		   printf("T%ld", index);
 		   break;
 		   default:
-		   printf("?%li;", index);
+		   printf("?%ld;", index);
 		   } */
 		readCopy >>= 2;
 
@@ -596,19 +596,19 @@ static inline Descriptor *mergeDescriptorsH2H_pg(Descriptor * descr,
 		(*writePtr) += (readCopy & 3) << 6;
 		/*switch ((readCopy & 3)) {
 		   case ADENINE:
-		   printf("A(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("A(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case CYTOSINE:
-		   printf("C(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("C(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case GUANINE:
-		   printf("G(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("G(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case THYMINE:
-		   printf("T(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("T(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   default:
-		   printf("?(%li %i %i);", index, writeOffset, readOffset);
+		   printf("?(%ld %i %i);", index, writeOffset, readOffset);
 		   } */
 		readCopy >>= 2;
 
@@ -642,19 +642,19 @@ static inline Descriptor *mergeDescriptorsH2H_pg(Descriptor * descr,
 #endif
 		/*switch (3 - ((readCopy & 192) >> 6)) {
 		   case ADENINE:
-		   printf("A(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("A(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case CYTOSINE:
-		   printf("C(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("C(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case GUANINE:
-		   printf("G(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("G(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case THYMINE:
-		   printf("T(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("T(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   default:
-		   printf("?(%li %i %i);", index, writeOffset, readOffset);
+		   printf("?(%ld %i %i);", index, writeOffset, readOffset);
 		   } */
 		readCopy <<= 2;
 
@@ -728,19 +728,19 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 #endif
 		/*switch (3 - ((readCopy & 192) >> 6)) {
 		   case ADENINE:
-		   printf("A(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("A(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case CYTOSINE:
-		   printf("C(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("C(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case GUANINE:
-		   printf("G(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("G(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case THYMINE:
-		   printf("T(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("T(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   default:
-		   printf("?(%li %i %i);", index, writeOffset, readOffset);
+		   printf("?(%ld %i %i);", index, writeOffset, readOffset);
 		   } */
 		readCopy <<= 2;
 
@@ -772,19 +772,19 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 		(*writePtr) += (readCopy & 3) << 6;
 		/*switch ((readCopy & 3)) {
 		   case ADENINE:
-		   printf("A(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("A(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case CYTOSINE:
-		   printf("C(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("C(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case GUANINE:
-		   printf("G(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("G(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case THYMINE:
-		   printf("T(%li %i %i) ", index, writeOffset, readOffset);
+		   printf("T(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   default:
-		   printf("?(%li %i %i);", index, writeOffset, readOffset);
+		   printf("?(%ld %i %i);", index, writeOffset, readOffset);
 		   } */
 		readCopy >>= 2;
 
@@ -893,7 +893,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 	PreArc *preArc;
 
 	puts("Renumbering preNodes");
-	printf("Initial preNode count %li\n", preGraph->preNodeCount);
+	printf("Initial preNode count %d\n", preGraph->preNodeCount);
 
 	for (preNodeIndex = 1; preNodeIndex <= preNodes; preNodeIndex++) {
 		currentPreNode = &(preGraph->preNodes[preNodeIndex]);
@@ -932,7 +932,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 				     preGraph->preNodeCount +
 				      1, PreNode);
 
-	printf("Destroyed %li preNodes\n", counter);
+	printf("Destroyed %d preNodes\n", counter);
 }
 
 // Allocate memory for an empty preGraph created with sequenceCount different sequences
@@ -1030,7 +1030,7 @@ static void exportPreNode_pg(FILE * outfile, PreNode * preNode, IDnum ID,
 	if (preNode == NULL)
 		return;
 
-	fprintf(outfile, "NODE\t%li\n", ID);
+	fprintf(outfile, "NODE\t%d\n", ID);
 
 	if (preNode->length == 0) {
 		fprintf(outfile, "\n");
@@ -1079,7 +1079,7 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 		printf("Writing into pregraph file %s...\n", filename);
 
 	// General data
-	fprintf(outfile, "%li\t%li\t%i\n", preGraph->preNodeCount,
+	fprintf(outfile, "%d\t%d\t%i\n", preGraph->preNodeCount,
 		preGraph->sequenceCount, preGraph->wordLength);
 
 	// PreNode info
@@ -1100,7 +1100,7 @@ void displayPreArcMemory_pg()
 {
 	if (preArcMemory == NULL)
 		return;
-	printf("ARC MEMORY %li allocated %li free\n",
+	printf("ARC MEMORY %ld allocated %ld free\n",
 	       RecycleBin_memory_usage(preArcMemory),
 	       recycleBinFreeSpace(preArcMemory));
 }

@@ -31,11 +31,10 @@ static RecycleBin *treeMemory = NULL;
 
 struct splayNode_st {
 	Kmer kmer;
-	IDnum seqID;
 	Coordinate position;
-
 	struct splayNode_st *left;
 	struct splayNode_st *right;
+	IDnum seqID;
 };
 
 typedef struct splayNode_st SplayNode;

@@ -348,7 +348,7 @@ void exportIDMapping(char *filename, ReadSet * reads)
 
 	for (index = 0; index < reads->readCount; index++)
 		if (reads->labels != NULL)
-			fprintf(outfile, "s/SEQUENCE %li/%s/\n", index + 1,
+			fprintf(outfile, "s/SEQUENCE %d/%s/\n", index + 1,
 				reads->labels[index]);
 
 	fclose(outfile);
@@ -381,7 +381,7 @@ ReadSet *readSolexaFile(char *filename)
 			lineCount++;
 
 	readCount = lineCount;
-	printf("%li reads found.\n", readCount);
+	printf("%d reads found.\n", readCount);
 	fclose(file);
 
 	// Create table:
@@ -428,7 +428,7 @@ ReadSet *readElandFile(char *filename)
 		lineCount++;
 
 	readCount = lineCount;
-	printf("%li reads found.\n", readCount);
+	printf("%d reads found.\n", readCount);
 	fclose(file);
 
 	// Create table:
@@ -485,7 +485,7 @@ ReadSet *readFastQFile(char *filename)
 	while (fgets(line, maxline, file) != NULL)
 		lineCount++;
 	readCount = lineCount / 4;
-	printf("%li reads found.\n", readCount);
+	printf("%d reads found.\n", readCount);
 	fclose(file);
 
 	// Create table:
@@ -540,7 +540,7 @@ ReadSet *readFastQGZFile(char *filename)
 	while (gzgets(file, line, maxline) != NULL)
 		lineCount++;
 	readCount = lineCount / 4;
-	printf("%li reads found.\n", readCount);
+	printf("%d reads found.\n", readCount);
 	gzclose(file);
 
 	// Create table:
@@ -596,7 +596,7 @@ ReadSet *readFastAFile(char *filename)
 		if (line[0] == '>')
 			sequenceCount++;
 	fclose(file);
-	printf("%li sequences found\n", sequenceCount);
+	printf("%d sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
 	reads->sequences = callocOrExit(sequenceCount, char *);
@@ -619,7 +619,7 @@ ReadSet *readFastAFile(char *filename)
 		}
 	}
 
-	//printf("Sequence %li has length %li\n", sequenceIndex, bpCount);
+	//printf("Sequence %d has length %d\n", sequenceIndex, bpCount);
 	reads->sequences[sequenceIndex] =
 	    callocOrExit(bpCount + 1, char);
 	fclose(file);
@@ -634,7 +634,7 @@ ReadSet *readFastAFile(char *filename)
 			}
 			sequenceIndex++;
 			bpCount = 0;
-			//printf("Starting to read sequence %li\n",
+			//printf("Starting to read sequence %d\n",
 			//       sequenceIndex);
 			sequence = reads->sequences[sequenceIndex];
 		} else {
@@ -681,7 +681,7 @@ ReadSet *readFastAGZFile(char *filename)
 		if (line[0] == '>')
 			sequenceCount++;
 	gzclose(file);
-	printf("%li sequences found\n", sequenceCount);
+	printf("%d sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
 	reads->sequences = mallocOrExit(sequenceCount, char *);
@@ -700,7 +700,7 @@ ReadSet *readFastAGZFile(char *filename)
 		}
 	}
 
-	//printf("Sequence %li has length %li\n", sequenceIndex, bpCount);
+	//printf("Sequence %d has length %d\n", sequenceIndex, bpCount);
 	reads->sequences[sequenceIndex] =
 	    mallocOrExit(bpCount + 1, char);
 	gzclose(file);
@@ -715,7 +715,7 @@ ReadSet *readFastAGZFile(char *filename)
 			}
 			sequenceIndex++;
 			bpCount = 0;
-			//printf("Starting to read sequence %li\n",
+			//printf("Starting to read sequence %d\n",
 			//       sequenceIndex);
 			sequence = reads->sequences[sequenceIndex];
 		} else {
@@ -757,7 +757,7 @@ ReadSet *readMAQGZFile(char *filename)
 	while (gzgets(file, line, maxline) != NULL)
 		sequenceCount++;
 	gzclose(file);
-	printf("%li sequences found\n", sequenceCount);
+	printf("%d sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
 	reads->sequences = mallocOrExit(sequenceCount, char *);
@@ -839,7 +839,7 @@ ReadSet *parseDataAndReadFiles(int argc, char **argv)
 			else if (strncmp
 				 (argv[argIndex], "-shortPaired",
 				  12) == 0) {
-				sscanf(argv[argIndex], "-shortPaired%hi",
+				sscanf(argv[argIndex], "-shortPaired%hd",
 				       (short int *) &cat);
 				if (cat < 1 || cat > CATEGORIES) {
 					printf("Unknown option: %s\n",
@@ -851,7 +851,7 @@ ReadSet *parseDataAndReadFiles(int argc, char **argv)
 				cat++;
 			} else if (strncmp(argv[argIndex], "-short", 6) ==
 				   0) {
-				sscanf(argv[argIndex], "-short%hi",
+				sscanf(argv[argIndex], "-short%hd",
 				       (short int *) &cat);
 				if (cat < 1 || cat > CATEGORIES) {
 					printf("Unknown option: %s\n",
@@ -1027,7 +1027,7 @@ void importClippingData(char *filename, ReadSet * reads)
 			destroyTightString(sequences[index]);
 			sequences[index] = NULL;
 		} else {
-			sscanf(line, "%*[PASFIL ]%*i  %li %li %*[^\n]",
+			sscanf(line, "%*[PASFIL ]%*i  %ld %ld %*[^\n]",
 			       &start, &finish);
 			clipTightString(sequences[index], start, finish);
 		}
@@ -1079,7 +1079,7 @@ void detachDubiousReads(ReadSet * reads, boolean * dubiousReads)
 		pairID = mateReads[index];
 
 		if (pairID != -1) {
-			//printf("Separating %li and %li\n", index, pairID);
+			//printf("Separating %d and %d\n", index, pairID);
 			mateReads[index] = -1;
 			mateReads[pairID] = -1;
 		}
@@ -1095,7 +1095,7 @@ static void exportRead(FILE * outfile, ReadSet * reads, IDnum index)
 	if (sequence == NULL)
 		return;
 
-	fprintf(outfile, ">SEQUENCE_%li_length_%li", index,
+	fprintf(outfile, ">SEQUENCE_%d_length_%ld", index,
 		getLength(sequence));
 
 	if (reads->categories != NULL)
@@ -1144,6 +1144,7 @@ ReadSet *importReadSet(char *filename)
 	IDnum sequenceCount, sequenceIndex;
 	IDnum index;
 	ReadSet *reads;
+	short int temp_short;
 
 	if (file != NULL)
 		printf("Reading read set file %s;\n", filename);
@@ -1158,7 +1159,7 @@ ReadSet *importReadSet(char *filename)
 		if (line[0] == '>')
 			sequenceCount++;
 	fclose(file);
-	printf("%li sequences found\n", sequenceCount);
+	printf("%d sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
 	reads->sequences = callocOrExit(sequenceCount, char *);
@@ -1170,8 +1171,9 @@ ReadSet *importReadSet(char *filename)
 		if (line[0] == '>') {
 
 			// Reading category info
-			sscanf(line, "%*[^\t]\t%hhi",
-			       &(reads->categories[sequenceIndex + 1]));
+			sscanf(line, "%*[^\t]\t%hd",
+			       &temp_short);
+			reads->categories[sequenceIndex + 1] = (Category) temp_short;
 
 			if (sequenceIndex != -1)
 				reads->sequences[sequenceIndex] =
@@ -1183,7 +1185,7 @@ ReadSet *importReadSet(char *filename)
 		}
 	}
 
-	//printf("Sequence %li has length %li\n", sequenceIndex, bpCount);
+	//printf("Sequence %d has length %d\n", sequenceIndex, bpCount);
 	reads->sequences[sequenceIndex] =
 	    mallocOrExit(bpCount + 1, char);
 	fclose(file);
@@ -1198,7 +1200,7 @@ ReadSet *importReadSet(char *filename)
 			}
 			sequenceIndex++;
 			bpCount = 0;
-			//printf("Starting to read sequence %li\n",
+			//printf("Starting to read sequence %d\n",
 			//       sequenceIndex);
 			sequence = reads->sequences[sequenceIndex];
 		} else {

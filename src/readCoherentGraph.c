@@ -50,9 +50,9 @@ typedef struct connection_st Connection;
 
 struct connection_st {
 	Node *node;
-	IDnum multiplicity;
 	PassageMarker *marker;
 	Connection *next;
+	IDnum multiplicity;
 };
 
 static RecycleBin *nodeListMemory = NULL;
@@ -139,7 +139,7 @@ static void identifyUniqueNodes(boolean(*isUniqueFunction) (Node *))
 			counter++;
 	}
 
-	printf("Done, %lu unique nodes counted\n", counter);
+	printf("Done, %u unique nodes counted\n", counter);
 }
 
 static boolean uniqueNodesConnect(Node * startingNode)
@@ -553,7 +553,7 @@ void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node * node),
 
 	destroyRecycleBin(listMemory);
 
-	printf("Confronted to %li multiple hits and %li null over %li\n",
+	printf("Confronted to %i multiple hits and %i null over %i\n",
 	       multCounter, nullCounter, dbgCounter);
 
 	puts("Read coherency over!");

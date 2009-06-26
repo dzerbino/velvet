@@ -99,3 +99,8 @@ V 0.7.35
 V 0.7.36
 - K > 31 now possible
 - --help option corrected for velvetg
+
+V 0.7.37
+- Acceleration of k-mer operations (comparable to 64bit int performance)
+- Fixed variable lengths
+- Reordered struct declaration for more efficent memory alignment

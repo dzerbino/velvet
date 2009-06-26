@@ -1,5 +1,5 @@
 /*
-Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
+Copyright 2007, 2008, 2009 Daniel Zerbino (zerbino@ebi.ac.uk)
 
     This file is part of Velvet.
 
@@ -21,6 +21,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _KMER_H_
 #define _KMER_H_
 
+#include <stdint.h>
+
 void copyKmers(Kmer* k1, Kmer* k2);
 
 void pushNucleotide(Kmer * kmer, Nucleotide nucleotide);
@@ -28,7 +30,7 @@ Nucleotide popNucleotide(Kmer * kmer);
 
 int compareKmers(Kmer* k1, Kmer* k2);
 
-void reverseComplement(Kmer* antiWord, Kmer * word, int WORDLENGTH);
+void reversePushNucleotide(Kmer * kmer, Nucleotide nucleotide);
 
 void printKmer(Kmer * kmer);
 
@@ -50,16 +52,16 @@ void resetWordFilter(int wordLength);
 
 struct kmer_st {
 #if KMER_LONGLONGS
-	unsigned long long int longlongs[KMER_LONGLONGS];
+	uint64_t longlongs[KMER_LONGLONGS];
 #endif
 #if KMER_LONGS
-	unsigned long int longs;
+	uint32_t longs;
 #endif
 #if KMER_INTS
-	unsigned int ints;
+	uint16_t ints;
 #endif
 #if KMER_CHARS
-	unsigned char chars;
+	uint8_t chars;
 #endif
 };
 

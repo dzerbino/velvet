@@ -32,7 +32,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #define VERSION_NUMBER 0
 #define RELEASE_NUMBER 7
-#define UPDATE_NUMBER 36
+#define UPDATE_NUMBER 37
 
 #define CATEGORIES 2
 
@@ -62,20 +62,22 @@ extern struct fibheap_el;
 extern struct dfibheap;
 extern struct dfibheap_el;
 #endif
+
 // Namespace sizes
-typedef signed char boolean;
-typedef char Nucleotide;
-typedef long IDnum;
-typedef long Coordinate;
-typedef short int ShortLength;
+#include <stdint.h>
+typedef int8_t boolean;
+typedef int8_t Nucleotide;
+typedef int32_t IDnum;
+typedef int64_t Coordinate;
+typedef int16_t ShortLength;
 typedef double Time;
-typedef unsigned char Quality;
+typedef uint8_t Quality;
 typedef double Probability;
-typedef signed char Category;
+typedef int8_t Category;
 
 // Atomic word
 typedef struct kmer_st Kmer;
-typedef long long KmerKey;
+typedef int64_t KmerKey;
 
 // Just a sequence string, but with just two bits per character
 typedef struct tString_st TightString;

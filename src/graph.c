@@ -38,38 +38,38 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 typedef unsigned char Descriptor;
 
 struct arc_st {
-	IDnum multiplicity;	// 32
-	Node *destination;	// 64
 	Arc *twinArc;		// 64
 	Arc *next;		// 64
 	Arc *previous;		// 64
 	Arc *nextInLookupTable;	// 64
+	Node *destination;	// 64
+	IDnum multiplicity;	// 32
 };				// 352 Total
 
 struct node_st {
-	IDnum ID;		// 32
 	Node *twinNode;		// 64
 	Arc *arc;		// 64
-	IDnum arcCount;		// 32
 	Descriptor *descriptor;	// 64
-	Coordinate length;	// 32
 	PassageMarker *marker;	// 64
-	boolean status;		// 1
-	boolean uniqueness;	// 1
+	Coordinate length;	// 32
 	Coordinate virtualCoverage[CATEGORIES];	// 32 * 2
 	Coordinate originalVirtualCoverage[CATEGORIES];	// 32 * 2
+	IDnum ID;		// 32
+	IDnum arcCount;		// 32
+	boolean status;		// 1
+	boolean uniqueness;	// 1
 };				// 418 Total
 
 struct shortReadMarker_st {
-	IDnum readID;
 	Coordinate position;
+	IDnum readID;
 	ShortLength offset;
 };
 
 struct gapMarker_st {
-	ShortLength length;
-	Coordinate position;
 	GapMarker *next;
+	Coordinate position;
+	ShortLength length;
 };
 
 struct graph_st {
@@ -467,7 +467,7 @@ void destroyNode(Node * node, Graph * graph)
 	IDnum ID = node->ID;
 	IDnum index;
 
-	//printf("Destroying %li\n and twin %li\n", getNodeID(node), getNodeID(twin));
+	//printf("Destroying %d\n and twin %d\n", getNodeID(node), getNodeID(twin));
 
 	if (ID < 0)
 		ID = -ID;
@@ -567,7 +567,7 @@ char *readNode(Node * node)
 	Nucleotide nucleotide;
 	Coordinate i;
 
-	sprintf(s, "NODE %li :", node->ID);
+	sprintf(s, "NODE %d :", node->ID);
 
 	for (i = 0; i < node->length; i++) {
 		nucleotide = getNucleotideInDescriptor(descriptor, i);
@@ -592,13 +592,13 @@ char *readNode(Node * node)
 
 	/*
 	   while (arc != NULL) {
-	   sprintf(tmpString, " %li(%lix);", arc->destination->ID,
+	   sprintf(tmpString, " %d(%dx);", arc->destination->ID,
 	   arc->multiplicity);
 	   strcat(s, tmpString);
 	   arc = arc->next;
 	   }
 
-	   sprintf(tmpString, " lgth: %li", node->length);
+	   sprintf(tmpString, " lgth: %d", node->length);
 	   strcat(s, tmpString);
 	 */
 
@@ -610,8 +610,8 @@ void displayGraph(Graph * graph)
 	Node *currentNode;
 	IDnum nodeIndex;
 
-	printf("%li sequences\n", graph->sequenceCount);
-	printf("%li*2 nodes\n", graph->nodeCount);
+	printf("%d sequences\n", graph->sequenceCount);
+	printf("%d*2 nodes\n", graph->nodeCount);
 
 	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
 		currentNode = graph->nodes[nodeIndex];
@@ -705,7 +705,7 @@ Node *getNodeInGraph(Graph * graph, IDnum nodeID)
 	// DEBUG
 	if (nodeID > graph->nodeCount || nodeID < -graph->nodeCount) {
 		printf
-		    ("Required node does not exist !!! Node %li Max node ID %li\n",
+		    ("Required node does not exist !!! Node %d Max node ID %d\n",
 		     nodeID, graph->nodeCount);
 		abort();
 	}
@@ -773,7 +773,7 @@ void appendNodeSequence(Node * node, TightString * sequence,
 	Coordinate i;
 	Nucleotide nucleotide;
 
-	//printf("Getting sequence from node %li of length %li (%li)\n", getNodeID(node), getNodeLength(node), getLength(nodeLabel));
+	//printf("Getting sequence from node %d of length %d (%d)\n", getNodeID(node), getNodeLength(node), getLength(nodeLabel));
 
 	for (i = 0; i < getNodeLength(node); i++) {
 		nucleotide =
@@ -1162,7 +1162,7 @@ void renumberNodes(Graph * graph)
 	IDnum newIndex;
 
 	puts("Renumbering nodes");
-	printf("Initial node count %li\n", graph->nodeCount);
+	printf("Initial node count %d\n", graph->nodeCount);
 
 	for (nodeIndex = 1; nodeIndex <= nodes; nodeIndex++) {
 		currentNode = getNodeInGraph(graph, nodeIndex);
@@ -1239,7 +1239,7 @@ void renumberNodes(Graph * graph)
 					    graph->nodeCount +
 					     1, GapMarker *);
 
-	printf("Removed %li null nodes\n", counter);
+	printf("Removed %d null nodes\n", counter);
 }
 
 void splitNodeDescriptor(Node * source, Node * target, Coordinate offset)
@@ -1341,7 +1341,7 @@ void checkPassageMarkersStatus(Graph * graph)
 							  (marker)),
 						  graph) == NULL) {
 				printf
-				    ("Missing arc %li -> %li (for %li)\n",
+				    ("Missing arc %d -> %d (for %d)\n",
 				     getNodeID(node),
 				     getNodeID(getNode
 					       (getNextInSequence
@@ -1356,7 +1356,7 @@ void checkPassageMarkersStatus(Graph * graph)
 						(marker)), node,
 					       graph) == NULL) {
 				printf
-				    ("Missing arc %li -> %li (for %li)\n",
+				    ("Missing arc %d -> %d (for %d)\n",
 				     getNodeID(getNode
 					       (getNextInSequence
 						(marker))),
@@ -1774,9 +1774,9 @@ static void exportNode(FILE * outfile, Node * node, void *withSequence)
 	if (node == NULL)
 		return;
 
-	fprintf(outfile, "NODE\t%li", node->ID);
+	fprintf(outfile, "NODE\t%d", node->ID);
 	for (cat = 0; cat < CATEGORIES; cat++)
-		fprintf(outfile, "\t%li\t%li", node->virtualCoverage[cat],
+		fprintf(outfile, "\t%ld\t%ld", node->virtualCoverage[cat],
 			node->originalVirtualCoverage[cat]);
 	fprintf(outfile, "\n");
 
@@ -1847,7 +1847,7 @@ static void exportArc(FILE * outfile, Arc * arc)
 	if (originID == destinationID && originID < 0)
 		return;
 
-	fprintf(outfile, "ARC\t%li\t%li\t%li\n", originID, destinationID,
+	fprintf(outfile, "ARC\t%d\t%d\t%d\n", originID, destinationID,
 		arc->multiplicity);
 }
 
@@ -2086,7 +2086,7 @@ void exportGraph(char *filename, Graph * graph, TightString ** sequences)
 		printf("Writing into graph file %s...\n", filename);
 
 	// General data
-	fprintf(outfile, "%li\t%li\t%i\n", graph->nodeCount,
+	fprintf(outfile, "%d\t%d\t%i\n", graph->nodeCount,
 		graph->sequenceCount, graph->wordLength);
 
 	// Node info
@@ -2129,13 +2129,13 @@ void exportGraph(char *filename, Graph * graph, TightString ** sequences)
 			if (readCount == 0)
 				continue;
 
-			fprintf(outfile, "NR\t%li\t%li\n",
+			fprintf(outfile, "NR\t%d\t%d\n",
 				index - graph->nodeCount, readCount);
 
 			reads = graph->nodeReads[index];
 			for (readIndex = 0; readIndex < readCount;
 			     readIndex++)
-				fprintf(outfile, "%li\t%li\t%i\n",
+				fprintf(outfile, "%d\t%ld\t%d\n",
 					reads[readIndex].readID,
 					reads[readIndex].position,
 					reads[readIndex].offset);
@@ -2176,24 +2176,24 @@ Graph *importGraph(char *filename)
 
 	// First  line
 	fgets(line, maxline, file);
-	sscanf(line, "%li\t%li\t%i\n", &nodeCounter, &sequenceCount,
+	sscanf(line, "%d\t%d\t%i\n", &nodeCounter, &sequenceCount,
 	       &wordLength);
 	graph = emptyGraph(sequenceCount, wordLength);
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
-	printf("Graph has %li nodes and %li sequences\n", nodeCounter,
+	printf("Graph has %d nodes and %d sequences\n", nodeCounter,
 	       sequenceCount);
 
 	// Read nodes
 	fgets(line, maxline, file);
 	while (strncmp(line, "NODE", 4) == 0) {
 		strtok(line, "\t\n");
-		sscanf(strtok(NULL, "\t\n"), "%li", &nodeID);
+		sscanf(strtok(NULL, "\t\n"), "%d", &nodeID);
 		node = addEmptyNodeToGraph(graph, nodeID);
 		for (cat = 0; cat < CATEGORIES; cat++) {
-			sscanf(strtok(NULL, "\t\n"), "%li", &coverage);
+			sscanf(strtok(NULL, "\t\n"), "%ld", &coverage);
 			setVirtualCoverage(node, cat, coverage);
-			sscanf(strtok(NULL, "\t\n"), "%li",
+			sscanf(strtok(NULL, "\t\n"), "%ld",
 			       &originalCoverage);
 			setOriginalVirtualCoverage(node, cat,
 						   originalCoverage);
@@ -2264,7 +2264,7 @@ Graph *importGraph(char *filename)
 
 	// Read arcs
 	while (line[0] == 'A' && !finished) {
-		sscanf(line, "ARC\t%li\t%li\t%li\n", &originID,
+		sscanf(line, "ARC\t%d\t%d\t%d\n", &originID,
 		       &destinationID, &multiplicity);
 		arc =
 		    createArc(getNodeInGraph(graph, originID),
@@ -2276,13 +2276,13 @@ Graph *importGraph(char *filename)
 
 	// Read sequences
 	while (!finished && line[0] != 'N') {
-		sscanf(line, "SEQ\t%li\n", &seqID);
+		sscanf(line, "SEQ\t%d\n", &seqID);
 		marker = NULL;
 		fgets(line, maxline, file);
 
 		while (!finished && line[0] != 'N' && line[0] != 'S') {
 			sCount =
-			    sscanf(line, "%li\t%li\t%li\t%li\t%li\n",
+			    sscanf(line, "%d\t%ld\t%ld\t%ld\t%ld\n",
 				   &nodeID, &startOffset, &start, &finish,
 				   &finishOffset);
 			if (sCount != 5) {
@@ -2306,7 +2306,7 @@ Graph *importGraph(char *filename)
 
 	// Node reads
 	while (!finished) {
-		sscanf(line, "NR\t%li\t%li\n", &nodeID, &readCount);
+		sscanf(line, "NR\t%d\t%d\n", &nodeID, &readCount);
 		if (!readStartsAreActivated(graph))
 			activateReadStarts(graph);
 
@@ -2318,7 +2318,7 @@ Graph *importGraph(char *filename)
 		readCount = 0;
 		fgets(line, maxline, file);
 		while (!finished && line[0] != 'N') {
-			sscanf(line, "%li\t%li\t%hi\n", &seqID,
+			sscanf(line, "%d\t%ld\t%hd\n", &seqID,
 			       &startOffset, &length);
 			array[readCount].readID = seqID;
 			array[readCount].position = startOffset;
@@ -2329,7 +2329,7 @@ Graph *importGraph(char *filename)
 		}
 	}
 
-	//printf("New graph has %li nodes\n", graph->nodeCount);
+	//printf("New graph has %d nodes\n", graph->nodeCount);
 
 	fclose(file);
 	//puts("Done, exiting");
@@ -2358,12 +2358,12 @@ Graph *readPreGraphFile(char *preGraphFilename)
 
 	// First  line
 	fgets(line, maxline, file);
-	sscanf(line, "%li\t%li\t%i\n", &nodeCounter, &sequenceCount,
+	sscanf(line, "%d\t%d\t%i\n", &nodeCounter, &sequenceCount,
 	       &wordLength);
 	graph = emptyGraph(sequenceCount, wordLength);
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
-	printf("Graph has %li nodes and %li sequences\n", nodeCounter,
+	printf("Graph has %d nodes and %d sequences\n", nodeCounter,
 	       sequenceCount);
 
 	// Read nodes
@@ -2485,7 +2485,7 @@ void DOTNode(Node * node, FILE * outfile)
 	if (ID < 0)
 		return;
 
-	fprintf(outfile, "\t%li [label=\"<left>|%li|<right>\"]\n", ID, ID);
+	fprintf(outfile, "\t%d [label=\"<left>|%d|<right>\"]\n", ID, ID);
 
 	for (arc = node->arc; arc != NULL; arc = arc->next) {
 		otherNode = arc->destination;
@@ -2494,10 +2494,10 @@ void DOTNode(Node * node, FILE * outfile)
 		}
 
 		if (otherNode->ID > 0)
-			fprintf(outfile, "\t%li:right -> %li:left\n", ID,
+			fprintf(outfile, "\t%d:right -> %d:left\n", ID,
 				otherNode->ID);
 		else
-			fprintf(outfile, "\t%li:right -> %li:right\n", ID,
+			fprintf(outfile, "\t%d:right -> %d:right\n", ID,
 				-otherNode->ID);
 	}
 
@@ -2508,10 +2508,10 @@ void DOTNode(Node * node, FILE * outfile)
 		}
 
 		if (otherNode->ID > 0)
-			fprintf(outfile, "\t%li:left -> %li:left\n", ID,
+			fprintf(outfile, "\t%d:left -> %d:left\n", ID,
 				otherNode->ID);
 		else
-			fprintf(outfile, "\t%li:left -> %li:right\n", ID,
+			fprintf(outfile, "\t%d:left -> %d:right\n", ID,
 				-otherNode->ID);
 	}
 }
@@ -3617,14 +3617,14 @@ int getWordLength(Graph * graph)
 
 void displayArcMemory()
 {
-	printf("ARC MEMORY %li allocated %li free\n",
+	printf("ARC MEMORY %ld allocated %ld free\n",
 	       RecycleBin_memory_usage(arcMemory),
 	       recycleBinFreeSpace(arcMemory));
 }
 
 void displayNodeMemory()
 {
-	printf("NODE MEMORY %li allocated %li free\n",
+	printf("NODE MEMORY %ld allocated %ld free\n",
 	       RecycleBin_memory_usage(nodeMemory),
 	       recycleBinFreeSpace(nodeMemory));
 }
@@ -3697,7 +3697,7 @@ void checkNodeReads(IDnum index, Graph * graph)
 		abort();
 
 	//if (arrayLength > 10000)
-	//      printf("Array length %li %li\n", arrayLength, index);
+	//      printf("Array length %d %d\n", arrayLength, index);
 
 	for (i = 1; i < arrayLength; i++) {
 		if (array[i].readID <= array[i - 1].readID)

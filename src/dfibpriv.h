@@ -56,14 +56,14 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
  * specific node operations
  */
 struct dfibheap_el {
-	int dfhe_degree;
-	boolean dfhe_mark;
 	DFibHeapNode *dfhe_p;
 	DFibHeapNode *dfhe_child;
 	DFibHeapNode *dfhe_left;
 	DFibHeapNode *dfhe_right;
-	Time dfhe_key;
 	void *dfhe_data;
+	Time dfhe_key;
+	int dfhe_degree;
+	boolean dfhe_mark;
 };
 
 static DFibHeapNode *dfhe_newelem(DFibHeap *);

@@ -29,14 +29,14 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "utility.h"
 
 struct passage_st {
-	IDnum sequenceID;
-	Coordinate start;
 	struct node_st *node;
 	PassageMarker *nextInNode;
 	PassageMarker *previousInNode;
 	PassageMarker *twinMarker;
 	PassageMarker *nextInSequence;
+	Coordinate start;
 	Coordinate finishOffset;
+	IDnum sequenceID;
 	boolean status;
 };
 
@@ -178,7 +178,7 @@ void setNextInNode(PassageMarker * marker, PassageMarker * next)
 		marker->twinMarker->nextInNode = NULL;
 	} else {
 		if (marker->twinMarker == NULL) {
-			printf("Dead marker in node %li %li\n",
+			printf("Dead marker in node %d %d\n",
 			       getNodeID(getNode(marker)),
 			       getPassageMarkerSequenceID(marker));
 			abort();
@@ -235,21 +235,21 @@ char *readPassageMarker(PassageMarker * marker)
 	if (marker == NULL)
 		return s;
 
-	sprintf(s, "MARKER %li (%li -> %li):", marker->sequenceID,
+	sprintf(s, "MARKER %d (%ld -> %ld):", marker->sequenceID,
 		marker->start, getPassageMarkerFinish(marker));
 
 	if (getPreviousInSequence(marker) == NULL)
-		sprintf(s, "%s START -> %li", s,
+		sprintf(s, "%s START -> %d", s,
 			getNodeID(getNode(marker)));
 	else
-		sprintf(s, "%s %li -> %li", s,
+		sprintf(s, "%s %d -> %d", s,
 			getNodeID(getNode(getPreviousInSequence(marker))),
 			getNodeID(getNode(marker)));
 
 	if (getNextInSequence(marker) == NULL)
 		sprintf(s, "%s -> FINISH", s);
 	else
-		sprintf(s, "%s -> %li ", s,
+		sprintf(s, "%s -> %d ", s,
 			getNodeID(getNode(getNextInSequence(marker))));
 
 	return s;
@@ -474,7 +474,7 @@ boolean isInitial(PassageMarker * marker)
 		return false;
 
 	if (marker->twinMarker == NULL) {
-		printf("Unpaired marker seq %li start %li node %li\n",
+		printf("Unpaired marker seq %d start %ld node %d\n",
 		       marker->sequenceID, marker->start,
 		       getNodeID(marker->node));
 		puts("SNAFU");
@@ -577,7 +577,7 @@ PassageMarker *newPassageMarker(IDnum seqID, Coordinate start,
 	PassageMarker *marker = allocatePassageMarker();
 	PassageMarker *twinMarker = allocatePassageMarker();
 
-//      printf("Values %li\t%li\t%li\t%li\t%li\n", seqID, start, finish, startOffset, finishOffset);
+//      printf("Values %d\t%d\t%d\t%d\t%d\n", seqID, start, finish, startOffset, finishOffset);
 
 	marker->sequenceID = seqID;
 	marker->node = NULL;
@@ -599,7 +599,7 @@ PassageMarker *newPassageMarker(IDnum seqID, Coordinate start,
 	setFinishOffset(marker, finishOffset);
 
 	if (getPassageMarkerLength(marker) < 0) {
-		printf("Negative marker %li %li %li %li\n",
+		printf("Negative marker %d %ld %ld %ld\n",
 		       getPassageMarkerSequenceID(marker),
 		       getPassageMarkerStart(marker),
 		       getPassageMarkerFinish(marker),
@@ -628,9 +628,9 @@ void exportMarker(FILE * outfile, PassageMarker * marker,
 		current = marker->twinMarker;
 	}
 
-	fprintf(outfile, "SEQ\t%li\n", current->sequenceID);
+	fprintf(outfile, "SEQ\t%d\n", current->sequenceID);
 	for (; current != NULL; current = current->nextInSequence) {
-		fprintf(outfile, "%li\t%li\t%li\t%li\t%li",
+		fprintf(outfile, "%d\t%ld\t%ld\t%ld\t%ld",
 			getNodeID(current->node), getStartOffset(current),
 			getPassageMarkerStart(current),
 			getPassageMarkerFinish(current),

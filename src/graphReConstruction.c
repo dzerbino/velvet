@@ -50,8 +50,8 @@ struct kmerOccurence_st {
 
 struct kmerOccurenceTable_st {
 	KmerOccurence *kmerTable;
-	IDnum kmerTableSize;
 	IDnum *accelerationTable;
+	IDnum kmerTableSize;
 	short int accelerationShift;
 	short int accelerationBits;
 };
@@ -149,6 +149,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	IDnum *accelPtr = NULL;
 	KmerKey lastHeader = 0;
 	KmerKey header;
+	Nucleotide nucleotide;
 
 	if (file == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
@@ -219,29 +220,47 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 
 		// Fill in the initial word : 
 		clearKmer(&word);
+		clearKmer(&antiWord);
 		for (index = 0; index < wordLength - 1; index++) {
 			if (line[index] == 'A')
-				pushNucleotide(&word, ADENINE);
+				nucleotide = ADENINE;
 			else if (line[index] == 'C')
-				pushNucleotide(&word, CYTOSINE);
+				nucleotide = CYTOSINE;
 			else if (line[index] == 'G')
-				pushNucleotide(&word, GUANINE);
+				nucleotide = GUANINE;
 			else if (line[index] == 'T')
-				pushNucleotide(&word, THYMINE);
+				nucleotide = THYMINE;
+			else
+				nucleotide = ADENINE;
+				
+
+			pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+			reversePushNucleotide(&antiWord, nucleotide);
+#else
+			reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
 		}
 
 		// Scan through node
 		for (; index < lineLength - 1; index++) {
 			if (line[index] == 'A')
-				pushNucleotide(&word, ADENINE);
+				nucleotide = ADENINE;
 			else if (line[index] == 'C')
-				pushNucleotide(&word, CYTOSINE);
+				nucleotide = CYTOSINE;
 			else if (line[index] == 'G')
-				pushNucleotide(&word, GUANINE);
+				nucleotide = GUANINE;
 			else if (line[index] == 'T')
-				pushNucleotide(&word, THYMINE);
+				nucleotide = THYMINE;
+			else
+				nucleotide = ADENINE;
 
-			reverseComplement(&antiWord, &word, wordLength);
+			pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+			reversePushNucleotide(&antiWord, nucleotide);
+#else
+			reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
 
 			if (compareKmers(&word, &antiWord) <= 0) {
 				copyKmers(&kmerOccurencePtr->kmer, &word);
@@ -338,11 +357,13 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 	Coordinate readNucleotideIndex;
 	KmerOccurence *kmerOccurence;
 	int wordLength = getWordLength(graph);
+	Nucleotide nucleotide;
 
 	Node *node;
 	Node *previousNode = NULL;
 
 	clearKmer(&word);
+	clearKmer(&antiWord);
 
 	// Neglect any read which will not be short paired
 	if ((!readTracking && category % 2 == 0)
@@ -366,16 +387,26 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
-	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++) 
-		pushNucleotide(&word, getNucleotide(readNucleotideIndex, tString));
+	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++) {
+		nucleotide = getNucleotide(readNucleotideIndex, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
+	}
 
 	// Go through sequence
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
-		pushNucleotide(&word, getNucleotide(readNucleotideIndex++, tString));
-
-		// Compute reverse complement
-		reverseComplement(&antiWord, &word, wordLength);
+		nucleotide = getNucleotide(readNucleotideIndex++, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
 
 		// Search in table
 		if (compareKmers(&word, &antiWord) <= 0
@@ -428,8 +459,10 @@ static void threadSequenceThroughGraph(TightString * tString,
 	Node *previousNode = NULL;
 	Coordinate coord;
 	Coordinate previousCoord = 0;
+	Nucleotide nucleotide;
 
 	clearKmer(&word);
+	clearKmer(&antiWord);
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < wordLength)
@@ -437,16 +470,25 @@ static void threadSequenceThroughGraph(TightString * tString,
 
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
-	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++)
-		pushNucleotide(&word, getNucleotide(readNucleotideIndex, tString));
+	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++) {
+		nucleotide = getNucleotide(readNucleotideIndex, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
+	}
 
 	// Go through sequence
 	while (readNucleotideIndex < getLength(tString)) {
-		// Shift word:
-		pushNucleotide(&word, getNucleotide(readNucleotideIndex++, tString));
-
-		// Compute reverse complement
-		reverseComplement(&antiWord, &word, wordLength);
+		nucleotide = getNucleotide(readNucleotideIndex++, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
 
 		// Search in table
 		if (compareKmers(&word, &antiWord) <= 0
@@ -570,7 +612,7 @@ static void fillUpGraph(ReadSet * reads,
 		category = reads->categories[readIndex];
 
 		if (readIndex % 100000 == 0)
-			printf("Threading through reads %li / %li\n",
+			printf("Threading through reads %d / %d\n",
 			       readIndex, reads->readCount);
 
 		threadSequenceThroughGraph(reads->tSequences[readIndex],

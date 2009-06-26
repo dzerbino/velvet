@@ -1,5 +1,5 @@
 /*
-Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
+Copyright 2007, 2008, 2009 Daniel Zerbino (zerbino@ebi.ac.uk)
 
     This file is part of Velvet.
 
@@ -20,23 +20,31 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 */
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "globals.h"
 #include "kmer.h"
 #include "utility.h"
 
-static const unsigned long long int longLongLeftFilter = (long long int) 3 << 62; 
-static const unsigned long int longLeftFilter = (long int) 3 << 30; 
-static const unsigned int intLeftFilter = (int) 3 << 14; 
-static const unsigned char charLeftFilter = (char) 3 << 6; 
+static const uint64_t longLongLeftFilter = (long long int) 3 << 62; 
+static const uint32_t longLeftFilter = (long int) 3 << 30; 
+static const uint16_t intLeftFilter = (int) 3 << 14; 
+static const uint8_t charLeftFilter = (char) 3 << 6; 
 
-static unsigned long long int longLongWordFilter = -1; 
-static unsigned long int longWordFilter = (long) (((long long int) 1) << 32) - 1; 
-static unsigned int intWordFilter = (int) (((long int) 1) << 16) - 1; 
-static unsigned char charWordFilter = (char) (((int) 1) << 8) - 1; 
+static uint64_t longLongWordFilter = -1; 
+static uint32_t longWordFilter = (long) (((long long int) 1) << 32) - 1; 
+static uint16_t intWordFilter = (int) (((long int) 1) << 16) - 1; 
+static uint8_t charWordFilter = (char) (((int) 1) << 8) - 1; 
 
-static unsigned int longLongKmerFilterIndex = KMER_LONGLONGS;
-static unsigned long long int longLongKmerFilter = -1;
+#define UNDEFINED 0
+#define CHARS 1
+#define INTS 2
+#define LONGS 3
+#define LONGLONGS 4
+static int kmerFilterIndex = UNDEFINED;
+static int kmerFilterOffset = 0;
+static uint16_t longLongKmerFilterIndex = KMER_LONGLONGS;
+static uint64_t longLongKmerFilter = -1;
 
 void resetWordFilter(int wordLength) {
 	int kmer_bit_size = wordLength * 2;
@@ -53,12 +61,17 @@ void resetWordFilter(int wordLength) {
 		} else if (kmer_bit_size == 64) {
 			longLongKmerFilterIndex = i;
 			longLongKmerFilter = longLongWordFilter; 
+			kmerFilterIndex = LONGLONGS;
+			kmerFilterOffset = kmer_bit_size - 2;
 			longWordFilter = 0;
 			intWordFilter = 0;
 			charWordFilter = 0;
+			return;
 		} else {
 			longLongKmerFilterIndex = i;
 			longLongKmerFilter = (((long long int) 1) << kmer_bit_size) - 1;	
+			kmerFilterIndex = LONGLONGS;
+			kmerFilterOffset = kmer_bit_size - 2;
 			longWordFilter = 0;
 			intWordFilter = 0;
 			charWordFilter = 0;
@@ -67,115 +80,99 @@ void resetWordFilter(int wordLength) {
 	}
 #endif
 #if KMER_LONGS
-	if (kmer_bit_size > 32) {
+	if (kmer_bit_size > 32)
 		kmer_bit_size -= 32;
-		;
-	} else if (kmer_bit_size == 32) {
+	else if (kmer_bit_size == 32) {
+		kmerFilterIndex = LONGS;
+		kmerFilterOffset = kmer_bit_size - 2;
 		intWordFilter = 0;
 		charWordFilter = 0;
+		return;
 	} else {
 		longWordFilter = (((long int) 1) << kmer_bit_size) - 1;	
+		kmerFilterIndex = LONGS;
+		kmerFilterOffset = kmer_bit_size - 2;
 		intWordFilter = 0;
 		charWordFilter = 0;
 		return;
 	}
 #endif
 #if KMER_INTS
-	if (kmer_bit_size > 16) {
+	if (kmer_bit_size > 16)
 		kmer_bit_size -= 16;
-		;
-	} else if (kmer_bit_size == 16) {
+	else if (kmer_bit_size == 16) {
+		kmerFilterIndex = INTS;
+		kmerFilterOffset = kmer_bit_size - 2;
 		charWordFilter = 0;
+		return;
 	} else {
 		intWordFilter = (((int) 1) << kmer_bit_size) - 1;	
+		kmerFilterIndex = INTS;
+		kmerFilterOffset = kmer_bit_size - 2;
 		charWordFilter = 0;
 		return;
 	}
 
 #endif
 #if KMER_CHARS
-	if (kmer_bit_size >= 8) {
-	} else {
+	if (kmer_bit_size < 8) 
 		charWordFilter = (((char) 1) << kmer_bit_size) - 1;	
-		return;
-	}
 
+	kmerfilterindex = CHARS;
+	kmerfilteroffset = kmer_bit_size - 2;
 #endif
 
-}
-
-static void shiftLeft(Kmer * kmer) {
-	int i;
-	unsigned long long int leftBits; 
-	unsigned long long int rightBits = 0;
-
-#if KMER_LONGLONGS
-	for (i = 0; i < KMER_LONGLONGS; i++) {
-		leftBits = (kmer->longlongs[i] & longLongLeftFilter);
-		leftBits >>= 62;
-		kmer->longlongs[i] <<= 2;
-		kmer->longlongs[i] += rightBits;
-		if (i < longLongKmerFilterIndex)
-			kmer->longlongs[i] &= longLongWordFilter;
-		else if (i == longLongKmerFilterIndex)
-			kmer->longlongs[i] &= longLongKmerFilter;
-		else 
-			kmer->longlongs[i] = 0;
-		rightBits = leftBits;
-	}
-#endif
-#if KMER_LONGS
-	leftBits = kmer->longs & longLeftFilter;
-	leftBits >>= 30;
-	kmer->longs <<= 2;
-	kmer->longs += rightBits;
-	kmer->longs &= longWordFilter;
-	rightBits = leftBits;
-#endif
-#if KMER_INTS
-	leftBits = kmer->ints & intLeftFilter;
-	leftBits >>= 14;
-	kmer->ints <<= 2;
-	kmer->ints += rightBits;
-	kmer->ints &= intWordFilter;
-	rightBits = leftBits;
-#endif
-#if KMER_CHARS
-	leftBits = kmer->chars & charLeftFilter;
-	leftBits >>= 6;
-	kmer->chars <<= 2;
-	kmer->chars += rightBits;
-	kmer->chars &= charWordFilter;
-	rightBits = leftBits;
-#endif
 }
 
 static void shiftRight(Kmer * kmer) {
 	int i;
-	unsigned long long int leftBits = 0;
-	unsigned long long int rightBits;
+	uint64_t leftBits = 0;
+	uint64_t rightBits;
 
 #if KMER_CHARS
+
+#if KMER_INTS | KMER_LONGS | KMER_LONGLONGS
 	rightBits = kmer->chars & 3;
-	leftBits <<= 6;
+#endif 
+
 	kmer->chars >>= 2;
-	kmer->chars += (unsigned char) leftBits;
+	kmer->chars += (uint8_t) leftBits;
+
+#if KMER_INTS | KMER_LONGS | KMER_LONGLONGS
 	leftBits = rightBits;
+#endif 
 #endif
+
 #if KMER_INTS
+
+#if KMER_LONGS | KMER_LONGLONGS
 	rightBits = kmer->ints & 3;
+#endif
+
 	leftBits <<= 14;
 	kmer->ints >>= 2;
-	kmer->ints += (unsigned int) leftBits;
+	kmer->ints += (uint16_t) leftBits;
+
+#if KMER_LONGS | KMER_LONGLONGS
 	leftBits = rightBits;
 #endif
+#endif
+
 #if KMER_LONGS
+
+#if KMER_LONGLONGS
 	rightBits = kmer->longs & 3;
+#endif
+
 	leftBits <<= 30;
 	kmer->longs >>= 2;
-	kmer->longs += (unsigned long int) leftBits;
-	rightBits = leftBits;
+	KMER->longs += (uint32_t) leftBits;
+
+#if KMER_LONGLONGS
+	leftBits = rightBits;
 #endif
+#endif 
+
 #if KMER_LONGLONGS
 	for (i = KMER_LONGLONGS - 1; i >= 0; i--) {
 		rightBits = kmer->longlongs[i] & 3;
@@ -205,66 +202,10 @@ void copyKmers(Kmer* k1, Kmer* k2) {
 #endif
 }
 
-static void incrementKmer(Kmer* kmer, char increment) {
-	int i;
-
-#if KMER_LONGLONGS
-	kmer->longlongs[0] += increment;
-	if (kmer->longlongs[0] >= increment)
-		return;
-
-	for (i = 1; i < KMER_LONGLONGS; i++) 
-		if (++kmer->longlongs[i])
-			return;
-#if KMER_LONGS
-	if (++kmer->longs)
-		return;
-#endif
-#if KMER_INTS
-	if (++kmer->ints)
-		return;
-#endif
-#if KMER_CHARS
-	++kmer->chars;
-#endif
-
-#else
-
-#if KMER_LONGS
-	kmer->longs += increment;
-	if (kmer->longs >= increment)
-		return;
-#if KMER_INTS
-	if (++kmer->ints)
-		return;
-#endif
-#if KMER_CHARS
-	++kmer->chars;
-#endif
-
-#else
-
-#if KMER_INTS
-	kmer->ints += increment;
-	if (kmer->ints >= increment)
-		return;
-#if KMER_CHARS
-	++kmer->chars;
-#endif
-
-#else 
-
-#if KMER_CHARS
-	kmer->chars += increment;
-#endif
-
-#endif
-#endif
-#endif
-}
-
 int compareKmers(Kmer* k1, Kmer* k2) {
+#if KMER_LONGLONGS
 	int i;
+#endif
 
 #if KMER_CHARS
 	if (k1->chars == k2->chars)
@@ -322,38 +263,19 @@ void clearKmer(Kmer * kmer) {
 #endif
 }
 
-unsigned char rightMostNucleotide(Kmer * kmer) {
+uint8_t rightMostNucleotide(Kmer * kmer) {
 #if KMER_LONGLONGS
-	return (unsigned char) (kmer->longlongs[0] && 3);
+	return (uint8_t) (kmer->longlongs[0] && 3);
 #endif
 #if KMER_LONGS
-	return (unsigned char) (kmer->longs && 3);
+	return (uint8_t) (kmer->longs && 3);
 #endif
 #if KMER_INTS
-	return (unsigned char) (kmer->ints && 3);
+	return (uint8_t) (kmer->ints && 3);
 #endif
 #if KMER_CHARS
-	return (unsigned char) (kmer->chars && 3);
+	return (uint8_t) (kmer->chars && 3);
 #endif
-}
-
-void reverseComplement(Kmer* revComp, Kmer * word, int WORDLENGTH)
-{
-	int index;
-	Kmer copy;
-	Nucleotide nucleotide;
-	
-	clearKmer(revComp);
-	copyKmers(&copy, word);
-
-	for (index = 0; index < WORDLENGTH; index++) {
-		nucleotide = popNucleotide(&copy);
-#ifndef COLOR
-		pushNucleotide(revComp, 3 - nucleotide);
-#else
-		pushNucleotide(revComp, nucleotide);
-#endif
-	}
 }
 
 void printKmer(Kmer * kmer) {
@@ -370,7 +292,7 @@ void printKmer(Kmer * kmer) {
 #endif
 #if KMER_LONGLONGS
 	for (i = KMER_LONGLONGS - 1; i >= 0; i--)
-		printf("%llx\t", kmer->longlongs[i]);
+		printf("%lx\t", kmer->longlongs[i]);
 #endif
 	puts("");
 }
@@ -378,15 +300,14 @@ void printKmer(Kmer * kmer) {
 void testKmers(int argc, char** argv) {
 	Kmer kmer;		
 	Kmer *k2;
-	Kmer k3;
 	Kmer k4;
 
 	k2 = &k4;
 	int i;
 	
 	printf("FORMATS %u %u %u %u\n", KMER_CHARS, KMER_INTS, KMER_LONGS, KMER_LONGLONGS);
-	printf("FILTERS %x %x %lx %llx\n", (int) charLeftFilter, intLeftFilter, longLeftFilter, longLongLeftFilter);
-	printf("FILTERS %hx %x %lx %llx\n", charWordFilter, intWordFilter, longWordFilter, longLongWordFilter);
+	printf("FILTERS %hx %hx %x %lx\n", charLeftFilter, intLeftFilter, longLeftFilter, longLongLeftFilter);
+	printf("FILTERS %hx %hx %x %lx\n", charWordFilter, intWordFilter, longWordFilter, longLongWordFilter);
 	printKmer(&kmer);
 	puts("Clear");
 	clearKmer(&kmer);
@@ -412,34 +333,188 @@ void testKmers(int argc, char** argv) {
 	puts("Reverse complement");
 	clearKmer(k2);
 	pushNucleotide(k2, 1);
-	reverseComplement(&k3, k2, MAXKMERLENGTH);
-	printKmer(&k3); 	
 	printf("%i\n", compareKmers(k2, &kmer)); 
 }
 
-static Nucleotide getRightNucleotide(Kmer * kmer) {
+void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
+	register int i;
+
 #if KMER_LONGLONGS
-	return kmer->longlongs[0] & 3;
+	register uint64_t * ptr;
 #endif
+#if KMER_LONGLONGS > 1 | KMER_LONGS | KMER_INTS | KMER_CHARS
+	uint64_t leftBits; 
+#endif
+	uint64_t rightBits = 0;
+
+#if KMER_LONGLONGS
+	ptr = kmer->longlongs;
+
+#if KMER_LONGLONGS > 1
+	for (i = 0; i < longlongKmerFilterIndex; i++) {
+		leftBits = (*ptr & longLongLeftFilter);
+		leftBits >>= 62;
+		*ptr <<= 2;
+		*ptr += rightBits;
+		*ptr &= longLongWordFilter;
+		rightBits = leftBits;
+		ptr++;
+	}
+#endif
+
+#if KMER_LONGS | KMER_INTS | KMER_CHARS
+	leftBits = (*ptr & longLongLeftFilter);
+	leftBits >>= 62;
+#endif
+
+	*ptr <<= 2;
+	*ptr += rightBits;
+	*ptr &= longLongKmerFilter;
+
+#if KMER_LONGS | KMER_INTS | KMER_CHARS
+	rightBits = leftBits;
+#endif
+#endif
+
 #if KMER_LONGS
-	return kmer->longs & 3;
+
+#if KMER_INTS | KMER_CHARS
+	leftBits = kmer->longs & longLeftFilter;
+	leftBits >>= 30;
+#endif
+	kmer->longs <<= 2;
+	kmer->longs += rightBits;
+	kmer->longs &= longWordFilter;
+
+#if KMER_INTS | KMER_CHARS
+	rightBits = leftBits;
+#endif
+
+#endif
+
+#if KMER_INTS
+
+#if KMER_CHARS
+	leftBits = kmer->ints & intLeftFilter;
+	leftBits >>= 14;
+#endif 
+	kmer->ints <<= 2;
+	kmer->ints += rightBits;
+	kmer->ints &= intWordFilter;
+
+#if KMER_CHARS
+	rightBits = leftBits;
+#endif 
+
+#endif
+
+#if KMER_CHARS
+	kmer->chars <<= 2;
+	kmer->chars += rightBits;
+	kmer->chars &= charWordFilter;
+#endif
+
+#if KMER_LONGLONGS
+	kmer->longlongs[0] += nucleotide;
+	if (kmer->longlongs[0] >= nucleotide)
+		return;
+
+	for (i = 1; i < KMER_LONGLONGS; i++) 
+		if (++kmer->longlongs[i])
+			return;
+#if KMER_LONGS
+	if (++kmer->longs)
+		return;
 #endif
 #if KMER_INTS
-	return kmer->ints & 3;
+	if (++kmer->ints)
+		return;
 #endif
 #if KMER_CHARS
-	return kmer->chars & 3;
+	++kmer->chars;
 #endif
-	
-}
 
-void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
-	shiftLeft(kmer);
-	incrementKmer(kmer, nucleotide);
+#else
+
+#if KMER_LONGS
+	kmer->longs += nucleotide;
+	if (kmer->longs >= nucleotide)
+		return;
+#if KMER_INTS
+	if (++kmer->ints)
+		return;
+#endif
+#if KMER_CHARS
+	++kmer->chars;
+#endif
+
+#else
+
+#if KMER_INTS
+	kmer->ints += nucleotide;
+	if (kmer->ints >= nucleotide)
+		return;
+#if KMER_CHARS
+	++kmer->chars;
+#endif
+
+#else 
+
+#if KMER_CHARS
+	kmer->chars += nucleotide;
+#endif
+
+#endif
+#endif
+#endif
 }
 
 Nucleotide popNucleotide(Kmer * kmer) {
-	Nucleotide nucl = getRightNucleotide(kmer);
+	Nucleotide nucl;
+
+#if KMER_LONGLONGS
+	nucl = kmer->longlongs[0] & 3;
+#elif KMER_LONGS
+	nucl = kmer->longs & 3;
+#elif KMER_INTS
+	nucl = kmer->ints & 3;
+#elif KMER_CHARS
+	nucl = kmer->chars & 3;
+#endif
+
 	shiftRight(kmer);
 	return nucl;
+}
+
+void reversePushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
+	uint64_t templongLong = nucleotide;
+
+	shiftRight(kmer);
+
+	switch(kmerFilterIndex) {
+		case UNDEFINED:
+			abort();
+#if KMER_LONGLONGS
+		case LONGLONGS:
+			kmer->longlongs[longLongKmerFilterIndex] += templongLong << kmerFilterOffset; 			
+			return;
+#endif
+#if KMER_LONGS
+		case LONGS:
+			kmer->longs += templongLong << kmerFilterOffset; 			
+			return;
+#endif
+#if KMER_INTS
+		case INTS:
+			kmer->ints += templongLong << kmerFilterOffset; 			
+			return;
+#endif
+#if KMER_CHARS
+		case CHARS:
+			kmer->chars += templongLong << kmerFilterOffset; 			
+			return;
+#endif
+	}		
+
+	exitErrorf(EXIT_FAILURE, true, "Anomaly in k-mer filering");
 }
