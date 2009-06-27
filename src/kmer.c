@@ -118,8 +118,8 @@ void resetWordFilter(int wordLength) {
 	if (kmer_bit_size < 8) 
 		charWordFilter = (((char) 1) << kmer_bit_size) - 1;	
 
-	kmerfilterindex = CHARS;
-	kmerfilteroffset = kmer_bit_size - 2;
+	kmerFilterIndex = CHARS;
+	kmerFilterOffset = kmer_bit_size - 2;
 #endif
 
 }
@@ -166,7 +166,7 @@ static void shiftRight(Kmer * kmer) {
 
 	leftBits <<= 30;
 	kmer->longs >>= 2;
-	KMER->longs += (uint32_t) leftBits;
+	kmer->longs += (uint32_t) leftBits;
 
 #if KMER_LONGLONGS
 	leftBits = rightBits;
@@ -263,21 +263,6 @@ void clearKmer(Kmer * kmer) {
 #endif
 }
 
-uint8_t rightMostNucleotide(Kmer * kmer) {
-#if KMER_LONGLONGS
-	return (uint8_t) (kmer->longlongs[0] && 3);
-#endif
-#if KMER_LONGS
-	return (uint8_t) (kmer->longs && 3);
-#endif
-#if KMER_INTS
-	return (uint8_t) (kmer->ints && 3);
-#endif
-#if KMER_CHARS
-	return (uint8_t) (kmer->chars && 3);
-#endif
-}
-
 void printKmer(Kmer * kmer) {
 	int i;
 
@@ -288,7 +273,7 @@ void printKmer(Kmer * kmer) {
 	printf("%x\t", kmer->ints);
 #endif
 #if KMER_LONGS
-	printf("%lx\t", kmer->longs);
+	printf("%x\t", kmer->longs);
 #endif
 #if KMER_LONGLONGS
 	for (i = KMER_LONGLONGS - 1; i >= 0; i--)
