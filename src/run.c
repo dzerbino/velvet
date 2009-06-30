@@ -36,7 +36,8 @@ static void printUsage()
 	puts("./velveth directory hash_length {[-file_format][-read_type] filename}");
 	puts("");
 	puts("\tdirectory\t\t: directory name for output files");
-	puts("\thash_length\t\t: odd integer (if even, it will be decremented) <= 31 (if above, will be reduced)");
+	printf("\thash_length\t\t: odd integer (if even, it will be decremented) <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
+	puts("\tfilename\t\t: path to sequence file or - for standard input");	
 	puts("");
 	puts("File format options:");
 	puts("\t-fasta");
@@ -96,7 +97,9 @@ int main(int argc, char **argv)
 		printf("Invalid hash length: %s\n", argv[2]);
 		printUsage();
 		return 0;
-	} else if (hashLength % 2 == 0) {
+	} 
+
+	if (hashLength % 2 == 0) {
 		printf
 		    ("Velvet can't work with even length k-mers, such as %i. We'll use %i instead, if you don't mind.\n",
 		     hashLength, hashLength - 1);
@@ -127,13 +130,12 @@ int main(int argc, char **argv)
 
 	splayTable = newSplayTable(hashLength);
 
-	allSequences = parseDataAndReadFiles(argc - 2, &(argv[2]));
-
-	printf("%i sequences in total.\n", allSequences->readCount);
-
 	strcpy(filename, directory);
 	strcat(filename, "/Sequences");
-	exportReadSet(filename, allSequences);
+	parseDataAndReadFiles(filename, argc - 2, &(argv[2]));
+
+	allSequences = importReadSet(filename);
+	printf("%i sequences in total.\n", allSequences->readCount);
 
 	strcpy(filename, directory);
 	strcat(filename, "/Roadmaps");

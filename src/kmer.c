@@ -336,7 +336,7 @@ void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
 	ptr = kmer->longlongs;
 
 #if KMER_LONGLONGS > 1
-	for (i = 0; i < longlongKmerFilterIndex; i++) {
+	for (i = 0; i < longLongKmerFilterIndex; i++) {
 		leftBits = (*ptr & longLongLeftFilter);
 		leftBits >>= 62;
 		*ptr <<= 2;

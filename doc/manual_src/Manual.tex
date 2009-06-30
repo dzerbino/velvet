@@ -54,6 +54,8 @@ is recommended.
 
 \subsection{Compiling instructions}
 
+\label{sec:compilation}
+
 From a GNU environment, simply type:
 
 \begin{verbatim}
@@ -71,6 +73,32 @@ To produce the colorspace version of Velvet, compile with the instruction:
 All the rest of the manual remains valid, except that the executables are now called velveth\_de and velveth\_de . 
 
 \textbf{Beware} that color- and sequence space are incompatible, hence separate sets of executables. In other words, don't try to hash sequence files with colorspace velvet or vice-versa, under penalty of meaningless results!
+
+\subsection{Compilation settings: CATEGORIES}
+
+Because of the use of fixed-length arrays, a number of variables have to be set at compilation time. 
+
+One of the is the number of channels, or categories of reads, which can be handled independently. This is for example useful is you want to distinguish reads from different insert libraries, or from different samples altogether.
+
+By default, there are only two short read categories, but this variable can be extended to your needs. Towards the top of the \emph{src/globals.h} file, you will find a line:
+
+\begin{verbatim}
+CATEGORIES		2
+\end{verbatim}
+
+Simply change the values to the desired one and re-compile as explained in \ref{sec:compilation}.
+
+Obviously, the greater the number, the longer the corresponding arrays, the more memory will be required to run Velvet. Adjust this variable according to your needs and your memory requirements. 
+
+\subsection{Compilation settings: MAXKMERLENGTH.}
+
+\label{sec:maxlength}
+
+Another useful compilation parameter is the MAXKMERLENGTH. As explained in \ref{sec:kmercov}, the hash length can be crucial to getting optimal assemblies. Depending on the dataset, you might wish to use long hash lengths. 
+
+By default, hash-lengths are limited to 31bp, but you can push up this limit by adjusting the MAXKMERLENGTH parameter on top of the \emph{src/globals.h} file and re-compiling as explained in \ref{sec:compilation}.
+
+By storing longer words, Velvet will be requiring more memory, so adjust this variable according to your needs and memory resources. 
 
 \section{Running instructions}
 
@@ -352,11 +380,13 @@ read. In other words, if the reads are indexed from 0, then reads 0 and 1 are
 paired, 2 and 3, 4 and 5, etc.  
 
 If for some reason you have forward and reverse reads in two different FASTA files
-but in corresponding order, the bundled Perl script shuffleSequences.pl will
+but in corresponding order, the bundled Perl script \emph{shuffleSequences\_fasta.pl} will
 merge the two files into one as appropriate. To use it, type:
 \begin{verbatim}
-> ./shuffleSequences.pl forward_reads.fa reverse_reads.fa output.fa
+> ./shuffleSequences_fasta.pl forward_reads.fa reverse_reads.fa output.fa
 \end{verbatim}
+
+There is also a \emph{shuffleSequences\_fastq.pl} script for Sanger-style FastQ files.
 
 Concerning read orientation, Velvet expects paired-end reads to come from opposite strands facing each other, as in the traditional Sanger format. If you have paired-end reads produced from circularisation (i.e. from the same strand), it will be necessary to replace the first read in each pair by its reverse complement before running velveth.
 
@@ -456,7 +486,7 @@ The hash length is the length of the k-mers being entered in the hash table.
 Firstly, you must observe three technical constraints:
 \begin{itemize}
 \item it must be an odd number, to avoid palindromes. If you put in an even number, Velvet will just decrement it and proceed.
-\item it must be below or equal to 31, because it is stored on 64 bits
+\item it must be below or equal to MAXKMERHASH length (cf. \ref{sec:maxlength}, by default 31bp), because it is stored on 64 bits
 \item it must be strictly inferior to read length, otherwise you simply will not observe any overlaps between reads, for obvious reasons.
 \end{itemize}
 

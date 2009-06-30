@@ -104,3 +104,12 @@ V 0.7.37
 - Acceleration of k-mer operations (comparable to 64bit int performance)
 - Fixed variable lengths
 - Reordered struct declaration for more efficent memory alignment
+
+V 0.7.38
+- Typo in kmer.c
+- Updated documentation
+- In git release, Makefile now compiles documentation
+- Stream option
+- Original read names in Sequences file
+- Updated MAQ parser.
+- Added Simon Gladman's VelvetOptimiser script in the third-party repository

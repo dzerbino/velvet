@@ -51,24 +51,13 @@ void simplifyReads(ReadSet * reads);
 // Exports a .sed script allowing to transform internal IDs to the original ones
 void exportIDMapping(char *filename, ReadSet * reads);
 
-// Various file parser returning a normal array of strings. 
-// Should you want to add your own, note that the length of the array is passed on using the pointer given in parameter
-ReadSet *readFastQFile(char *filename);
-ReadSet *readFastAFile(char *filename);
-ReadSet *readSolexaFile(char *filename);
-ReadSet *readElandFile(char *filename);
 ReadSet *importReadSet(char *filename);
-
 void exportReadSet(char *filename, ReadSet * reads);
 
 // The overall argument parser and file reader for the hash function
-ReadSet *parseDataAndReadFiles(int argc, char **argv);
-ReadSet *parseDataAndReadMaskFiles(int argc, char **argv);
+void parseDataAndReadFiles(char * filename, int argc, char **argv);
 
 void logInstructions(int argc, char **argv, char *directory);
-
-// read clippiing data and make changes on the read set
-void importClippingData(char *filename, ReadSet * reads);
 
 // Read pairing info
 void pairUpReads(ReadSet * reads, Category cat);

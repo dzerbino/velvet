@@ -35,6 +35,14 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "../third-party/zlib-1.2.3/zlib.h"
 #endif
 
+#if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
+#  include <fcntl.h>
+#  include <io.h>
+#  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+#else
+#  define SET_BINARY_MODE(file)
+#endif
+
 ReadSet *newReadSet()
 {
 	ReadSet *rs = callocOrExit(1, ReadSet);
@@ -357,99 +365,88 @@ void exportIDMapping(char *filename, ReadSet * reads)
 
 // Imports sequences from a fastq file 
 // Memory space allocated within this function.
-ReadSet *readSolexaFile(char *filename)
+static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
 	FILE *file = fopen(filename, "r");
-	IDnum lineCount = 0;
-	IDnum readCount, readIndex;
+	IDnum counter = 0;
 	const int maxline = 500;
 	char line[500];
-	ReadSet *reads;
+	char readName[500];
+	char readSeq[500];
+	char str[100];
+	Coordinate start;
+
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "r");
+	else
+		file = stdin;
 
 	if (file != NULL)
 		printf("Reading Solexa file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	reads = newReadSet();
-
-
-	// Count lines:
-	puts("Counting lines...");
-	while (fgets(line, maxline, file) != NULL)
-		if (strchr(line, '.') == NULL)
-			lineCount++;
-
-	readCount = lineCount;
-	printf("%d reads found.\n", readCount);
-	fclose(file);
-
-	// Create table:
-	reads->readCount = readCount;
-	reads->sequences = mallocOrExit(readCount, char *);
-	for (readIndex = 0; readIndex < readCount; readIndex++) 
-		reads->sequences[readIndex] = mallocOrExit(100, char);
-
-	// Reopen file and memorize line:
-	puts("Writing lines into string array...");
-	file = fopen(filename, "r");
-	readIndex = 0;
 	while (fgets(line, maxline, file) != NULL)
 		if (strchr(line, '.') == NULL) {
-			sscanf(line, "%*i\t%*i\t%*i\t%*i\t%*c%[^\n]",
-			       reads->sequences[readIndex]);
-			readIndex++;
+			sscanf(line, "%*i\t%*i\t%*i\t%*i\t%c%[^\n]",
+			       readName, readSeq);
+			fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+			start = 0;
+			while (start <= strlen(readSeq)) {
+				strncpy(str, readSeq + start, 60);
+				fprintf(outfile, "%s\n", str);
+				start += 60;
+			}
+
+			counter++;
 		}
 
 	fclose(file);
+
+	printf("%d sequences found\n", counter);
 	puts("Done");
-	return reads;
 }
 
-ReadSet *readElandFile(char *filename)
+static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
 	FILE *file = fopen(filename, "r");
-	IDnum lineCount = 0;
-	IDnum readCount, readIndex;
+	IDnum counter = 0;
 	const int maxline = 500;
 	char line[500];
-	ReadSet *reads;
+	char readName[500];
+	char readSeq[500];
+	char str[100];
+	Coordinate start;
+
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "r");
+	else
+		file = stdin;
 
 	if (file != NULL)
-		printf("Reading Eland file %s\n", filename);
+		printf("Reading Solexa file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	reads = newReadSet();
-
-	// Count lines:
-	puts("Counting lines...");
-	while (fgets(line, maxline, file) != NULL)
-		lineCount++;
-
-	readCount = lineCount;
-	printf("%d reads found.\n", readCount);
-	fclose(file);
-
-	// Create table:
-	reads->readCount = readCount;
-	reads->sequences = mallocOrExit(readCount, char *);
-	for (readIndex = 0; readIndex < readCount; readIndex++)
-		reads->sequences[readIndex] = mallocOrExit(100, char);
-
 	// Reopen file and memorize line:
-	puts("Writing lines into string array...");
-	file = fopen(filename, "r");
-	readIndex = 0;
 	while (fgets(line, maxline, file) != NULL) {
 		sscanf(line, "%*[^\t]\t%[^\t\n]",
-		       reads->sequences[readIndex]);
-		readIndex++;
+		       readSeq);
+		fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+		start = 0;
+		while (start <= strlen(readSeq)) {
+			strncpy(str, readSeq + start, 60);
+			fprintf(outfile, "%s\n", str);
+			start += 60;
+		}
+
+		counter++;
 	}
 
 	fclose(file);
+
+	printf("%d sequences found\n", counter);
 	puts("Done");
-	return reads;
 }
 
 void goToEndOfLine(char *line, FILE * file)
@@ -463,39 +460,36 @@ void goToEndOfLine(char *line, FILE * file)
 
 // Imports sequences from a fastq file 
 // Memory space allocated within this function.
-ReadSet *readFastQFile(char *filename)
+static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
-	FILE *file = fopen(filename, "r");
-	IDnum lineCount = 0;
-	IDnum readCount, readIndex;
+	FILE *file;
 	const int maxline = 5000;
 	char line[5000];
-	ReadSet *reads;
-	int i;
+	char str[100];
+	IDnum counter = 0;
+	Coordinate start, i;
+
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "r");
+	else 
+		file = stdin;
 
 	if (file != NULL)
 		printf("Reading FastQ file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	reads = newReadSet();
 
-	// Count lines:
-	puts("Counting lines...");
-	while (fgets(line, maxline, file) != NULL)
-		lineCount++;
-	readCount = lineCount / 4;
-	printf("%d reads found.\n", readCount);
-	fclose(file);
+	while(fgets(line, maxline, file)) { 
 
-	// Create table:
-	reads->readCount = readCount;
-	reads->sequences = mallocOrExit(readCount, char *);
-	// Reopen file and memorize line:
-	puts("Writing lines into string array...");
-	file = fopen(filename, "r");
-	for (readIndex = 0; readIndex < readCount; readIndex++) {
-		fgets(line, maxline, file);
+		for (i = strlen(line) - 1;
+		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
+			line[i] = '\0';
+		}
+
+		fprintf(outfile,">%s\t%d\t%d\n", line + 1, (*sequenceIndex)++, cat);
+		counter++;
+
 		fgets(line, maxline, file);
 
 		// newline stripping that will work on any platform
@@ -504,53 +498,55 @@ ReadSet *readFastQFile(char *filename)
 			line[i] = '\0';
 		}
 
-		reads->sequences[readIndex] = mallocOrExit(strlen(line) + 1, char);	// Allocate enough space for null + line contents
-		strncpy(reads->sequences[readIndex], line, strlen(line) + 1);	// Copy line plus null terminating char
+		start = 0;
+		while (start <= strlen(line)) {
+			strncpy(str, line + start, 60);
+			fprintf(outfile, "%s\n", str);
+			start += 60;
+		}
 
 		fgets(line, maxline, file);
 		fgets(line, maxline, file);
 	}
 
 	fclose(file);
+	printf("%d reads found.\n", counter);
 	puts("Done");
-	return reads;
 }
 
 // Imports sequences from a zipped rfastq file 
 // Memory space allocated within this function.
-ReadSet *readFastQGZFile(char *filename)
+static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum *sequenceIndex)
 {
-	gzFile file = gzopen(filename, "r");
-	IDnum lineCount = 0;
-	IDnum readCount, readIndex;
+	gzFile file;
 	const int maxline = 5000;
 	char line[5000];
-	ReadSet *reads;
-	int i;
+	char str[100];
+	IDnum counter = 0;
+	Coordinate start, i;
+
+	if (strcmp(filename, "-"))
+		file = gzopen(filename, "r");
+	else { 
+		file = stdin;
+		SET_BINARY_MODE(file);
+	}
 
 	if (file != NULL)
-		printf("Reading zipped FastQ file %s\n", filename);
-	else 
-		exitErrorf(EXIT_FAILURE, true, "Could not open zipped file %s", filename);
+		printf("Reading FastQ file %s\n", filename);
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	reads = newReadSet();
 
-	// Count lines:
-	puts("Counting lines...");
-	while (gzgets(file, line, maxline) != NULL)
-		lineCount++;
-	readCount = lineCount / 4;
-	printf("%d reads found.\n", readCount);
-	gzclose(file);
+	while (gzgets(file, line, maxline)) {
+		for (i = strlen(line) - 1;
+		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
+			line[i] = '\0';
+		}
 
-	// Create table:
-	reads->readCount = readCount;
-	reads->sequences = mallocOrExit(readCount, char);
-	// Reopen file and memorize line:
-	puts("Writing lines into string array...");
-	file = gzopen(filename, "r");
-	for (readIndex = 0; readIndex < readCount; readIndex++) {
-		gzgets(file, line, maxline);
+		fprintf(outfile,">%s\t%d\t%d\n", line + 1, (*sequenceIndex)++, cat);
+		counter++;
+
 		gzgets(file, line, maxline);
 
 		// newline stripping that will work on any platform
@@ -559,227 +555,145 @@ ReadSet *readFastQGZFile(char *filename)
 			line[i] = '\0';
 		}
 
-		reads->sequences[readIndex] = mallocOrExit(strlen(line) + 1, char);	// Allocate enough space for null + line contents
-		strncpy(reads->sequences[readIndex], line, strlen(line) + 1);	// Copy line plus null terminating char
+		start = 0;
+		while (start <= strlen(line)) {
+			strncpy(str, line + start, 60);
+			fprintf(outfile, "%s\n", str);
+			start += 60;
+		}
 
 		gzgets(file, line, maxline);
 		gzgets(file, line, maxline);
 	}
 
 	gzclose(file);
+	printf("%d reads found.\n", counter);
 	puts("Done");
-	return reads;
 }
 
 // Imports sequences from a fasta file 
 // Memory is allocated within the function 
-ReadSet *readFastAFile(char *filename)
+static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
-	FILE *file = fopen(filename, "r");
-	char *sequence = NULL;
-	Coordinate bpCount = 0;
+	FILE *file;
 	const int maxline = 5000;
 	char line[5000];
-	IDnum sequenceCount, sequenceIndex;
-	IDnum index;
-	ReadSet *reads;
+	IDnum counter = 0;
+	Coordinate i;
+
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "r");
+	else
+		file = stdin;
 
 	if (file != NULL)
 		printf("Reading FastA file %s;\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	reads = newReadSet();
-	// Count number of separate sequences
-	sequenceCount = 0;
-	while (fgets(line, maxline, file) != NULL)
-		if (line[0] == '>')
-			sequenceCount++;
-	fclose(file);
-	printf("%d sequences found\n", sequenceCount);
-
-	reads->readCount = sequenceCount;
-	reads->sequences = callocOrExit(sequenceCount, char *);
-	if (sequenceCount == 0) {
-		reads->sequences = NULL;
-		return reads;
-	}
-	// Counting base pair length of each sequence:
-	file = fopen(filename, "r");
-	sequenceIndex = -1;
-	while (fgets(line, maxline, file) != NULL) {
-		if (line[0] == '>') {
-			if (sequenceIndex != -1)
-				reads->sequences[sequenceIndex] =
-				    callocOrExit(bpCount + 1, char);
-			sequenceIndex++;
-			bpCount = 0;
-		} else {
-			bpCount += (long) strlen(line) - 1;
-		}
-	}
-
-	//printf("Sequence %d has length %d\n", sequenceIndex, bpCount);
-	reads->sequences[sequenceIndex] =
-	    callocOrExit(bpCount + 1, char);
-	fclose(file);
-
-	// Reopen file and memorize line:
-	file = fopen(filename, "r");
-	sequenceIndex = -1;
 	while (fgets(line, maxline, file)) {
 		if (line[0] == '>') {
-			if (sequenceIndex != -1) {
-				sequence[bpCount] = '\0';
+			for (i = strlen(line) - 1;
+			     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
+				line[i] = '\0';
 			}
-			sequenceIndex++;
-			bpCount = 0;
-			//printf("Starting to read sequence %d\n",
-			//       sequenceIndex);
-			sequence = reads->sequences[sequenceIndex];
-		} else {
-			for (index = 0; index < (long) strlen(line) - 1;
-			     index++)
-				sequence[bpCount + index] = line[index];
-			bpCount += (long) (strlen(line) - 1);
-		}
-	}
 
-	if (sequenceIndex != -1) {
-		sequence[bpCount] = '\0';
+			fprintf(outfile, "%s\t%d\t%d\n", line, (*sequenceIndex)++, cat);	
+			counter++;
+		} else 
+			fprintf(outfile, line);
 	}
 
 	fclose(file);
 
+	printf("%d sequences found\n", counter);
 	puts("Done");
-	return reads;
 }
 
 // Imports sequences from a zipped fasta file 
 // Memory is allocated within the function 
-ReadSet *readFastAGZFile(char *filename)
+static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
-	gzFile file = gzopen(filename, "r");
-	char *sequence = NULL;
-	Coordinate bpCount = 0;
-	const int maxline = 100;
-	char line[100];
-	IDnum sequenceCount, sequenceIndex;
-	IDnum index;
-	ReadSet *reads;
+	gzFile file;
+	const int maxline = 5000;
+	char line[5000];
+	IDnum counter = 0;
+	Coordinate i;
+
+	if (strcmp(filename, "-"))
+		file = gzopen(filename, "r");
+	else { 
+		file = stdin;
+		SET_BINARY_MODE(file);
+	}
 
 	if (file != NULL)
 		printf("Reading zipped FastA file %s;\n", filename);
-	else 
+	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	reads = newReadSet();
-	// Count number of separate sequences
-	file = gzopen(filename, "r");
-	sequenceCount = 0;
-	while (gzgets(file, line, maxline) != NULL)
-		if (line[0] == '>')
-			sequenceCount++;
-	gzclose(file);
-	printf("%d sequences found\n", sequenceCount);
-
-	reads->readCount = sequenceCount;
-	reads->sequences = mallocOrExit(sequenceCount, char *);
-	// Counting base pair length of each sequence:
-	file = gzopen(filename, "r");
-	sequenceIndex = -1;
-	while (gzgets(file, line, maxline) != NULL) {
-		if (line[0] == '>') {
-			if (sequenceIndex != -1) 
-				reads->sequences[sequenceIndex] =
-				    mallocOrExit(bpCount + 1, char);
-			sequenceIndex++;
-			bpCount = 0;
-		} else {
-			bpCount += (long) strlen(line) - 1;
-		}
-	}
-
-	//printf("Sequence %d has length %d\n", sequenceIndex, bpCount);
-	reads->sequences[sequenceIndex] =
-	    mallocOrExit(bpCount + 1, char);
-	gzclose(file);
-
-	// Reopen file and memorize line:
-	file = gzopen(filename, "r");
-	sequenceIndex = -1;
 	while (gzgets(file, line, maxline)) {
 		if (line[0] == '>') {
-			if (sequenceIndex != -1) {
-				sequence[bpCount] = '\0';
+			for (i = strlen(line) - 1;
+			     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
+				line[i] = '\0';
 			}
-			sequenceIndex++;
-			bpCount = 0;
-			//printf("Starting to read sequence %d\n",
-			//       sequenceIndex);
-			sequence = reads->sequences[sequenceIndex];
-		} else {
-			for (index = 0; index < (long) strlen(line) - 1;
-			     index++)
-				sequence[bpCount + index] = line[index];
-			bpCount += (long) (strlen(line) - 1);
-		}
-	}
 
-	if (sequenceIndex != -1) {
-		sequence[bpCount] = '\0';
+			fprintf(outfile, "%s\t%d\t%d\n", line, (*sequenceIndex)++, cat);	
+			counter++;
+		} else 
+			fprintf(outfile, line);
 	}
 
 	gzclose(file);
 
+	printf("%d sequences found\n", counter);
 	puts("Done");
-	return reads;
 }
 
 // Parser for new output
-ReadSet *readMAQGZFile(char *filename)
+static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
-	gzFile file = gzopen(filename, "r");
+	gzFile file;
 	const int maxline = 1000;
 	char line[1000];
-	IDnum sequenceCount, index;
-	ReadSet *reads;
+	IDnum counter = 0;
+	char readName[500];
+	char readSeq[500];
+	char str[100];
+	Coordinate start;
+
+	if (strcmp(filename, "-"))
+		file = gzopen(filename, "r");
+	else { 
+		file = stdin;
+		SET_BINARY_MODE(file);
+	}
 
 	if (file != NULL)
-		printf("Reading zipped MAQ file %s;\n", filename);
-	else 
+		printf("Reading zipped MAQ file %s\n", filename);
+	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	reads = newReadSet();
-
-	// Count number of separate sequences
-	sequenceCount = 0;
-	while (gzgets(file, line, maxline) != NULL)
-		sequenceCount++;
-	gzclose(file);
-	printf("%d sequences found\n", sequenceCount);
-
-	reads->readCount = sequenceCount;
-	reads->sequences = mallocOrExit(sequenceCount, char *);
-	// Counting base pair length of each sequence:
-	for (index = 0; index < sequenceCount; index++)
-		reads->sequences[index] = mallocOrExit(100, char);
-
 	// Reopen file and memorize line:
-	file = gzopen(filename, "r");
-	index = 0;
 	while (gzgets(file, line, maxline)) {
-		sscanf(line, "%*s\t%*i\t%*i\t%*i\t%*i\t%*i\t\t%*i\t%[^\t]",
-		       reads->sequences[index]);
-		if (strspn(reads->sequences[index], "ATGC") < 21)
-			strcpy(reads->sequences[index], "");
-		index++;
+		sscanf(line, "%s\t%*i\t%*i\t%*c\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%[^\t]",
+		       readName, readSeq);
+		fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+		start = 0;
+		while (start <= strlen(readSeq)) {
+			strncpy(str, readSeq + start, 60);
+			fprintf(outfile, "%s\n", str);
+			start += 60;
+		}
+
+		counter++;
 	}
 
 	gzclose(file);
 
+	printf("%d sequences found\n", counter);
 	puts("Done");
-	return reads;
 }
 
 #define FASTQ 1
@@ -792,14 +706,13 @@ ReadSet *readMAQGZFile(char *filename)
 
 // General argument parser for most functions
 // Basically a reused portion of toplevel code dumped into here
-ReadSet *parseDataAndReadFiles(int argc, char **argv)
+void parseDataAndReadFiles(char * filename, int argc, char **argv)
 {
 	int argIndex = 1;
-	ReadSet *reads;
-	ReadSet *allSequences = newReadSet();
+	FILE *outfile = fopen(filename, "w");
 	int filetype = FASTA;
-	IDnum fileIndex = 0;
 	Category cat = 0;
+	IDnum sequenceIndex = 0;
 
 	if (argc < 2) {
 		puts("Wrong number of arguments!");
@@ -815,7 +728,7 @@ ReadSet *parseDataAndReadFiles(int argc, char **argv)
 	}
 
 	for (argIndex = 1; argIndex < argc; argIndex++) {
-		if (argv[argIndex][0] == '-') {
+		if (argv[argIndex][0] == '-' && strlen(argv[argIndex]) > 1) {
 
 			if (strcmp(argv[argIndex], "-fastq") == 0)
 				filetype = FASTQ;
@@ -865,8 +778,6 @@ ReadSet *parseDataAndReadFiles(int argc, char **argv)
 			else if (strcmp(argv[argIndex], "-longPaired") ==
 				 0)
 				cat = CATEGORIES * 2 + 1;
-
-
 			else {
 				printf("Unknown option: %s\n",
 				       argv[argIndex]);
@@ -881,162 +792,33 @@ ReadSet *parseDataAndReadFiles(int argc, char **argv)
 
 		switch (filetype) {
 		case FASTA:
-			reads = readFastAFile(argv[argIndex]);
+			readFastAFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case FASTQ:
-			reads = readFastQFile(argv[argIndex]);
+			readFastQFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case GERALD:
-			reads = readSolexaFile(argv[argIndex]);
+			readSolexaFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case ELAND:
-			reads = readElandFile(argv[argIndex]);
+			readElandFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case FASTA_GZ:
-			reads = readFastAGZFile(argv[argIndex]);
+			readFastAGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case FASTQ_GZ:
-			reads = readFastQGZFile(argv[argIndex]);
+			readFastQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case MAQ_GZ:
-			reads = readMAQGZFile(argv[argIndex]);
+			readMAQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		default:
 			puts("Screw up in parser... exiting");
 			exit(1);
 		}
-
-		convertSequences(reads);
-		categorizeReads(reads, cat);
-		fileIndex++;
-		concatenateReadSets(allSequences, reads);
 	}
 
-	return allSequences;
-
-}
-
-// General argument parser for most functions
-// Basically a reused portion of toplevel code dumped into here
-ReadSet *parseDataAndReadMaskFiles(int argc, char **argv)
-{
-	int argIndex = 1;
-	ReadSet *reads;
-	ReadSet *allSequences = newReadSet();
-	int filetype = FASTA;
-	boolean cat = false;
-
-	if (argc < 2) {
-		destroyReadSet(allSequences);
-		return NULL;
-	}
-
-	for (argIndex = 1; argIndex < argc; argIndex++) {
-		if (argv[argIndex][0] == '-') {
-
-			if (strcmp(argv[argIndex], "-fastq") == 0)
-				filetype = FASTQ;
-			else if (strcmp(argv[argIndex], "-fasta") == 0)
-				filetype = FASTA;
-			else if (strcmp(argv[argIndex], "-gerald") == 0)
-				filetype = GERALD;
-			else if (strcmp(argv[argIndex], "-eland") == 0)
-				filetype = ELAND;
-			else if (strcmp(argv[argIndex], "-fastq.gz") == 0)
-				filetype = FASTQ_GZ;
-			else if (strcmp(argv[argIndex], "-fasta.gz") == 0)
-				filetype = FASTA_GZ;
-			else if (strcmp(argv[argIndex], "-maq.gz") == 0)
-				filetype = MAQ_GZ;
-			else if (strcmp(argv[argIndex], "-short") == 0)
-				cat = false;
-			else if (strcmp(argv[argIndex], "-shortPaired") ==
-				 0)
-				cat = false;
-			else if (strcmp(argv[argIndex], "-short2") == 0)
-				cat = false;
-			else if (strcmp(argv[argIndex], "-shortPaired2") ==
-				 0)
-				cat = false;
-			else if (strcmp(argv[argIndex], "-long") == 0)
-				cat = false;
-			else {
-				printf("Unknown option: %s\n",
-				       argv[argIndex]);
-				exit(1);
-			}
-
-			continue;
-		}
-
-		if (!cat)
-			continue;
-
-		switch (filetype) {
-		case FASTA:
-			reads = readFastAFile(argv[argIndex]);
-			break;
-		case FASTQ:
-			reads = readFastQFile(argv[argIndex]);
-			break;
-		case GERALD:
-			reads = readSolexaFile(argv[argIndex]);
-			break;
-		case ELAND:
-			reads = readElandFile(argv[argIndex]);
-			break;
-		case FASTA_GZ:
-			reads = readFastAGZFile(argv[argIndex]);
-			break;
-		case FASTQ_GZ:
-			reads = readFastQGZFile(argv[argIndex]);
-			break;
-		case MAQ_GZ:
-			reads = readMAQGZFile(argv[argIndex]);
-			break;
-		default:
-			puts("Screw up in parser... exiting");
-			exit(1);
-		}
-
-		convertSequences(reads);
-		concatenateReadSets(allSequences, reads);
-	}
-
-	return allSequences;
-
-}
-
-void importClippingData(char *filename, ReadSet * reads)
-{
-	FILE *file = fopen(filename, "r");
-	char line[100];
-	const int maxline = 5000;
-	IDnum index = 0;
-	Coordinate start, finish;
-	TightString **sequences = reads->tSequences;
-
-	if (file == NULL)
-		exitErrorf(EXIT_FAILURE, true, "Could not read %s", filename);
-
-	puts("Importing clip data");
-
-	// For each other lines
-	while (fgets(line, maxline, file) != NULL) {
-		if (line[0] == 'F') {
-			destroyTightString(sequences[index]);
-			sequences[index] = NULL;
-		} else {
-			sscanf(line, "%*[PASFIL ]%*i  %ld %ld %*[^\n]",
-			       &start, &finish);
-			clipTightString(sequences[index], start, finish);
-		}
-		index++;
-	}
-
-	puts("Done");
-
-	fclose(file);
+	fclose(outfile);
 }
 
 void pairUpReads(ReadSet * reads, Category cat)

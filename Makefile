@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall
-DEBUG = -g -pg 
+DEBUG = -g
 LDFLAGS = -lm
 OPT = -O3
 DEF = 
@@ -19,7 +19,7 @@ Z_LIB_FILES=$(Z_LIB_DIR)/*.o
 OBJ = obj/tightString.o obj/run.o obj/splay.o obj/splayTable.o obj/graph.o obj/run2.o obj/fibHeap.o obj/fib.o obj/concatenatedGraph.o obj/passageMarker.o obj/graphStats.o obj/correctedGraph.o obj/dfib.o obj/dfibHeap.o obj/recycleBin.o obj/readSet.o obj/shortReadPairs.o obj/locallyCorrectedGraph.o obj/graphReConstruction.o obj/roadMap.o obj/preGraph.o obj/preGraphConstruction.o obj/concatenatedPreGraph.o obj/readCoherentGraph.o obj/crc.o obj/utility.o obj/kmer.o
 OBJDBG = $(subst obj,obj/dbg,$(OBJ))
 
-default : cleanobj zlib obj velveth velvetg 
+default : cleanobj zlib obj velveth velvetg doc
 
 clean :
 	-rm obj/*.o obj/dbg/*.o ./velvet* 
@@ -63,3 +63,6 @@ obj/%.o: src/%.c
 
 obj/dbg/%.o: src/%.c
 	$(CC) $(CFLAGS) $(DEBUG) $(DEF) -c $? -o $@ 
+
+doc:
+	cd doc/manual_src; pdflatex Manual.tex; pdflatex Manual.tex; mv Manual.pdf ../..	

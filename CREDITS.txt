@@ -7,7 +7,7 @@ However, some code was reused with kind permission from:
 (http://www.ebi.ac.uk/~guy/exonerate/) 
 - Ewan Birney, for his hashing function
 (ftp://ftp.ebi.ac.uk/pub/software/unix/wise2/)
-- John Marshall, for the streamlined error handling
+- John Marshall, for the streamlined error handling.
 
 Also this package uses and includes the zlib library developped by Jean-Loup
 Gailly and Mark Adler - more details in the zlib README file.
@@ -20,6 +20,8 @@ To this package I also bundled some third-party analysis scripts for Velvet:
   allows the user to break down the assembly file into contig files, and the
   second to view, within an ASCII terminal, the alignment of reads at a given
   position in a contig. 
+- Simon Gladmon also programmed the VelvetOptimiser script which automatically
+  scans the parameter space to obtain the best possible assembly. 
 
 Many thanks to: 
 - Darren Platt for his very thorough debugging.
@@ -27,3 +29,5 @@ Many thanks to:
 - Jean-Michel Batto for his advice on Sparc/Solaris.
 - Craig Cummings and Vrunda Sheth for their work on the colorspace version of
   Velvet.
+- John Marshall for his C tips.
+- Torsten Seeman for his advice on useability.
