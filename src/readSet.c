@@ -388,7 +388,7 @@ static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * 
 
 	while (fgets(line, maxline, file) != NULL)
 		if (strchr(line, '.') == NULL) {
-			sscanf(line, "%*i\t%*i\t%*i\t%*i\t%c%[^\n]",
+			sscanf(line, "%s\t%*i\t%*i\t%*i\t%*c%[^\n]",
 			       readName, readSeq);
 			fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
 			start = 0;
@@ -430,8 +430,8 @@ static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	// Reopen file and memorize line:
 	while (fgets(line, maxline, file) != NULL) {
-		sscanf(line, "%*[^\t]\t%[^\t\n]",
-		       readSeq);
+		sscanf(line, "%[^\t]\t%[^\t\n]",
+		       readName, readSeq);
 		fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
 		start = 0;
 		while (start <= strlen(readSeq)) {
@@ -953,7 +953,7 @@ ReadSet *importReadSet(char *filename)
 		if (line[0] == '>') {
 
 			// Reading category info
-			sscanf(line, "%*[^\t]\t%hd",
+			sscanf(line, "%*[^\t]\t%*[^\t]\t%hd",
 			       &temp_short);
 			reads->categories[sequenceIndex + 1] = (Category) temp_short;
 

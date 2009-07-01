@@ -22,6 +22,8 @@ To this package I also bundled some third-party analysis scripts for Velvet:
   position in a contig. 
 - Simon Gladmon also programmed the VelvetOptimiser script which automatically
   scans the parameter space to obtain the best possible assembly. 
+- Torsten Seeman provided a script which automatically analyses and displays 
+  in ASCII mode the coverage distribution of a Velvet assembly.
 
 Many thanks to: 
 - Darren Platt for his very thorough debugging.

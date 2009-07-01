@@ -113,3 +113,8 @@ V 0.7.38
 - Original read names in Sequences file
 - Updated MAQ parser.
 - Added Simon Gladman's VelvetOptimiser script in the third-party repository
+
+V 0.7.39
+- Added Torsten Seemans's estimate-exp_cov script
+- Amended Makefile to compile Manual
+- Moved code contributions to the eponymous ./contrib directory
