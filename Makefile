@@ -3,7 +3,9 @@ CFLAGS = -Wall
 DEBUG = -g
 LDFLAGS = -lm
 OPT = -O3
-DEF = 
+MAXKMERLENGTH=31
+CATEGORIES=2
+DEF = -D MAXKMERLENGTH=$(MAXKMERLENGTH) -D CATEGORIES=$(CATEGORIES)
 
 Z_LIB_DIR=third-party/zlib-1.2.3
 Z_LIB_FILES=$(Z_LIB_DIR)/*.o
@@ -24,6 +26,7 @@ default : cleanobj zlib obj velveth velvetg doc
 clean :
 	-rm obj/*.o obj/dbg/*.o ./velvet* 
 	cd $(Z_LIB_DIR) && make clean
+	-rm -f doc/manual_src/Manual.toc doc/manual_src/Manual.aux doc/manual_src/Manual.out doc/manual_src/Manual.log
 
 cleanobj: 
 	-rm obj/*.o obj/dbg/*.o 
@@ -65,4 +68,6 @@ obj/dbg/%.o: src/%.c
 	$(CC) $(CFLAGS) $(DEBUG) $(DEF) -c $? -o $@ 
 
 doc: Manual.pdf
+
+Manual.pdf: doc/manual_src/Manual.tex
 	cd doc/manual_src; pdflatex Manual.tex; pdflatex Manual.tex; mv Manual.pdf ../..	

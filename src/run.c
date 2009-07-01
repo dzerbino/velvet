@@ -78,6 +78,10 @@ int main(int argc, char **argv)
 		puts("\nCopyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)");
 		puts("This is free software; see the source for copying conditions.  There is NO");
 		puts("warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
+		puts("Compilation settings:");
+		printf("CATEGORIES = %i\n", CATEGORIES);
+		printf("MAXKMERLENGTH = %i\n", MAXKMERLENGTH);
+		puts("");
 		printUsage();
 		return 0;
 	}

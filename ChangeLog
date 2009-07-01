@@ -118,3 +118,8 @@ V 0.7.39
 - Added Torsten Seemans's estimate-exp_cov script
 - Amended Makefile to compile Manual
 - Moved code contributions to the eponymous ./contrib directory
+
+V 0.7.40
+- Amended Makefile to help changing compilation time parameters
+- Amended Makefile to integrate documentation compilation
+- Corrected crashing bug in parsing

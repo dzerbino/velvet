@@ -80,13 +80,13 @@ Because of the use of fixed-length arrays, a number of variables have to be set 
 
 One of the is the number of channels, or categories of reads, which can be handled independently. This is for example useful is you want to distinguish reads from different insert libraries, or from different samples altogether.
 
-By default, there are only two short read categories, but this variable can be extended to your needs. Towards the top of the \emph{src/globals.h} file, you will find a line:
+By default, there are only two short read categories, but this variable can be extended to your needs. For example, to obtain 57 different channels, compile with the parameter:
 
 \begin{verbatim}
-CATEGORIES		2
+make 'CATEGORIES=57'
 \end{verbatim}
 
-Simply change the values to the desired one and re-compile as explained in \ref{sec:compilation}.
+(Note the single quotes and absence of spacing.)
 
 Obviously, the greater the number, the longer the corresponding arrays, the more memory will be required to run Velvet. Adjust this variable according to your needs and your memory requirements. 
 
@@ -96,7 +96,13 @@ Obviously, the greater the number, the longer the corresponding arrays, the more
 
 Another useful compilation parameter is the MAXKMERLENGTH. As explained in \ref{sec:kmercov}, the hash length can be crucial to getting optimal assemblies. Depending on the dataset, you might wish to use long hash lengths. 
 
-By default, hash-lengths are limited to 31bp, but you can push up this limit by adjusting the MAXKMERLENGTH parameter on top of the \emph{src/globals.h} file and re-compiling as explained in \ref{sec:compilation}.
+By default, hash-lengths are limited to 31bp, but you can push up this limit by adjusting the MAXKMERLENGTH parameter at compilation time:
+
+\begin{verbatim}
+make 'MAXKMERLENGTH=57'
+\end{verbatim}
+
+(Note the single quotes and absence of spacing.)
 
 By storing longer words, Velvet will be requiring more memory, so adjust this variable according to your needs and memory resources. 
 
@@ -156,6 +162,25 @@ can also be written as:
 
 \begin{verbatim}
 > ./velveth output_directory/ 21 solexa*.fa -long capillary.fa
+\end{verbatim}
+
+\subsubsection{Piping Velvet}
+
+If you wish to run velveth directly on the output of another program, without the cost of creating and reading a new sequence file, then you can pipe it. In that case the character `-' is used to represent the standard input within the command line. 
+
+Therefore, instead of having:
+
+\begin{verbatim}
+> myprogram > selected_reads.fa
+> velveth directory 21 -fastq other_reads.fastq -fasta selected_reads
+> velvetg directory (... parameters...) 
+\end{verbatim}
+
+You can simply do:
+
+\begin{verbatim}
+> myprogram | velveth directory 21 -fastq other_reads.fastq -fasta -
+> velvetg directory (... parameters...) 
 \end{verbatim}
 
 \subsection{Running velvetg}

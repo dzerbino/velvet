@@ -49,6 +49,34 @@ ReadSet *newReadSet()
 	return rs;
 }
 
+static void velvetifySequence(char * str) {
+	int i = strlen(str) - 1;
+	char c;
+
+	for (i = strlen(str) - 1; i >= 0; i--) {
+		c = str[i];
+		switch (c) {
+		case '\n':
+		case '\r':
+			break;
+		case 'C':
+		case 'c':
+			str[i] = 'C';
+			break;
+		case 'G':
+		case 'g':
+			str[i] = 'G';
+			break;
+		case 'T':
+		case 't':
+			str[i] = 'T';
+			break;
+		default:
+			str[i] = 'A';
+		}
+	} 
+}
+
 ReadSet *newReadSetAroundTightStringArray(TightString ** array,
 					  IDnum length)
 {
@@ -391,6 +419,7 @@ static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * 
 			sscanf(line, "%s\t%*i\t%*i\t%*i\t%*c%[^\n]",
 			       readName, readSeq);
 			fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+			velvetifySequence(readSeq);
 			start = 0;
 			while (start <= strlen(readSeq)) {
 				strncpy(str, readSeq + start, 60);
@@ -433,6 +462,7 @@ static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		sscanf(line, "%[^\t]\t%[^\t\n]",
 		       readName, readSeq);
 		fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+		velvetifySequence(readSeq);
 		start = 0;
 		while (start <= strlen(readSeq)) {
 			strncpy(str, readSeq + start, 60);
@@ -497,6 +527,7 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
 			line[i] = '\0';
 		}
+		velvetifySequence(line);
 
 		start = 0;
 		while (start <= strlen(line)) {
@@ -554,6 +585,7 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
 			line[i] = '\0';
 		}
+		velvetifySequence(line);
 
 		start = 0;
 		while (start <= strlen(line)) {
@@ -600,8 +632,10 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 			fprintf(outfile, "%s\t%d\t%d\n", line, (*sequenceIndex)++, cat);	
 			counter++;
-		} else 
+		} else {
+			velvetifySequence(line);
 			fprintf(outfile, line);
+		}
 	}
 
 	fclose(file);
@@ -641,8 +675,10 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 
 			fprintf(outfile, "%s\t%d\t%d\n", line, (*sequenceIndex)++, cat);	
 			counter++;
-		} else 
+		} else {
+			velvetifySequence(line);
 			fprintf(outfile, line);
+		}
 	}
 
 	gzclose(file);
@@ -680,6 +716,7 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		sscanf(line, "%s\t%*i\t%*i\t%*c\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%[^\t]",
 		       readName, readSeq);
 		fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+		velvetifySequence(readSeq);
 		start = 0;
 		while (start <= strlen(readSeq)) {
 			strncpy(str, readSeq + start, 60);
