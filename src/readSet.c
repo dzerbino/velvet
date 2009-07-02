@@ -858,27 +858,32 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv)
 	fclose(outfile);
 }
 
+void createReadPairingArray(ReadSet* reads) {
+	IDnum index;
+	IDnum *mateReads = mallocOrExit(reads->readCount, IDnum);
+
+	for (index = 0; index < reads->readCount; index++) 
+		mateReads[index] = -1;
+
+	reads->mateReads = mateReads;
+}
+
 void pairUpReads(ReadSet * reads, Category cat)
 {
 	int phase = 0;
-	IDnum *mateReads = mallocOrExit(reads->readCount, IDnum);
 	IDnum index;
 
 	for (index = 0; index < reads->readCount; index++) {
 		if (reads->categories[index] != cat) {
-			mateReads[index] = -1;
 			phase = 0;
 		} else if (phase == 0) {
-			mateReads[index] = index + 1;
+			reads->mateReads[index] = index + 1;
 			phase = 1;
 		} else {
-			mateReads[index] = index - 1;
+			reads->mateReads[index] = index - 1;
 			phase = 0;
 		}
 	}
-
-	free(reads->mateReads);
-	reads->mateReads = mateReads;
 }
 
 void detachDubiousReads(ReadSet * reads, boolean * dubiousReads)

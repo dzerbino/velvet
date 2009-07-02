@@ -1538,9 +1538,6 @@ static NodeList *pathIsClear(Node * node, Node * oppositeNode,
 			}
 			return false;
 		}
-		// DEBUG 
-		if (candidate == node || candidate == getTwinNode(node))
-			abort();
 
 		// Missassembly detection
 		if (getUniqueness(candidate) && oppositeNode

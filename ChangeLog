@@ -123,3 +123,6 @@ V 0.7.40
 - Amended Makefile to help changing compilation time parameters
 - Amended Makefile to integrate documentation compilation
 - Corrected crashing bug in parsing
+
+V 0.7.41
+- Corrected use of multiple libraries

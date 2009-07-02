@@ -60,6 +60,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv);
 void logInstructions(int argc, char **argv, char *directory);
 
 // Read pairing info
+void createReadPairingArray(ReadSet* reads);
 void pairUpReads(ReadSet * reads, Category cat);
 void detachDubiousReads(ReadSet * reads, boolean * dubiousReads);
 

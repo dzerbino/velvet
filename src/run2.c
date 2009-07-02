@@ -328,6 +328,7 @@ int main(int argc, char **argv)
 				  sequences);
 
 		// Paired ends module
+		createReadPairingArray(sequences);
 		for (cat = 0; cat < CATEGORIES; cat++) {
 			if (insertLength[cat] > -1) {
 				pairUpReads(sequences, 2 * cat + 1);
