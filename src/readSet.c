@@ -58,6 +58,7 @@ static void velvetifySequence(char * str) {
 		switch (c) {
 		case '\n':
 		case '\r':
+			str[i] = '\0';
 			break;
 		case 'C':
 		case 'c':
@@ -522,11 +523,6 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 		fgets(line, maxline, file);
 
-		// newline stripping that will work on any platform
-		for (i = strlen(line) - 1;
-		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
-			line[i] = '\0';
-		}
 		velvetifySequence(line);
 
 		start = 0;
@@ -580,11 +576,6 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 
 		gzgets(file, line, maxline);
 
-		// newline stripping that will work on any platform
-		for (i = strlen(line) - 1;
-		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
-			line[i] = '\0';
-		}
 		velvetifySequence(line);
 
 		start = 0;
@@ -634,7 +625,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 			counter++;
 		} else {
 			velvetifySequence(line);
-			fprintf(outfile, line);
+			fprintf(outfile, "%s\n", line);
 		}
 	}
 
@@ -677,7 +668,7 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 			counter++;
 		} else {
 			velvetifySequence(line);
-			fprintf(outfile, line);
+			fprintf(outfile, "%s\n", line);
 		}
 	}
 
@@ -1005,7 +996,7 @@ ReadSet *importReadSet(char *filename)
 			sequenceIndex++;
 			bpCount = 0;
 		} else {
-			bpCount += (long) strlen(line) - 1;
+			bpCount += (Coordinate) strlen(line) - 1;
 		}
 	}
 
@@ -1028,10 +1019,10 @@ ReadSet *importReadSet(char *filename)
 			//       sequenceIndex);
 			sequence = reads->sequences[sequenceIndex];
 		} else {
-			for (index = 0; index < (long) strlen(line) - 1;
+			for (index = 0; index < (Coordinate) strlen(line) - 1;
 			     index++)
 				sequence[bpCount + index] = line[index];
-			bpCount += (long) (strlen(line) - 1);
+			bpCount += (Coordinate) (strlen(line) - 1);
 		}
 	}
 
@@ -1157,7 +1148,7 @@ Coordinate *getSequenceLengthsFromFile(char *filename, int wordLength)
 			sequenceIndex++;
 			bpCount = 0;
 		} else {
-			bpCount += (long) strlen(line) - 1;
+			bpCount += (Coordinate) strlen(line) - 1;
 		}
 	}
 	fclose(file);

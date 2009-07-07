@@ -126,3 +126,8 @@ V 0.7.40
 
 V 0.7.41
 - Corrected use of multiple libraries
+
+V 0.7.42
+- Removed some minor memory leaks
+- Corrected the parsing of FastA files (crashing bug)
+- Added exception catchers for file reading

@@ -147,6 +147,9 @@ int main(int argc, char **argv)
 						   splayTable, filename);
 
 	destroySplayTable(splayTable);
+	closedir(dir);
+	free(filename);
+	free(buf);
 
 	return 0;
 }

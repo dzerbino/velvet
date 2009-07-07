@@ -50,6 +50,7 @@ void destroySplayTable(SplayTable * splayTable)
 	puts("Destroying splay table");
 
 	destroyAllSplayTrees();
+	free(splayTable->table);
 	free(splayTable);
 
 	puts("Splay table destroyed");

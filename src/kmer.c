@@ -26,15 +26,15 @@ Copyright 2007, 2008, 2009 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "kmer.h"
 #include "utility.h"
 
-static const uint64_t longLongLeftFilter = (long long int) 3 << 62; 
-static const uint32_t longLeftFilter = (long int) 3 << 30; 
-static const uint16_t intLeftFilter = (int) 3 << 14; 
-static const uint8_t charLeftFilter = (char) 3 << 6; 
+static const uint64_t longLongLeftFilter = (uint64_t) 3 << 62; 
+static const uint32_t longLeftFilter = (uint32_t) 3 << 30; 
+static const uint16_t intLeftFilter = (uint16_t) 3 << 14; 
+static const uint8_t charLeftFilter = (uint8_t) 3 << 6; 
 
-static uint64_t longLongWordFilter = -1; 
-static uint32_t longWordFilter = (long) (((long long int) 1) << 32) - 1; 
-static uint16_t intWordFilter = (int) (((long int) 1) << 16) - 1; 
-static uint8_t charWordFilter = (char) (((int) 1) << 8) - 1; 
+static uint64_t longLongWordFilter = (uint64_t) ((int64_t) -1); 
+static uint32_t longWordFilter = (uint32_t) ((int32_t) -1); 
+static uint16_t intWordFilter = (uint16_t) ((int16_t) -1); 
+static uint8_t charWordFilter = (uint8_t) ((int8_t) -1); 
 
 #define UNDEFINED 0
 #define CHARS 1
@@ -43,8 +43,8 @@ static uint8_t charWordFilter = (char) (((int) 1) << 8) - 1;
 #define LONGLONGS 4
 static int kmerFilterIndex = UNDEFINED;
 static int kmerFilterOffset = 0;
-static uint16_t longLongKmerFilterIndex = KMER_LONGLONGS;
-static uint64_t longLongKmerFilter = -1;
+static int longLongKmerFilterIndex = KMER_LONGLONGS;
+static uint64_t longLongKmerFilter = (uint64_t) ((int64_t) -1); 
 
 void resetWordFilter(int wordLength) {
 	int kmer_bit_size = wordLength * 2;
@@ -69,7 +69,7 @@ void resetWordFilter(int wordLength) {
 			return;
 		} else {
 			longLongKmerFilterIndex = i;
-			longLongKmerFilter = (((long long int) 1) << kmer_bit_size) - 1;	
+			longLongKmerFilter = (((uint64_t) 1) << kmer_bit_size) - 1;	
 			kmerFilterIndex = LONGLONGS;
 			kmerFilterOffset = kmer_bit_size - 2;
 			longWordFilter = 0;
@@ -89,7 +89,7 @@ void resetWordFilter(int wordLength) {
 		charWordFilter = 0;
 		return;
 	} else {
-		longWordFilter = (((long int) 1) << kmer_bit_size) - 1;	
+		longWordFilter = (((uint32_t) 1) << kmer_bit_size) - 1;	
 		kmerFilterIndex = LONGS;
 		kmerFilterOffset = kmer_bit_size - 2;
 		intWordFilter = 0;
@@ -106,7 +106,7 @@ void resetWordFilter(int wordLength) {
 		charWordFilter = 0;
 		return;
 	} else {
-		intWordFilter = (((int) 1) << kmer_bit_size) - 1;	
+		intWordFilter = (((uint16_t) 1) << kmer_bit_size) - 1;	
 		kmerFilterIndex = INTS;
 		kmerFilterOffset = kmer_bit_size - 2;
 		charWordFilter = 0;
@@ -116,7 +116,7 @@ void resetWordFilter(int wordLength) {
 #endif
 #if KMER_CHARS
 	if (kmer_bit_size < 8) 
-		charWordFilter = (((char) 1) << kmer_bit_size) - 1;	
+		charWordFilter = (((uint8_t) 1) << kmer_bit_size) - 1;	
 
 	kmerFilterIndex = CHARS;
 	kmerFilterOffset = kmer_bit_size - 2;

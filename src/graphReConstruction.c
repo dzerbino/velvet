@@ -159,7 +159,8 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	       preGraphFilename);
 
 	// First  line
-	fgets(line, maxline, file);
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 	sscanf(line, "%*i\t%*i\t%i\n", &wordLength);
 
 	// Initialize kmer occurence table:
@@ -185,11 +186,13 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	}
 
 	// Read nodes
-	fgets(line, maxline, file);
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 	kmerCount = 0;
 	while (line[0] == 'N') {
-		fgets(line, maxline, file);
-		kmerCount += (long) strlen(line) - wordLength;
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
+		kmerCount += (Coordinate) strlen(line) - wordLength;
 		if (fgets(line, maxline, file) == NULL)
 			break;
 	}
@@ -208,14 +211,17 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	if (file == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
 
-	fgets(line, maxline, file);
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 
 	// Read nodes
-	fgets(line, maxline, file);
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 	while (line[0] == 'N') {
-		fgets(line, maxline, file);
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 		nodeID++;
-		lineLength = (long) strlen(line);
+		lineLength = (Coordinate) strlen(line);
 		nodeLength = lineLength - wordLength;
 
 		// Fill in the initial word : 

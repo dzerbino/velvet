@@ -2103,7 +2103,7 @@ static void exportAMOSLib(FILE * outfile, Graph * graph, Category cat)
 	fprintf(outfile, "iid:%d\n", cat + 1);
 	fprintf(outfile, "{DST\n");
 	fprintf(outfile, "mea:%ld\n", distance);
-	fprintf(outfile, "std:%ld\n", (long int) sqrt(variance));
+	fprintf(outfile, "std:%ld\n", (Coordinate) sqrt(variance));
 	fprintf(outfile, "}\n");
 	fprintf(outfile, "}\n");
 }

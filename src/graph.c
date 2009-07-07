@@ -2175,7 +2175,8 @@ Graph *importGraph(char *filename)
 	printf("Reading graph file %s\n", filename);
 
 	// First  line
-	fgets(line, maxline, file);
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 	sscanf(line, "%d\t%d\t%i\n", &nodeCounter, &sequenceCount,
 	       &wordLength);
 	graph = emptyGraph(sequenceCount, wordLength);
@@ -2185,7 +2186,8 @@ Graph *importGraph(char *filename)
 	       sequenceCount);
 
 	// Read nodes
-	fgets(line, maxline, file);
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 	while (strncmp(line, "NODE", 4) == 0) {
 		strtok(line, "\t\n");
 		sscanf(strtok(NULL, "\t\n"), "%d", &nodeID);
@@ -2199,7 +2201,8 @@ Graph *importGraph(char *filename)
 						   originalCoverage);
 		}
 
-		fgets(line, maxline, file);
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 		node->length = strlen(line) - 1;
 		arrayLength = node->length / 4;
 		if (node->length % 4 > 0)
@@ -2231,8 +2234,9 @@ Graph *importGraph(char *filename)
 		}
 
 		twin = node->twinNode;
-		fgets(line, maxline, file);
-		twin->length = (long) strlen(line) - 1;
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
+		twin->length = (Coordinate) strlen(line) - 1;
 		twin->descriptor =
 		    mallocOrExit(arrayLength, Descriptor);
 		for (index = 0; index < twin->length; index++) {
@@ -2278,7 +2282,8 @@ Graph *importGraph(char *filename)
 	while (!finished && line[0] != 'N') {
 		sscanf(line, "SEQ\t%d\n", &seqID);
 		marker = NULL;
-		fgets(line, maxline, file);
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 
 		while (!finished && line[0] != 'N' && line[0] != 'S') {
 			sCount =
@@ -2316,7 +2321,8 @@ Graph *importGraph(char *filename)
 		graph->nodeReads[nodeID + graph->nodeCount] = array;
 
 		readCount = 0;
-		fgets(line, maxline, file);
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 		while (!finished && line[0] != 'N') {
 			sscanf(line, "%d\t%ld\t%hd\n", &seqID,
 			       &startOffset, &length);
@@ -2357,7 +2363,8 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	printf("Reading pre-graph file %s\n", preGraphFilename);
 
 	// First  line
-	fgets(line, maxline, file);
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 	sscanf(line, "%d\t%d\t%i\n", &nodeCounter, &sequenceCount,
 	       &wordLength);
 	graph = emptyGraph(sequenceCount, wordLength);
@@ -2367,12 +2374,14 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	       sequenceCount);
 
 	// Read nodes
-	fgets(line, maxline, file);
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 	while (line[0] == 'N') {
 		nodeID++;
 		node = addEmptyNodeToGraph(graph, nodeID);
 
-		fgets(line, maxline, file);
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 		// Exact formula is strlen(line) - 1 - wordLength + 1
 		// -1 for the newline character
 		// +1 for the last character of the first kmer
