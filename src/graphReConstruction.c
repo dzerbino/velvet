@@ -199,7 +199,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	fclose(file);
 
 	// Create table
-	printf("%li kmers found\n", kmerCount);
+	printf("%li kmers found\n", (long) kmerCount);
 	kmerOccurences = callocOrExit(kmerCount, KmerOccurence);
 	kmerOccurencePtr = kmerOccurences;
 	kmerOccurenceIndex = 0;
@@ -382,8 +382,8 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 
 	// Verify that all short reads are reasonnably short
 	if (getLength(tString) > USHRT_MAX) {
-		printf("Short read of length %li, longer than limit %i\n",
-		       getLength(tString), SHRT_MAX);
+		printf("Short read of length %lli, longer than limit %i\n",
+		       (long long) getLength(tString), SHRT_MAX);
 		puts("You should better declare this sequence as long, because it genuinely is!");
 		exit(1);
 	}

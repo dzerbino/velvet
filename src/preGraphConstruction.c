@@ -320,8 +320,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	Coordinate currentPosition, nextStop;
 	IDnum preNodeCounter = 1;
 	FILE *file = fopen(sequenceFilename, "r");
-	char line[100];
-	int lineLength = 100;
+	char line[50000];
+	int lineLength = 50000;
 	Coordinate readIndex;
 	boolean tooShort;
 	Kmer initialKmer;
@@ -333,7 +333,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	if (file == NULL) 
 		exitErrorf(EXIT_FAILURE, true, "Could not read %s", sequenceFilename);
 	// Reading sequence descriptor in first line
-	fgets(line, lineLength, file);
+	if (!fgets(line, lineLength, file))
+		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
 
 	// Now that we have read all of the annotations, we go on to create the preNodes and tie them up
 	for (sequenceIndex = 1;
@@ -344,7 +345,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			       sequenceCount_pg(preGraph));
 
 		while (line[0] != '>')
-			fgets(line, lineLength, file);
+			if (!fgets(line, lineLength, file))
+				exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
 
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
 		annotIndex = 0;
@@ -389,7 +391,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		if (tooShort) {
 			//printf("Skipping short read.. %d\n", sequenceIndex);
 			chains[sequenceIndex] = preNodeCounter;
-			fgets(line, lineLength, file);
+			if (!fgets(line, lineLength, file))
+				exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
 			continue;
 		}
 
@@ -495,8 +498,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		}
 
 		// End of sequence
-		fgets(line, lineLength, file);
-
+		if (!fgets(line, lineLength, file))
+			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
 		//puts(" ");
 
 		if (latestPreNodeID == 0)

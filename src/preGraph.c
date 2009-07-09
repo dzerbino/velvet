@@ -1100,9 +1100,9 @@ void displayPreArcMemory_pg()
 {
 	if (preArcMemory == NULL)
 		return;
-	printf("ARC MEMORY %ld allocated %ld free\n",
-	       RecycleBin_memory_usage(preArcMemory),
-	       recycleBinFreeSpace(preArcMemory));
+	printf("ARC MEMORY %lld allocated %lld free\n",
+	       (long long) RecycleBin_memory_usage(preArcMemory),
+	       (long long) recycleBinFreeSpace(preArcMemory));
 }
 
 boolean hasSinglePreArc_pg(IDnum preNodeID, PreGraph * preGraph)

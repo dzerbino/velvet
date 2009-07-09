@@ -58,7 +58,7 @@ void destroySplayTable(SplayTable * splayTable)
 
 static int hash_kmer(Kmer * kmer)
 {
-	return crc32_v((char *) kmer, sizeof(Kmer));
+	return crc32_v((char *) kmer, KMER_BYTE_SIZE);
 }
 
 static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
@@ -151,9 +151,9 @@ void inputSequenceIntoSplayTable(TightString * tString,
 		if (!found) {
 			writeNucleotideIndex++;
 			if (!annotationClosed)
-				fprintf(file, "%d\t%ld\t%ld\t%ld\n",
-					referenceSequenceID, position,
-					start, finish);
+				fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+					(long) referenceSequenceID, (long long) position,
+					(long long) start, (long long) finish);
 			annotationClosed = true;
 		}
 		// Other wise create/complete annotation:
@@ -185,9 +185,9 @@ void inputSequenceIntoSplayTable(TightString * tString,
 			}
 			// Previous non corresponding annotation
 			else {
-				fprintf(file, "%d\t%ld\t%ld\t%ld\n",
-					referenceSequenceID, position,
-					start, finish);
+				fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+					(long) referenceSequenceID, (long long) position,
+					(long long) start, (long long) finish);
 
 				referenceSequenceID = sequenceID;
 				position = writeNucleotideIndex;
@@ -202,8 +202,9 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	}
 
 	if (!annotationClosed)
-		fprintf(file, "%d\t%ld\t%ld\t%ld\n", referenceSequenceID,
-			position, start, finish);
+		fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+			(long) referenceSequenceID, (long long) position,
+			(long long) start, (long long) finish);
 
 	destroyTightString(tString);
 	return;

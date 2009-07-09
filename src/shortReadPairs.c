@@ -1924,36 +1924,36 @@ void printConnections()
 			next = connect->next;
 			if (getUniqueness(connect->destination)) {
 				printf
-				    ("CONNECT %d %d %d %d %ld %ld %ld %f %d %d",
-				     index - nodeCount(graph),
-				     getNodeID(connect->destination),
-				     connect->direct_count,
-				     connect->paired_count,
-				     connect->distance,
-				     getNodeLength(node),
-				     getNodeLength(connect->destination),
+				    ("CONNECT %ld %ld %ld %ld %lld %lld %lld %f %ld %ld",
+				     (long) index - nodeCount(graph),
+				     (long) getNodeID(connect->destination),
+				     (long) connect->direct_count,
+				     (long) connect->paired_count,
+				     (long long) connect->distance,
+				     (long long) getNodeLength(node),
+				     (long long) getNodeLength(connect->destination),
 				     connect->variance,
-				     getNodeReadCount(node, graph),
-				     getNodeReadCount(connect->destination,
+				     (long) getNodeReadCount(node, graph),
+				     (long) getNodeReadCount(connect->destination,
 						      graph));
 				if (markerCount(node) == 1
 				    && markerCount(connect->destination) ==
 				    1)
-					printf(" %ld %ld %ld",
-					       getPassageMarkerFinish
+					printf(" %lld %lld %lld",
+					       (long long) getPassageMarkerFinish
 					       (getMarker(node)),
-					       getPassageMarkerFinish
+					       (long long) getPassageMarkerFinish
 					       (getMarker
 						(connect->destination)),
-					       getPassageMarkerFinish
+					       (long long) (getPassageMarkerFinish
 					       (getMarker(node)) - 
 					       getPassageMarkerFinish
 					       (getMarker
-						(connect->destination)));
+						(connect->destination))));
 				else
 					printf(" ? ?");
-				printf(" %d", expectedNumberOfConnections(index-nodeCount(graph), connect, counts, 0));
-				printf(" %ld", connect->distance - (getNodeLength(node) + getNodeLength(connect->destination))/2);
+				printf(" %ld", (long) expectedNumberOfConnections(index-nodeCount(graph), connect, counts, 0));
+				printf(" %lld", (long long) (connect->distance - (getNodeLength(node) + getNodeLength(connect->destination))/2));
 				if (testConnection
 				    (index - nodes, connect, counts))
 					puts(" OK");

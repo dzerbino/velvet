@@ -277,7 +277,7 @@ void printKmer(Kmer * kmer) {
 #endif
 #if KMER_LONGLONGS
 	for (i = KMER_LONGLONGS - 1; i >= 0; i--)
-		printf("%lx\t", kmer->longlongs[i]);
+		printf("%llx\t", (long long) kmer->longlongs[i]);
 #endif
 	puts("");
 }
@@ -291,8 +291,8 @@ void testKmers(int argc, char** argv) {
 	int i;
 	
 	printf("FORMATS %u %u %u %u\n", KMER_CHARS, KMER_INTS, KMER_LONGS, KMER_LONGLONGS);
-	printf("FILTERS %hx %hx %x %lx\n", charLeftFilter, intLeftFilter, longLeftFilter, longLongLeftFilter);
-	printf("FILTERS %hx %hx %x %lx\n", charWordFilter, intWordFilter, longWordFilter, longLongWordFilter);
+	printf("FILTERS %hx %x %lx %llx\n", (short) charLeftFilter, (int) intLeftFilter, (long) longLeftFilter, (long long) longLongLeftFilter);
+	printf("FILTERS %hx %x %lx %llx\n", (short) charWordFilter, (int) intWordFilter, (long) longWordFilter, (long long) longLongWordFilter);
 	printKmer(&kmer);
 	puts("Clear");
 	clearKmer(&kmer);
@@ -300,7 +300,7 @@ void testKmers(int argc, char** argv) {
 
 	puts("Fill up");
 	for (i = 0; i < MAXKMERLENGTH; i++) {
-		pushNucleotide(&kmer, i % 4);
+		pushNucleotide(&kmer, ((i + 1)  % 4));
 		printKmer(&kmer);
 	}
 
@@ -310,15 +310,19 @@ void testKmers(int argc, char** argv) {
 		printKmer(&kmer);
 	}
 
+	puts("Reverse complement");
+	resetWordFilter(9);
+	clearKmer(&kmer);
+	for (i = 0; i < MAXKMERLENGTH; i++) {
+		reversePushNucleotide(&kmer, ((i + 1)  % 4));
+		printKmer(&kmer);
+	}
+
 	puts("Copy");
 	copyKmers(k2, &kmer);
 	printKmer(k2); 	
 	printf("%i\n", compareKmers(k2, &kmer)); 
 
-	puts("Reverse complement");
-	clearKmer(k2);
-	pushNucleotide(k2, 1);
-	printf("%i\n", compareKmers(k2, &kmer)); 
 }
 
 void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {

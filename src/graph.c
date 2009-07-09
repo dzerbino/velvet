@@ -1776,8 +1776,8 @@ static void exportNode(FILE * outfile, Node * node, void *withSequence)
 
 	fprintf(outfile, "NODE\t%d", node->ID);
 	for (cat = 0; cat < CATEGORIES; cat++)
-		fprintf(outfile, "\t%ld\t%ld", node->virtualCoverage[cat],
-			node->originalVirtualCoverage[cat]);
+		fprintf(outfile, "\t%lld\t%lld", (long long) node->virtualCoverage[cat],
+			(long long) node->originalVirtualCoverage[cat]);
 	fprintf(outfile, "\n");
 
 	if (withSequence == NULL)
@@ -2135,10 +2135,10 @@ void exportGraph(char *filename, Graph * graph, TightString ** sequences)
 			reads = graph->nodeReads[index];
 			for (readIndex = 0; readIndex < readCount;
 			     readIndex++)
-				fprintf(outfile, "%d\t%ld\t%d\n",
-					reads[readIndex].readID,
-					reads[readIndex].position,
-					reads[readIndex].offset);
+				fprintf(outfile, "%ld\t%lld\t%d\n",
+					(long) reads[readIndex].readID,
+					(long long) reads[readIndex].position,
+					(int) reads[readIndex].offset);
 		}
 	}
 
@@ -2168,6 +2168,9 @@ Graph *importGraph(char *filename)
 	int wordLength, sCount;
 	ShortLength length;
 	Category cat;
+	long long_var, long_var2, long_var3;
+	long long longlong_var, longlong_var2, longlong_var3, longlong_var4;
+	short short_var;
 
 	if (file == NULL) 
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
@@ -2177,26 +2180,31 @@ Graph *importGraph(char *filename)
 	// First  line
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-	sscanf(line, "%d\t%d\t%i\n", &nodeCounter, &sequenceCount,
+	sscanf(line, "%ld\t%ld\t%i\n", &long_var, &long_var2,
 	       &wordLength);
+	nodeCounter = (IDnum) long_var;
+	sequenceCount = (IDnum) long_var2;
 	graph = emptyGraph(sequenceCount, wordLength);
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
-	printf("Graph has %d nodes and %d sequences\n", nodeCounter,
-	       sequenceCount);
+	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
+	       (long) sequenceCount);
 
 	// Read nodes
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 	while (strncmp(line, "NODE", 4) == 0) {
 		strtok(line, "\t\n");
-		sscanf(strtok(NULL, "\t\n"), "%d", &nodeID);
+		sscanf(strtok(NULL, "\t\n"), "%ld", &long_var);
+		nodeID = (IDnum) long_var;
 		node = addEmptyNodeToGraph(graph, nodeID);
 		for (cat = 0; cat < CATEGORIES; cat++) {
-			sscanf(strtok(NULL, "\t\n"), "%ld", &coverage);
+			sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
+			coverage = (Coordinate) longlong_var;
 			setVirtualCoverage(node, cat, coverage);
-			sscanf(strtok(NULL, "\t\n"), "%ld",
-			       &originalCoverage);
+			sscanf(strtok(NULL, "\t\n"), "%lld",
+			       &longlong_var);
+			originalCoverage = (Coordinate) longlong_var;
 			setOriginalVirtualCoverage(node, cat,
 						   originalCoverage);
 		}
@@ -2268,8 +2276,11 @@ Graph *importGraph(char *filename)
 
 	// Read arcs
 	while (line[0] == 'A' && !finished) {
-		sscanf(line, "ARC\t%d\t%d\t%d\n", &originID,
-		       &destinationID, &multiplicity);
+		sscanf(line, "ARC\t%ld\t%ld\t%ld\n", &long_var,
+		       &long_var2, &long_var3);
+		originID = (IDnum) long_var;
+		destinationID = (IDnum) long_var2;
+		multiplicity = (IDnum) long_var3;
 		arc =
 		    createArc(getNodeInGraph(graph, originID),
 			      getNodeInGraph(graph, destinationID), graph);
@@ -2280,16 +2291,22 @@ Graph *importGraph(char *filename)
 
 	// Read sequences
 	while (!finished && line[0] != 'N') {
-		sscanf(line, "SEQ\t%d\n", &seqID);
+		sscanf(line, "SEQ\t%ld\n", &long_var);
+		seqID = (IDnum) long_var;
 		marker = NULL;
 		if (!fgets(line, maxline, file))
 			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 
 		while (!finished && line[0] != 'N' && line[0] != 'S') {
 			sCount =
-			    sscanf(line, "%d\t%ld\t%ld\t%ld\t%ld\n",
-				   &nodeID, &startOffset, &start, &finish,
-				   &finishOffset);
+			    sscanf(line, "%ld\t%lld\t%lld\t%lld\t%lld\n",
+				   &long_var, &longlong_var, &longlong_var2, &longlong_var3,
+				   &longlong_var4);
+			nodeID = (IDnum) long_var;
+			startOffset = (Coordinate) longlong_var;
+			start = (Coordinate) longlong_var2;
+			finish = (Coordinate) longlong_var3;
+			finishOffset = (Coordinate) longlong_var4;
 			if (sCount != 5) {
 				printf
 				    ("ERROR: reading in graph - only %d items read for line '%s'",
@@ -2311,7 +2328,9 @@ Graph *importGraph(char *filename)
 
 	// Node reads
 	while (!finished) {
-		sscanf(line, "NR\t%d\t%d\n", &nodeID, &readCount);
+		sscanf(line, "NR\t%ld\t%ld\n", &long_var, &long_var2);
+		nodeID = (IDnum) long_var;
+		readCount = (IDnum) long_var2;
 		if (!readStartsAreActivated(graph))
 			activateReadStarts(graph);
 
@@ -2324,8 +2343,11 @@ Graph *importGraph(char *filename)
 		if (!fgets(line, maxline, file))
 			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 		while (!finished && line[0] != 'N') {
-			sscanf(line, "%d\t%ld\t%hd\n", &seqID,
-			       &startOffset, &length);
+			sscanf(line, "%ld\t%lld\t%hd\n", &long_var,
+			       &longlong_var, &short_var);
+			seqID = (IDnum) long_var;
+			startOffset = (Coordinate) longlong_var;
+			length = (ShortLength) short_var;
 			array[readCount].readID = seqID;
 			array[readCount].position = startOffset;
 			array[readCount].offset = length;
@@ -2356,6 +2378,7 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	Coordinate index, readIndex, nodeLength;
 	int wordLength;
 	size_t arrayLength;
+	long long_var, long_var2;
 
 	if (file == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
@@ -2365,13 +2388,15 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	// First  line
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
-	sscanf(line, "%d\t%d\t%i\n", &nodeCounter, &sequenceCount,
+	sscanf(line, "%ld\t%ld\t%i\n", &long_var, &long_var2,
 	       &wordLength);
+	nodeCounter = (IDnum) long_var;
+	sequenceCount = (IDnum) long_var2;
 	graph = emptyGraph(sequenceCount, wordLength);
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
-	printf("Graph has %d nodes and %d sequences\n", nodeCounter,
-	       sequenceCount);
+	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
+	       (long) sequenceCount);
 
 	// Read nodes
 	if (!fgets(line, maxline, file))
@@ -3626,16 +3651,16 @@ int getWordLength(Graph * graph)
 
 void displayArcMemory()
 {
-	printf("ARC MEMORY %ld allocated %ld free\n",
-	       RecycleBin_memory_usage(arcMemory),
-	       recycleBinFreeSpace(arcMemory));
+	printf("ARC MEMORY %lld allocated %lld free\n",
+	       (long long) RecycleBin_memory_usage(arcMemory),
+	       (long long) recycleBinFreeSpace(arcMemory));
 }
 
 void displayNodeMemory()
 {
-	printf("NODE MEMORY %ld allocated %ld free\n",
-	       RecycleBin_memory_usage(nodeMemory),
-	       recycleBinFreeSpace(nodeMemory));
+	printf("NODE MEMORY %lld allocated %lld free\n",
+	       (long long) RecycleBin_memory_usage(nodeMemory),
+	       (long long) recycleBinFreeSpace(nodeMemory));
 }
 
 ShortReadMarker *getNodeReads(Node * node, Graph * graph)

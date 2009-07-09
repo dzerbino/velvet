@@ -131,3 +131,9 @@ V 0.7.42
 - Removed some minor memory leaks
 - Corrected the parsing of FastA files (crashing bug)
 - Added exception catchers for file reading
+
+V 0.7.43 
+- Added more exception catchers for file reading
+- Corrected parsers to allow long sequence names (crashing bug)
+- Inserted millions of casts to correct printf and scanf variable size inconsistency errors
+- Corrected bug in hashing associate to different max. kmer lengths

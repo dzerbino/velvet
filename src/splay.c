@@ -417,7 +417,7 @@ void filterAndExportSplayTree(FILE * file, SplayTree * T, int minCov,
 
 void displaySplayTreeMemory()
 {
-	printf("TREE MEMORY %li allocated %li free\n",
-	       RecycleBin_memory_usage(treeMemory),
-	       recycleBinFreeSpace(treeMemory));
+	printf("TREE MEMORY %lli allocated %lli free\n",
+	       (long long) RecycleBin_memory_usage(treeMemory),
+	       (long long) recycleBinFreeSpace(treeMemory));
 }

@@ -385,7 +385,7 @@ void exportIDMapping(char *filename, ReadSet * reads)
 
 	for (index = 0; index < reads->readCount; index++)
 		if (reads->labels != NULL)
-			fprintf(outfile, "s/SEQUENCE %d/%s/\n", index + 1,
+			fprintf(outfile, "s/SEQUENCE %ld/%s/\n", (long) (index + 1),
 				reads->labels[index]);
 
 	fclose(outfile);
@@ -419,7 +419,7 @@ static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * 
 		if (strchr(line, '.') == NULL) {
 			sscanf(line, "%s\t%*i\t%*i\t%*i\t%*c%[^\n]",
 			       readName, readSeq);
-			fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+			fprintf(outfile, ">%s\t%ld\t%d\n", readName, (long) ((*sequenceIndex)++), (int) cat);
 			velvetifySequence(readSeq);
 			start = 0;
 			while (start <= strlen(readSeq)) {
@@ -462,7 +462,7 @@ static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	while (fgets(line, maxline, file) != NULL) {
 		sscanf(line, "%[^\t]\t%[^\t\n]",
 		       readName, readSeq);
-		fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+		fprintf(outfile, ">%s\t%ld\t%d\n", readName, (long) ((*sequenceIndex)++), (int) cat);
 		velvetifySequence(readSeq);
 		start = 0;
 		while (start <= strlen(readSeq)) {
@@ -518,10 +518,11 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 			line[i] = '\0';
 		}
 
-		fprintf(outfile,">%s\t%d\t%d\n", line + 1, (*sequenceIndex)++, cat);
+		fprintf(outfile,">%s\t%ld\t%d\n", line + 1, (long) ((*sequenceIndex)++), (int) cat);
 		counter++;
 
-		fgets(line, maxline, file);
+		if(!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
 
 		velvetifySequence(line);
 
@@ -532,8 +533,10 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 			start += 60;
 		}
 
-		fgets(line, maxline, file);
-		fgets(line, maxline, file);
+		if(!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
+		if(!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
 	}
 
 	fclose(file);
@@ -571,7 +574,7 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 			line[i] = '\0';
 		}
 
-		fprintf(outfile,">%s\t%d\t%d\n", line + 1, (*sequenceIndex)++, cat);
+		fprintf(outfile,">%s\t%ld\t%d\n", line + 1, (long) ((*sequenceIndex)++), (int) cat);
 		counter++;
 
 		gzgets(file, line, maxline);
@@ -621,7 +624,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 				line[i] = '\0';
 			}
 
-			fprintf(outfile, "%s\t%d\t%d\n", line, (*sequenceIndex)++, cat);	
+			fprintf(outfile,"%s\t%ld\t%d\n", line, (long) ((*sequenceIndex)++), (int) cat);
 			counter++;
 		} else {
 			velvetifySequence(line);
@@ -664,7 +667,7 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 				line[i] = '\0';
 			}
 
-			fprintf(outfile, "%s\t%d\t%d\n", line, (*sequenceIndex)++, cat);	
+			fprintf(outfile, "%s\t%ld\t%d\n", line, (long) ((*sequenceIndex)++), (int) cat);	
 			counter++;
 		} else {
 			velvetifySequence(line);
@@ -706,7 +709,7 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	while (gzgets(file, line, maxline)) {
 		sscanf(line, "%s\t%*i\t%*i\t%*c\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%[^\t]",
 		       readName, readSeq);
-		fprintf(outfile, ">%s\t%d\t%d\n", readName, (*sequenceIndex)++, cat);
+		fprintf(outfile, ">%s\t%ld\t%d\n", readName, (long) ((*sequenceIndex)++), (int) cat);
 		velvetifySequence(readSeq);
 		start = 0;
 		while (start <= strlen(readSeq)) {
@@ -741,6 +744,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv)
 	int filetype = FASTA;
 	Category cat = 0;
 	IDnum sequenceIndex = 0;
+	short short_var;
 
 	if (argc < 2) {
 		puts("Wrong number of arguments!");
@@ -780,8 +784,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv)
 			else if (strncmp
 				 (argv[argIndex], "-shortPaired",
 				  12) == 0) {
-				sscanf(argv[argIndex], "-shortPaired%hd",
-				       (short int *) &cat);
+				sscanf(argv[argIndex], "-shortPaired%hd", &short_var);
+				cat = (Category) short_var;
 				if (cat < 1 || cat > CATEGORIES) {
 					printf("Unknown option: %s\n",
 					       argv[argIndex]);
@@ -792,8 +796,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv)
 				cat++;
 			} else if (strncmp(argv[argIndex], "-short", 6) ==
 				   0) {
-				sscanf(argv[argIndex], "-short%hd",
-				       (short int *) &cat);
+				sscanf(argv[argIndex], "-short%hd", &short_var);
+				cat = (Category) short_var;
 				if (cat < 1 || cat > CATEGORIES) {
 					printf("Unknown option: %s\n",
 					       argv[argIndex]);
@@ -910,11 +914,11 @@ static void exportRead(FILE * outfile, ReadSet * reads, IDnum index)
 	if (sequence == NULL)
 		return;
 
-	fprintf(outfile, ">SEQUENCE_%d_length_%ld", index,
-		getLength(sequence));
+	fprintf(outfile, ">SEQUENCE_%ld_length_%lld", (long) index,
+		(long long) getLength(sequence));
 
 	if (reads->categories != NULL)
-		fprintf(outfile, "\t%i", reads->categories[index]);
+		fprintf(outfile, "\t%i", (int) reads->categories[index]);
 
 	fprintf(outfile, "\n");
 
@@ -954,8 +958,8 @@ ReadSet *importReadSet(char *filename)
 	FILE *file = fopen(filename, "r");
 	char *sequence = NULL;
 	Coordinate bpCount = 0;
-	const int maxline = 100;
-	char line[100];
+	const int maxline = 5000;
+	char line[5000];
 	IDnum sequenceCount, sequenceIndex;
 	IDnum index;
 	ReadSet *reads;

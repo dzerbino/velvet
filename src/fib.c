@@ -236,7 +236,7 @@ FibHeapNode *fh_insertkey(FibHeap * h, Coordinate key, void *data)
 Coordinate fh_minkey(FibHeap * h)
 {
 	if (h->fh_min == NULL)
-		return INT_MIN;
+		return (Coordinate) INT_MIN;
 	return h->fh_min->fhe_key;
 }
 
@@ -361,7 +361,7 @@ void *fh_delete(FibHeap * h, FibHeapNode * x)
 	if (!h->fh_keys)
 		fh_replacedata(x, h->fh_neginf);
 	else
-		fh_replacekey(h, x, INT_MIN);
+		fh_replacekey(h, x, (Coordinate) INT_MIN);
 	fh_extractmin(h);
 
 	return k;

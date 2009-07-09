@@ -507,8 +507,8 @@ void exportTightString(FILE * outfile, TightString * sequence, IDnum index)
 	if (sequence == NULL)
 		return;
 
-	fprintf(outfile, ">SEQUENCE_%d_length_%ld\n", index,
-		getLength(sequence));
+	fprintf(outfile, ">SEQUENCE_%ld_length_%lld\n", (long) index,
+		(long long) getLength(sequence));
 
 	start = 0;
 	while (start <= getLength(sequence)) {

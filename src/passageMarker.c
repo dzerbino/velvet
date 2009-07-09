@@ -235,22 +235,22 @@ char *readPassageMarker(PassageMarker * marker)
 	if (marker == NULL)
 		return s;
 
-	sprintf(s, "MARKER %d (%ld -> %ld):", marker->sequenceID,
-		marker->start, getPassageMarkerFinish(marker));
+	sprintf(s, "MARKER %ld (%lld -> %lld):", (long) marker->sequenceID,
+		(long long) marker->start, (long long) getPassageMarkerFinish(marker));
 
 	if (getPreviousInSequence(marker) == NULL)
-		sprintf(s, "%s START -> %d", s,
-			getNodeID(getNode(marker)));
+		sprintf(s, "%s START -> %ld", s,
+			(long) getNodeID(getNode(marker)));
 	else
-		sprintf(s, "%s %d -> %d", s,
-			getNodeID(getNode(getPreviousInSequence(marker))),
-			getNodeID(getNode(marker)));
+		sprintf(s, "%s %ld -> %ld", s,
+			(long) getNodeID(getNode(getPreviousInSequence(marker))),
+			(long) getNodeID(getNode(marker)));
 
 	if (getNextInSequence(marker) == NULL)
 		sprintf(s, "%s -> FINISH", s);
 	else
-		sprintf(s, "%s -> %d ", s,
-			getNodeID(getNode(getNextInSequence(marker))));
+		sprintf(s, "%s -> %ld ", s,
+			(long) getNodeID(getNode(getNextInSequence(marker))));
 
 	return s;
 }
@@ -474,9 +474,9 @@ boolean isInitial(PassageMarker * marker)
 		return false;
 
 	if (marker->twinMarker == NULL) {
-		printf("Unpaired marker seq %d start %ld node %d\n",
-		       marker->sequenceID, marker->start,
-		       getNodeID(marker->node));
+		printf("Unpaired marker seq %ld start %lld node %ld\n",
+		       (long) marker->sequenceID, (long long) marker->start,
+		       (long) getNodeID(marker->node));
 		puts("SNAFU");
 		abort();
 	}
@@ -599,11 +599,11 @@ PassageMarker *newPassageMarker(IDnum seqID, Coordinate start,
 	setFinishOffset(marker, finishOffset);
 
 	if (getPassageMarkerLength(marker) < 0) {
-		printf("Negative marker %d %ld %ld %ld\n",
-		       getPassageMarkerSequenceID(marker),
-		       getPassageMarkerStart(marker),
-		       getPassageMarkerFinish(marker),
-		       getPassageMarkerLength(marker));
+		printf("Negative marker %ld %lld %lld %lld\n",
+		       (long) getPassageMarkerSequenceID(marker),
+		       (long long) getPassageMarkerStart(marker),
+		       (long long) getPassageMarkerFinish(marker),
+		       (long long) getPassageMarkerLength(marker));
 		abort();
 	}
 
@@ -630,11 +630,11 @@ void exportMarker(FILE * outfile, PassageMarker * marker,
 
 	fprintf(outfile, "SEQ\t%d\n", current->sequenceID);
 	for (; current != NULL; current = current->nextInSequence) {
-		fprintf(outfile, "%d\t%ld\t%ld\t%ld\t%ld",
-			getNodeID(current->node), getStartOffset(current),
-			getPassageMarkerStart(current),
-			getPassageMarkerFinish(current),
-			getFinishOffset(current));
+		fprintf(outfile, "%ld\t%lld\t%lld\t%lld\t%lld",
+			(long) getNodeID(current->node), (long long) getStartOffset(current),
+			(long long) getPassageMarkerStart(current),
+			(long long) getPassageMarkerFinish(current),
+			(long long) getFinishOffset(current));
 		if (sequences != NULL) {
 			string =
 			    readPassageMarkerSequence(current, sequences,

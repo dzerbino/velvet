@@ -89,6 +89,8 @@ int main(int argc, char **argv)
 	Category cat;
 	boolean scaffolding = true;
 	int pebbleRounds = 1;
+	long long longlong_var;
+	short int short_var;
 
 	setProgramName("velvetg");
 
@@ -141,50 +143,56 @@ int main(int argc, char **argv)
 			if (expectedCoverage > 0)
 				readTracking = true;
 		} else if (strcmp(arg, "-ins_length") == 0) {
-			sscanf(argv[arg_index], "%li", &insertLength[0]);
-			if (&insertLength[0] < 0) {
-				printf("Invalid insert length: %li\n",
-				       insertLength[0]);
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			insertLength[0] = (Coordinate) longlong_var;
+			if (insertLength[0] < 0) {
+				printf("Invalid insert length: %lli\n",
+				       (long long) insertLength[0]);
 				exit(1);
 			}
 		} else if (strcmp(arg, "-ins_length_sd") == 0) {
-			sscanf(argv[arg_index], "%li", &std_dev[0]);
-			if (&std_dev[0] < 0) {
-				printf("Invalid std deviation: %li\n",
-				       std_dev[0]);
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			std_dev[0] = (Coordinate) longlong_var;
+			if (std_dev[0] < 0) {
+				printf("Invalid std deviation: %lli\n",
+				       (long long) std_dev[0]);
 				exit(1);
 			}
 		} else if (strncmp(arg, "-ins_length", 11) == 0
 			   && strchr(arg, 'd') == NULL) {
-			sscanf(arg, "-ins_length%hi", (short int *) &cat);
+			sscanf(arg, "-ins_length%hi", &short_var);
+			cat = (Category) short_var;
 			if (cat < 1 || cat > CATEGORIES) {
 				printf("Unknown option: %s\n", arg);
 				exit(1);
 			}
-			sscanf(argv[arg_index], "%li",
-			       &insertLength[cat - 1]);
-			if (&insertLength[cat - 1] < 0) {
-				printf("Invalid insert length: %li\n",
-				       insertLength[cat - 1]);
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			insertLength[cat - 1] = (Coordinate) longlong_var;
+			if (insertLength[cat - 1] < 0) {
+				printf("Invalid insert length: %lli\n",
+				       (long long) insertLength[cat - 1]);
 				exit(1);
 			}
 		} else if (strncmp(arg, "-ins_length", 11) == 0) {
-			sscanf(arg, "-ins_length%hi_sd",
-			       (short int *) &cat);
+			sscanf(arg, "-ins_length%hi_sd", &short_var);
+			cat = (Category) short_var;
 			if (cat < 1 || cat > CATEGORIES) {
 				printf("Unknown option: %s\n", arg);
 				exit(1);
 			}
-			sscanf(argv[arg_index], "%li", &std_dev[cat - 1]);
-			if (&std_dev[cat - 1] < 0) {
-				printf("Invalid std deviation: %li\n",
-				       std_dev[cat - 1]);
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			std_dev[cat - 1] = (Coordinate) longlong_var;
+			if (std_dev[cat - 1] < 0) {
+				printf("Invalid std deviation: %lli\n",
+				       (long long) std_dev[cat - 1]);
 				exit(1);
 			}
 		} else if (strcmp(arg, "-ins_length_long") == 0) {
-			sscanf(argv[arg_index], "%li", &insertLengthLong);
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			insertLengthLong = (Coordinate) longlong_var;
 		} else if (strcmp(arg, "-ins_length_long_sd") == 0) {
-			sscanf(argv[arg_index], "%li", &std_dev_long);
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			std_dev_long = (Coordinate) longlong_var;
 		} else if (strcmp(arg, "-read_trkg") == 0) {
 			readTracking =
 			    (strcmp(argv[arg_index], "yes") == 0);
@@ -195,7 +203,8 @@ int main(int argc, char **argv)
 			exportAssembly =
 			    (strcmp(argv[arg_index], "yes") == 0);
 		} else if (strcmp(arg, "-min_contig_lgth") == 0) {
-			sscanf(argv[arg_index], "%li", &minContigLength);
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			minContigLength = (Coordinate) longlong_var;
 		} else if (strcmp(arg, "-accel_bits") == 0) {
 			sscanf(argv[arg_index], "%hi", &accelerationBits);
 			if (accelerationBits < 0) {
