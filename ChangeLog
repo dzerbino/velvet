@@ -137,3 +137,7 @@ V 0.7.43
 - Corrected parsers to allow long sequence names (crashing bug)
 - Inserted millions of casts to correct printf and scanf variable size inconsistency errors
 - Corrected bug in hashing associate to different max. kmer lengths
+
+V 0.7.44
+- Corrected parameter parser for -ins_length_long and -ins_length_long_sd
+- Exits more gracefully when presented with an empty dataset

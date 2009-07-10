@@ -981,6 +981,13 @@ ReadSet *importReadSet(char *filename)
 	printf("%d sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
+	
+	if (reads->readCount == 0) {
+		reads->sequences = NULL;
+		reads->categories = NULL;
+		return reads;	
+	}
+
 	reads->sequences = callocOrExit(sequenceCount, char *);
 	reads->categories = callocOrExit(sequenceCount, Category);
 	// Counting base pair length of each sequence:

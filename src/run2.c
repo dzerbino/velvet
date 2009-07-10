@@ -158,6 +158,12 @@ int main(int argc, char **argv)
 				       (long long) std_dev[0]);
 				exit(1);
 			}
+		} else if (strcmp(arg, "-ins_length_long") == 0) {
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			insertLengthLong = (Coordinate) longlong_var;
+		} else if (strcmp(arg, "-ins_length_long_sd") == 0) {
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			std_dev_long = (Coordinate) longlong_var;
 		} else if (strncmp(arg, "-ins_length", 11) == 0
 			   && strchr(arg, 'd') == NULL) {
 			sscanf(arg, "-ins_length%hi", &short_var);
@@ -187,12 +193,6 @@ int main(int argc, char **argv)
 				       (long long) std_dev[cat - 1]);
 				exit(1);
 			}
-		} else if (strcmp(arg, "-ins_length_long") == 0) {
-			sscanf(argv[arg_index], "%lli", &longlong_var);
-			insertLengthLong = (Coordinate) longlong_var;
-		} else if (strcmp(arg, "-ins_length_long_sd") == 0) {
-			sscanf(argv[arg_index], "%lli", &longlong_var);
-			std_dev_long = (Coordinate) longlong_var;
 		} else if (strcmp(arg, "-read_trkg") == 0) {
 			readTracking =
 			    (strcmp(argv[arg_index], "yes") == 0);
