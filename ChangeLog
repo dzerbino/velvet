@@ -141,3 +141,7 @@ V 0.7.43
 V 0.7.44
 - Corrected parameter parser for -ins_length_long and -ins_length_long_sd
 - Exits more gracefully when presented with an empty dataset
+
+V 0.7.45
+- Crashing and parsing bug when piping zipped files
+- Updated Eland parser

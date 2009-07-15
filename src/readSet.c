@@ -441,10 +441,10 @@ static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * s
 {
 	FILE *file = fopen(filename, "r");
 	IDnum counter = 0;
-	const int maxline = 500;
-	char line[500];
-	char readName[500];
-	char readSeq[500];
+	const int maxline = 5000;
+	char line[5000];
+	char readName[5000];
+	char readSeq[5000];
 	char str[100];
 	Coordinate start;
 
@@ -558,7 +558,7 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "r");
 	else { 
-		file = stdin;
+		file = gzdopen(fileno(stdin), "rb");
 		SET_BINARY_MODE(file);
 	}
 
@@ -566,7 +566,6 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 		printf("Reading FastQ file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
-
 
 	while (gzgets(file, line, maxline)) {
 		for (i = strlen(line) - 1;
@@ -651,7 +650,7 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "r");
 	else { 
-		file = stdin;
+		file = gzdopen(fileno(stdin), "rb");
 		SET_BINARY_MODE(file);
 	}
 
@@ -696,7 +695,7 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "r");
 	else { 
-		file = stdin;
+		file = gzdopen(fileno(stdin), "rb");
 		SET_BINARY_MODE(file);
 	}
 
