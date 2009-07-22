@@ -145,3 +145,7 @@ V 0.7.44
 V 0.7.45
 - Crashing and parsing bug when piping zipped files
 - Updated Eland parser
+
+V 0.7.46
+- Filetype checker to avoid confusion between FastA and FastQ
+- Corrected asmbly_splitter script to handle scaffolds better

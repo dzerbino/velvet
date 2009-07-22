@@ -499,6 +499,7 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	char str[100];
 	IDnum counter = 0;
 	Coordinate start, i;
+	char c;
 
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
@@ -510,6 +511,11 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
+	// Checking if FastQ
+	c = getc(file);
+	if (c != '@') 
+		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastQ format", filename);
+	ungetc(c, file);	
 
 	while(fgets(line, maxline, file)) { 
 
@@ -554,6 +560,7 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 	char str[100];
 	IDnum counter = 0;
 	Coordinate start, i;
+	char c;
 
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "r");
@@ -566,6 +573,12 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 		printf("Reading FastQ file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	// Checking if FastQ
+	c = gzgetc(file);
+	if (c != '@') 
+		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastQ format", filename);
+	gzungetc(c, file);	
 
 	while (gzgets(file, line, maxline)) {
 		for (i = strlen(line) - 1;
@@ -605,6 +618,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	char line[5000];
 	IDnum counter = 0;
 	Coordinate i;
+	char c;
 
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
@@ -615,6 +629,12 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		printf("Reading FastA file %s;\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	// Checking if FastA
+	c = getc(file);
+	if (c != '>') 
+		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastA format", filename);
+	ungetc(c, file);	
 
 	while (fgets(line, maxline, file)) {
 		if (line[0] == '>') {
@@ -646,6 +666,7 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 	char line[5000];
 	IDnum counter = 0;
 	Coordinate i;
+	char c;
 
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "r");
@@ -658,6 +679,12 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 		printf("Reading zipped FastA file %s;\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	// Checking if FastA
+	c = gzgetc(file);
+	if (c != '>') 
+		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastA format", filename);
+	gzungetc(c, file);	
 
 	while (gzgets(file, line, maxline)) {
 		if (line[0] == '>') {

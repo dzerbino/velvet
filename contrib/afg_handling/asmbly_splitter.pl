@@ -78,15 +78,22 @@ print STDERR "Searching for start of contig $contig\n";
 #need two passes of the file...
 #first pass gets the contig information.
 
-while(<IN>){
-    $count ++;
+$_ = <IN>;
+while($_){
+    $count++;
     if($count % 1000000 == 0){
         print STDERR ".";
     }
-    if(/{CTG/){
+
+    if($_ =~ /^\{CTG/){
         #found the contigs
         $iid_line = <IN>;
         $line = <IN>;
+	if (!$line) {
+		print STDERR $_;
+		print STDERR $iid_line;
+		exit;
+	}	
         if($line =~ /^eid:$contig(-[0-9]*)?$/){
             #found the right contig..
             print STDERR "\nFound a part of contig $contig\n";
@@ -94,7 +101,7 @@ while(<IN>){
 	    $contigString .= $iid_line;
             $contigString .= $line;
             while(<IN>){
-                if($_ =~ /^{CTG/ || $_ =~ /^{SCF/){
+                if($_ =~ /^\{CTG/ || $_ =~ /^\{SCF/){
                     #found the end of the contig..
                     last;
                 }
@@ -106,12 +113,14 @@ while(<IN>){
                         my @tmp = split /:/, $_;
                         push @reads, $tmp[1];
                         $readcount ++;
-					}
+		    }
                 }
             }
-        }
+        } else {
+		$_ = <IN>;
+	}
     }
-    elsif(/{SCF/){
+    elsif($_ =~ /\{SCF/){
         #found a scaffold 
         $line = <IN>;
         if($line =~ /^eid:$contig$/){
@@ -120,7 +129,7 @@ while(<IN>){
 	    $contigString .= "{SCF\n";
             $contigString .= $line;
             while(<IN>){
-                if($_ =~ /^{CTG/ || $_ =~ /^{SCF/){
+                if($_ =~ /^\{CTG/ || $_ =~ /^\{SCF/){
                     #found the end of the scaffold..
                     last;
                 }
@@ -129,10 +138,12 @@ while(<IN>){
                 }
             }
 	    last;
-        }
+        } else {
+            $_ = <IN>;
+	}
     }
     else {
-        next;
+	$_ = <IN>;
     }
 }
 
@@ -157,15 +168,15 @@ while(<IN>){
 	if($foundreads == $readcount){
 		last;
 	}
-	if(/{RED/){
+	if(/\{RED/){
 		my $line = <IN>;
 		if($line =~ /^iid:$currentread/){
 			$foundreads ++;
-			print OUT "{RED\n";
+			print OUT "\{RED\n";
 			print OUT $line;
 			while(<IN>){
 				print OUT $_;
-				if(/}/){
+				if(/\}/){
 					last;
 				}
 			}
