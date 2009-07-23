@@ -94,6 +94,10 @@ V 0.7.34
 - Multiple rounds of Pebble to allow for very different insert lengths
 
 V 0.7.35
+- Patched acceleration table bug (John Marshall)
+- Corrected error messages (John Marshall)
+- Crashing bug when using -cov_cutoff
+- --help option
 - Small formatting change to error messages
 
 V 0.7.36
@@ -149,3 +153,8 @@ V 0.7.45
 V 0.7.46
 - Filetype checker to avoid confusion between FastA and FastQ
 - Corrected asmbly_splitter script to handle scaffolds better
+
+V 0.7.47
+- Small bug in splay.c
+- Small bug in graphReconstruction.c
+- Added guide to contrib directory and within the Manual

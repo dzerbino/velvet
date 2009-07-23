@@ -125,7 +125,7 @@ static inline KmerKey keyInAccelerationTable(Kmer * kmer,
 		popNucleotide(&copy);
 
 	for (i = 0; i < table->accelerationBits; i+= 2) {
-		key += popNucleotide(&copy) << table->accelerationBits;
+		key += ((KmerKey) popNucleotide(&copy)) << table->accelerationBits;
 		key >>= 2;
 	}
 	

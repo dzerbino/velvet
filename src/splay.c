@@ -133,7 +133,7 @@ static SplayTree *Splay(Kmer * kmer, SplayTree * T)
 		} else {
 			if (T->right == NULL)
 				break;
-			if (compareKmers(kmer, &(T->right->kmer)) < 0)
+			if (compareKmers(kmer, &(T->right->kmer)) > 0)
 				T = SingleRotateWithRight(T);
 			if (T->right == NULL)
 				break;
