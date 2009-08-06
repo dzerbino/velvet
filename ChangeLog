@@ -158,3 +158,7 @@ V 0.7.47
 - Small bug in splay.c
 - Small bug in graphReconstruction.c
 - Added guide to contrib directory and within the Manual
+
+V 0.7.48
+- Accelerated concatenation (pre-graph and graph)
+- Unlimited contig size

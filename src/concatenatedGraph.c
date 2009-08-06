@@ -144,6 +144,101 @@ void concatenateNodes(Node * nodeA, Node * nodeB, Graph * graph)
 	destroyNode(nodeB, graph);
 }
 
+// Replaces two consecutive nodes into a single equivalent node
+// The extra memory is freed
+void concatenateStringOfNodes(Node * nodeA, Graph * graph)
+{
+	Node *twinA = getTwinNode(nodeA);
+	Node * nodeB = nodeA;
+	Node * twinB;
+	Node *currentNode, *nextNode;
+	Coordinate totalLength = 0;
+	PassageMarker *marker, *tmpMarker;
+	Arc *arc;
+	Category cat;
+
+	while (simpleArcCount(nodeB) == 1
+	       &&
+	       simpleArcCount(getTwinNode
+			      (getDestination(getArc(nodeB)))) ==
+	       1
+	       && getDestination(getArc(nodeB)) != getTwinNode(nodeB)
+	       && getDestination(getArc(nodeB)) != nodeA) {
+		totalLength += getNodeLength(nodeB);
+		nodeB = getDestination(getArc(nodeB));
+	}
+	twinB = getTwinNode(nodeB);
+	totalLength += getNodeLength(nodeB);
+	reallocateNodeDescriptor(nodeA, totalLength);
+
+	currentNode = nodeA;
+	while (currentNode != nodeB) {		
+		currentNode = getDestination(getArc(currentNode));
+
+		// Passage marker management in node A:
+		for (marker = getMarker(nodeA); marker != NULL;
+		     marker = getNextInNode(marker))
+			if (isTerminal(marker))
+				incrementFinishOffset(marker,
+						      getNodeLength(currentNode));
+
+		// Swapping new born passageMarkers from B to A
+		for (marker = getMarker(currentNode); marker != NULL; marker = tmpMarker) {
+			tmpMarker = getNextInNode(marker);
+
+			if (isInitial(marker)
+			    || getNode(getPreviousInSequence(marker)) != nodeA) {
+				extractPassageMarker(marker);
+				transposePassageMarker(marker, nodeA);
+				incrementFinishOffset(getTwinMarker(marker),
+						      getNodeLength(nodeA));
+			} else
+				disconnectNextPassageMarker(getPreviousInSequence
+							    (marker), graph);
+		}
+
+		// Read starts
+		concatenateReadStarts(nodeA, currentNode, graph);
+
+		// Gaps
+		appendNodeGaps(nodeA, currentNode, graph);
+
+		// Update uniqueness:
+		setUniqueness(nodeA, getUniqueness(nodeA) || getUniqueness(currentNode));
+
+		// Update virtual coverage
+		for (cat = 0; cat < CATEGORIES; cat++)
+			incrementVirtualCoverage(nodeA, cat,
+						 getVirtualCoverage(currentNode, cat));
+
+		// Update original virtual coverage
+		for (cat = 0; cat < CATEGORIES; cat++)
+			incrementOriginalVirtualCoverage(nodeA, cat,
+							 getOriginalVirtualCoverage
+							 (currentNode, cat));
+		// Descriptor management (node)
+		directlyAppendDescriptors(nodeA, currentNode, totalLength);
+	}
+
+	// Correct arcs
+	for (arc = getArc(nodeB); arc != NULL; arc = getNextArc(arc)) {
+		if (getDestination(arc) != twinB)
+			createAnalogousArc(nodeA, getDestination(arc),
+					   arc, graph);
+		else
+			createAnalogousArc(nodeA, twinA, arc, graph);
+	}
+
+	// Freeing gobbled nodes
+	currentNode = getTwinNode(nodeB);
+	while (currentNode != getTwinNode(nodeA)) {
+		arc = getArc(currentNode);
+		nextNode = getDestination(arc);
+		destroyNode(currentNode, graph);
+		currentNode = nextNode;
+	}
+}
+
 // Detects sequences that could be simplified through concatentation
 // Iterates till graph cannot be more simplified
 // Useless nodes are freed from memory and remaining ones are renumbered
@@ -169,8 +264,7 @@ void concatenateGraph(Graph * graph)
 			if (getDestination(getArc(node)) == twin
 			    || getDestination(getArc(node)) == node)
 				break;
-			concatenateNodes(node,
-					 getDestination(getArc(node)),
+			concatenateStringOfNodes(node,
 					 graph);
 		}
 
@@ -182,8 +276,7 @@ void concatenateGraph(Graph * graph)
 			if (getDestination(getArc(twin)) == node
 			    || getDestination(getArc(twin)) == twin)
 				break;
-			concatenateNodes(twin,
-					 getDestination(getArc(twin)),
+			concatenateStringOfNodes(twin,
 					 graph);
 		}
 	}

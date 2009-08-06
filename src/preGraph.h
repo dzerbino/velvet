@@ -41,8 +41,8 @@ char simplePreArcCount_pg(IDnum preNodeID, PreGraph * preGraph);
 
 // Descriptor
 Coordinate getPreNodeLength_pg(IDnum preNodeID, PreGraph * preGraph);
-void appendDescriptors_pg(IDnum targetID, IDnum sourceID,
-			  PreGraph * preGraph);
+void setPreNodeDescriptor_pg(Descriptor * descr, Coordinate length, IDnum preNodeID, PreGraph * preGraph);
+void appendDescriptors_pg(Descriptor ** start, int * writeOffset, IDnum preNodeID, PreGraph* preGraph, boolean initial);
 
 ////////////////////////////////////////////////////////////
 // PreArc functions

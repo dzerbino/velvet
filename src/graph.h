@@ -46,12 +46,14 @@ boolean hasSingleArc(Node * node);
 // Descriptor
 Coordinate getNodeLength(Node * node);
 void appendDescriptors(Node * target, Node * source);
+void directlyAppendDescriptors(Node * target, Node * sourcei, Coordinate totalLength);
 void appendSequence(Node * node, TightString ** reads,
 		    PassageMarker * guide, Graph * graph);
 void clipNodeLength(Node * node, Coordinate startClip,
 		    Coordinate finishClip);
 void splitNodeDescriptor(Node * source, Node * target, Coordinate offset);
 void reduceNode(Node * node);
+void reallocateNodeDescriptor(Node * node, Coordinate length);
 
 // Passage markers
 void insertPassageMarker(PassageMarker * marker, Node * destination);

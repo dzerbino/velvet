@@ -616,9 +616,11 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	FILE *file;
 	const int maxline = 5000;
 	char line[5000];
+	char str[100];
 	IDnum counter = 0;
 	Coordinate i;
 	char c;
+	Coordinate start;
 
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
@@ -647,7 +649,12 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 			counter++;
 		} else {
 			velvetifySequence(line);
-			fprintf(outfile, "%s\n", line);
+			start = 0;
+			while (start <= strlen(line)) {
+				strncpy(str, line + start, 60);
+				fprintf(outfile, "%s\n", str);
+				start += 60;
+			}
 		}
 	}
 
@@ -664,8 +671,9 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 	gzFile file;
 	const int maxline = 5000;
 	char line[5000];
+	char str[100];
 	IDnum counter = 0;
-	Coordinate i;
+	Coordinate i, start;
 	char c;
 
 	if (strcmp(filename, "-"))
@@ -697,7 +705,13 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 			counter++;
 		} else {
 			velvetifySequence(line);
-			fprintf(outfile, "%s\n", line);
+
+			start = 0;
+			while (start <= strlen(line)) {
+				strncpy(str, line + start, 60);
+				fprintf(outfile, "%s\n", str);
+				start += 60;
+			}
 		}
 	}
 

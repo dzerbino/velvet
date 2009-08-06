@@ -133,13 +133,14 @@ static inline KmerKey keyInAccelerationTable(Kmer * kmer,
 }
 
 static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
-					       short int accelerationBits)
+					       short int accelerationBits, Graph * graph)
 {
 	FILE *file = fopen(preGraphFilename, "r");
 	const int maxline = MAXLINE;
 	char line[MAXLINE];
+	char c;
 	int wordLength;
-	Coordinate nodeLength, lineLength, kmerCount;
+	Coordinate lineLength, kmerCount;
 	Kmer word, antiWord;
 	KmerOccurenceTable *kmerTable = NULL;
 	KmerOccurence *kmerOccurences, *kmerOccurencePtr;
@@ -190,9 +191,10 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 	kmerCount = 0;
 	while (line[0] == 'N') {
-		if (!fgets(line, maxline, file))
-			exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
-		kmerCount += (Coordinate) strlen(line) - wordLength;
+		lineLength = 0;
+		while ((c = getc(file)) != EOF && c != '\n')
+			lineLength++;
+		kmerCount += lineLength - wordLength + 1;
 		if (fgets(line, maxline, file) == NULL)
 			break;
 	}
@@ -218,24 +220,23 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 	while (line[0] == 'N') {
-		if (!fgets(line, maxline, file))
-			exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 		nodeID++;
-		lineLength = (Coordinate) strlen(line);
-		nodeLength = lineLength - wordLength;
 
 		// Fill in the initial word : 
 		clearKmer(&word);
 		clearKmer(&antiWord);
 		for (index = 0; index < wordLength - 1; index++) {
-			if (line[index] == 'A')
+			c = getc(file);
+			if (c == 'A')
 				nucleotide = ADENINE;
-			else if (line[index] == 'C')
+			else if (c == 'C')
 				nucleotide = CYTOSINE;
-			else if (line[index] == 'G')
+			else if (c == 'G')
 				nucleotide = GUANINE;
-			else if (line[index] == 'T')
+			else if (c == 'T')
 				nucleotide = THYMINE;
+			else if (c == '\n')
+				exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 			else
 				nucleotide = ADENINE;
 				
@@ -249,14 +250,15 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 		}
 
 		// Scan through node
-		for (; index < lineLength - 1; index++) {
-			if (line[index] == 'A')
+		index = 0;
+		while((c = getc(file)) != '\n' && c != EOF) {
+			if (c == 'A')
 				nucleotide = ADENINE;
-			else if (line[index] == 'C')
+			else if (c == 'C')
 				nucleotide = CYTOSINE;
-			else if (line[index] == 'G')
+			else if (c == 'G')
 				nucleotide = GUANINE;
-			else if (line[index] == 'T')
+			else if (c == 'T')
 				nucleotide = THYMINE;
 			else
 				nucleotide = ADENINE;
@@ -272,16 +274,17 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 				copyKmers(&kmerOccurencePtr->kmer, &word);
 				kmerOccurencePtr->nodeID = nodeID;
 				kmerOccurencePtr->position =
-				    index - wordLength + 1;
+				    index;
 			} else {
 				copyKmers(&kmerOccurencePtr->kmer, &antiWord);
 				kmerOccurencePtr->nodeID = -nodeID;
 				kmerOccurencePtr->position =
-				    lineLength - 2 - index;
+				    getNodeLength(getNodeInGraph(graph, nodeID)) - 1 - index;
 			}
 
 			kmerOccurencePtr++;
 			kmerOccurenceIndex++;
+			index++;
 		}
 
 		if (fgets(line, maxline, file) == NULL)
@@ -642,7 +645,7 @@ Graph *importPreGraph(char *preGraphFilename, ReadSet * reads,
 {
 	Graph *graph = readPreGraphFile(preGraphFilename);
 	KmerOccurenceTable *kmerOccurences =
-	    referenceGraphKmers(preGraphFilename, accelerationBits);
+	    referenceGraphKmers(preGraphFilename, accelerationBits, graph);
 	fillUpGraph(reads, kmerOccurences, graph, readTracking);
 
 	return graph;

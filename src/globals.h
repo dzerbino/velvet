@@ -32,9 +32,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #define VERSION_NUMBER 0
 #define RELEASE_NUMBER 7
-#define UPDATE_NUMBER 47
+#define UPDATE_NUMBER 48
 
-#define MAXLINE 1000000
+#define MAXLINE 5000 
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #define inline __inline
@@ -63,6 +63,7 @@ extern struct dfibheap_el;
 #include <stdint.h>
 typedef int8_t boolean;
 typedef int8_t Nucleotide;
+typedef uint8_t Descriptor;
 typedef int32_t IDnum;
 typedef int64_t Coordinate;
 typedef int16_t ShortLength;

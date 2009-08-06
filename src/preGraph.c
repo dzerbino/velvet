@@ -35,8 +35,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define GUANINE 2
 #define THYMINE 3
 
-typedef unsigned char Descriptor;
-
 struct preArc_st {
 	PreArc *nextLeft;
 	PreArc *nextRight;
@@ -813,60 +811,6 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 	return new;
 }
 
-void appendDescriptors_pg(IDnum destinationID, IDnum sourceID,
-			  PreGraph * preGraph)
-{
-	Descriptor *new, *copy, *descr;
-	Coordinate newLength, destinationLength, sourceLength;
-	PreNode *destination, *source;
-	int wordLength = getWordLength_pg(preGraph);
-
-	if (sourceID == 0 || destinationID == 0)
-		return;
-
-	if (destinationID > 0)
-		destination = &(preGraph->preNodes[destinationID]);
-	else
-		destination = &(preGraph->preNodes[-destinationID]);
-
-	descr = destination->descriptor;
-
-	if (sourceID > 0)
-		source = &(preGraph->preNodes[sourceID]);
-	else
-		source = &(preGraph->preNodes[-sourceID]);
-
-	copy = source->descriptor;
-
-	destinationLength = destination->length;
-	sourceLength = source->length;
-
-	newLength = destinationLength + sourceLength;
-
-	// Merging forward descriptors
-	if (destinationID > 0 && sourceID > 0)
-		new =
-		    mergeDescriptors_pg(descr, destinationLength, copy,
-					sourceLength, wordLength);
-	else if (destinationID < 0 && sourceID < 0)
-		new =
-		    mergeDescriptors_pg(copy, sourceLength, descr,
-					destinationLength, wordLength);
-	else if (destinationID < 0 && sourceID > 0)
-		new =
-		    mergeDescriptorsF2F_pg(descr, destinationLength, copy,
-					   sourceLength, wordLength);
-	else
-		new =
-		    mergeDescriptorsH2H_pg(descr, destinationLength, copy,
-					   sourceLength, wordLength);
-
-	free(descr);
-
-	destination->descriptor = new;
-	destination->length = newLength;
-}
-
 void setMultiplicity_pg(PreArc * preArc, IDnum mult)
 {
 	preArc->multiplicity = mult;
@@ -1030,7 +974,7 @@ static void exportPreNode_pg(FILE * outfile, PreNode * preNode, IDnum ID,
 	if (preNode == NULL)
 		return;
 
-	fprintf(outfile, "NODE\t%d\n", ID);
+	fprintf(outfile, "NODE\t%ld\t%lld\n", (long) ID, (long long) preNode->length);
 
 	if (preNode->length == 0) {
 		fprintf(outfile, "\n");
@@ -1153,4 +1097,106 @@ boolean isLoop_pg(PreArc * preArc)
 {
 	return (preArc->preNodeIDLeft == preArc->preNodeIDRight
 		|| preArc->preNodeIDLeft == -preArc->preNodeIDRight);
+}
+
+void setPreNodeDescriptor_pg(Descriptor * descr, Coordinate length, IDnum preNodeID, PreGraph * preGraph) {
+	PreNode * preNode;
+
+	if (preNodeID < 0) 
+		preNodeID = -preNodeID;
+
+	preNode = getPreNodeInPreGraph_pg(preGraph, preNodeID);
+	free(preNode->descriptor);
+	preNode->descriptor = descr;
+	preNode->length = length;	
+}
+
+static void appendPositiveDescriptor_pg(Descriptor ** writePtr, int * writeOffset, IDnum preNodeID, PreGraph * preGraph, boolean initial) {
+	PreNode * preNode = getPreNodeInPreGraph_pg(preGraph, preNodeID);
+	Descriptor * readPtr = preNode->descriptor;
+	Descriptor readCopy;
+	int wordLength = getWordLength_pg(preGraph);
+	Coordinate length = preNode->length;
+	Coordinate index;
+	int readOffset = 0;
+
+	if (initial) {
+		index = 0;
+		readPtr = preNode->descriptor;
+		readCopy = *readPtr;
+		readOffset = 0;
+	} else {
+		index = wordLength - 1;
+		readPtr = &(preNode->descriptor[(wordLength - 1) / 4]);
+		readCopy = *readPtr;
+		readOffset = (wordLength - 1) % 4;
+		readCopy >>= (readOffset * 2);
+	}
+
+	for (; index < length + wordLength - 1; index++) {
+		(**writePtr) >>= 2;
+		if (readOffset == 0)
+			readCopy = *readPtr;
+		(**writePtr) += (readCopy & 3) << 6;
+		readCopy >>= 2;
+
+		if (++(*writeOffset) == 4) {
+			(*writePtr)++;
+			*writeOffset = 0;
+		}
+
+		if (++readOffset == 4) {
+			readPtr++;
+			readOffset = 0;
+		}
+	}
+}
+
+static void appendNegativeDescriptor_pg(Descriptor ** writePtr, int * writeOffset, IDnum preNodeID, PreGraph * preGraph, boolean initial) {
+	PreNode * preNode = getPreNodeInPreGraph_pg(preGraph, preNodeID);
+	Descriptor * readPtr = preNode->descriptor;
+	Descriptor readCopy;
+	int wordLength = getWordLength_pg(preGraph);
+	Coordinate length = preNode->length;
+	Coordinate index;
+	int readOffset;
+
+	if (initial) 
+		length += wordLength - 1;
+
+	readPtr = &(preNode->descriptor[(length - 1) / 4]);
+	readCopy = *readPtr;
+	readOffset = (length - 1) % 4;
+	readCopy <<= ((3 - readOffset) * 2);
+
+	for (index = 0; index < length; index++) {
+		(**writePtr) >>= 2;
+		if (readOffset == 3)
+			readCopy = *readPtr;
+#ifndef COLOR
+		(**writePtr) += 192 - (readCopy & 192);
+#else
+		(**writePtr) += (readCopy & 192);
+#endif
+		readCopy <<= 2;
+
+		(*writeOffset)++;
+		if (*writeOffset == 4) {
+			(*writePtr)++;
+			*writeOffset = 0;
+		}
+
+		readOffset--;
+		if (readOffset == -1) {
+			readPtr--;
+			readOffset = 3;
+		}
+	}
+}
+
+void appendDescriptors_pg(Descriptor ** start, int * writeOffset, IDnum preNodeID, PreGraph* preGraph, boolean initial) {
+	if (preNodeID > 0)
+		appendPositiveDescriptor_pg(start, writeOffset, preNodeID, preGraph, initial);
+	else
+		appendNegativeDescriptor_pg(start, writeOffset, -preNodeID, preGraph, initial);
 }

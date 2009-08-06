@@ -35,8 +35,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define GUANINE 2
 #define THYMINE 3
 
-typedef unsigned char Descriptor;
-
 struct arc_st {
 	Arc *twinArc;		// 64
 	Arc *next;		// 64
@@ -952,9 +950,9 @@ void appendDescriptors(Node * destination, Node * source)
 	twinCopy = source->twinNode->descriptor;
 
 	// Amendments for empty descriptors
-	if (copy == NULL)
+	if (getNodeLength(source) == 0)
 		return;
-	if (descr == NULL) {
+	if (getNodeLength(destination) == 0) {
 		destination->descriptor = copy;
 		twinDestination->descriptor = twinCopy;
 		source->descriptor = NULL;
@@ -988,6 +986,62 @@ void appendDescriptors(Node * destination, Node * source)
 	free(twinDescr);
 	twinDestination->descriptor = new;
 	twinDestination->length = newLength;
+}
+
+static void catDescriptors(Descriptor * descr, Coordinate destinationLength, Descriptor * copy, Coordinate sourceLength) 
+{
+	Coordinate index;
+	Nucleotide nucleotide;
+
+	for (index = 0; index < sourceLength; index++) {
+		nucleotide = getNucleotideInDescriptor(copy, index);
+		writeNucleotideInDescriptor(nucleotide, descr, index + destinationLength);
+	}
+}
+
+static void reverseCatDescriptors(Descriptor * descr, Coordinate destinationLength, Descriptor * copy, Coordinate sourceLength, Coordinate totalLength) 
+{
+	Coordinate shift = totalLength - destinationLength - sourceLength;
+	Coordinate index;
+	Nucleotide nucleotide;
+
+	for (index = 0; index < sourceLength; index++) {
+		nucleotide = getNucleotideInDescriptor(copy, index);
+		writeNucleotideInDescriptor(nucleotide, descr, index + shift);
+	}
+}
+
+void directlyAppendDescriptors(Node * destination, Node * source, Coordinate totalLength)
+{
+	Descriptor *copy;
+	Descriptor *twinCopy;
+	Descriptor *descr;
+	Descriptor *twinDescr;
+	Coordinate destinationLength, sourceLength;
+
+	if (source == NULL || destination == NULL)
+		return;
+
+	descr = destination->descriptor;
+	twinDescr = destination->twinNode->descriptor;
+	copy = source->descriptor;
+	twinCopy = source->twinNode->descriptor;
+
+	// Amendments for empty descriptors
+	if (getNodeLength(source) == 0)
+		return;
+
+	destinationLength = destination->length;
+	sourceLength = source->length;
+
+	// Merging forward descriptors
+	catDescriptors(descr, destinationLength, copy, sourceLength);
+
+	// Merging reverse descriptors
+	reverseCatDescriptors(twinDescr, destinationLength, twinCopy, sourceLength, totalLength);
+
+	destination->length += source->length;
+	destination->twinNode->length += source->length;
 }
 
 static void copyDownDescriptor(Descriptor ** writePtr, int *writeOffset,
@@ -1590,7 +1644,6 @@ Node *emptyNode()
 	newnd->descriptor = NULL;
 	newnd->arc = NULL;
 	newnd->arcCount = 0;
-	//newnd->arcTree = NULL;
 	newnd->marker = NULL;
 	newnd->length = 0;
 	newnd->uniqueness = false;
@@ -1603,7 +1656,6 @@ Node *emptyNode()
 	antiNode->descriptor = NULL;
 	antiNode->arc = NULL;
 	antiNode->arcCount = 0;
-	//antiNode->arcTree = NULL;
 	antiNode->marker = NULL;
 	antiNode->length = 0;
 	antiNode->uniqueness = false;
@@ -1774,7 +1826,7 @@ static void exportNode(FILE * outfile, Node * node, void *withSequence)
 	if (node == NULL)
 		return;
 
-	fprintf(outfile, "NODE\t%d", node->ID);
+	fprintf(outfile, "NODE\t%ld\t%lld", (long) node->ID, (long long) node->length);
 	for (cat = 0; cat < CATEGORIES; cat++)
 		fprintf(outfile, "\t%lld\t%lld", (long long) node->virtualCoverage[cat],
 			(long long) node->originalVirtualCoverage[cat]);
@@ -2171,6 +2223,7 @@ Graph *importGraph(char *filename)
 	long long_var, long_var2, long_var3;
 	long long longlong_var, longlong_var2, longlong_var3, longlong_var4;
 	short short_var;
+	char c;
 
 	if (file == NULL) 
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
@@ -2198,6 +2251,8 @@ Graph *importGraph(char *filename)
 		sscanf(strtok(NULL, "\t\n"), "%ld", &long_var);
 		nodeID = (IDnum) long_var;
 		node = addEmptyNodeToGraph(graph, nodeID);
+		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
+		node->length = (Coordinate) longlong_var;
 		for (cat = 0; cat < CATEGORIES; cat++) {
 			sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
 			coverage = (Coordinate) longlong_var;
@@ -2209,65 +2264,62 @@ Graph *importGraph(char *filename)
 						   originalCoverage);
 		}
 
-		if (!fgets(line, maxline, file))
-			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-		node->length = strlen(line) - 1;
 		arrayLength = node->length / 4;
 		if (node->length % 4 > 0)
 			arrayLength++;
 		node->descriptor =
-		    mallocOrExit(arrayLength, Descriptor);
+		    callocOrExit(arrayLength, Descriptor);
 
-		for (index = 0; index < node->length; index++) {
-			if (line[index] == 'A')
+		index = 0;
+		while ((c = fgetc(file)) != '\n' && c != EOF) {
+			if (c == 'A')
 				writeNucleotideInDescriptor(ADENINE,
 							    node->
 							    descriptor,
-							    index);
-			else if (line[index] == 'C')
+							    index++);
+			else if (c == 'C')
 				writeNucleotideInDescriptor(CYTOSINE,
 							    node->
 							    descriptor,
-							    index);
-			else if (line[index] == 'G')
+							    index++);
+			else if (c == 'G')
 				writeNucleotideInDescriptor(GUANINE,
 							    node->
 							    descriptor,
-							    index);
-			else if (line[index] == 'T')
+							    index++);
+			else if (c == 'T')
 				writeNucleotideInDescriptor(THYMINE,
 							    node->
 							    descriptor,
-							    index);
+							    index++);
 		}
 
 		twin = node->twinNode;
-		if (!fgets(line, maxline, file))
-			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-		twin->length = (Coordinate) strlen(line) - 1;
+		twin->length = node->length;
 		twin->descriptor =
-		    mallocOrExit(arrayLength, Descriptor);
-		for (index = 0; index < twin->length; index++) {
-			if (line[index] == 'A')
+		    callocOrExit(arrayLength, Descriptor);
+		index = 0;
+		while ((c = fgetc(file)) != '\n' && c != EOF) {
+			if (c == 'A')
 				writeNucleotideInDescriptor(ADENINE,
 							    twin->
 							    descriptor,
-							    index);
-			else if (line[index] == 'C')
+							    index++);
+			else if (c == 'C')
 				writeNucleotideInDescriptor(CYTOSINE,
 							    twin->
 							    descriptor,
-							    index);
-			else if (line[index] == 'G')
+							    index++);
+			else if (c == 'G')
 				writeNucleotideInDescriptor(GUANINE,
 							    twin->
 							    descriptor,
-							    index);
-			else if (line[index] == 'T')
+							    index++);
+			else if (c == 'T')
 				writeNucleotideInDescriptor(THYMINE,
 							    twin->
 							    descriptor,
-							    index);
+							    index++);
 		}
 
 		if (fgets(line, maxline, file) == NULL)
@@ -2275,7 +2327,7 @@ Graph *importGraph(char *filename)
 	}
 
 	// Read arcs
-	while (line[0] == 'A' && !finished) {
+	while (!finished && line[0] == 'A') {
 		sscanf(line, "ARC\t%ld\t%ld\t%ld\n", &long_var,
 		       &long_var2, &long_var3);
 		originID = (IDnum) long_var;
@@ -2375,10 +2427,12 @@ Graph *readPreGraphFile(char *preGraphFilename)
 
 	Node *node, *twin;
 	IDnum nodeID = 0;
-	Coordinate index, readIndex, nodeLength;
-	int wordLength;
+	Coordinate index, nodeLength;
+	char c;
+	int wordLength, wordShift;
 	size_t arrayLength;
 	long long_var, long_var2;
+	long long longlong_var;
 
 	if (file == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
@@ -2392,6 +2446,7 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	       &wordLength);
 	nodeCounter = (IDnum) long_var;
 	sequenceCount = (IDnum) long_var2;
+	wordShift = wordLength - 1;
 	graph = emptyGraph(sequenceCount, wordLength);
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
@@ -2405,96 +2460,102 @@ Graph *readPreGraphFile(char *preGraphFilename)
 		nodeID++;
 		node = addEmptyNodeToGraph(graph, nodeID);
 
-		if (!fgets(line, maxline, file))
-			exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
-		// Exact formula is strlen(line) - 1 - wordLength + 1
-		// -1 for the newline character
-		// +1 for the last character of the first kmer
-		nodeLength = strlen(line) - wordLength;
-
-		node->length = nodeLength;
+		sscanf(line, "%*s\t%*i\t%lli\n", &longlong_var);
+		node->length = (Coordinate) longlong_var;
+		nodeLength = node->length;
 		arrayLength = node->length / 4;
 		if (node->length % 4 > 0)
 			arrayLength++;
 		node->descriptor =
-		    mallocOrExit(arrayLength, Descriptor);
-
-		for (index = 0; index < nodeLength; index++) {
-			readIndex = index + wordLength - 1;
-
-			if (line[readIndex] == 'A')
-				writeNucleotideInDescriptor(ADENINE,
-							    node->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'C')
-				writeNucleotideInDescriptor(CYTOSINE,
-							    node->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'G')
-				writeNucleotideInDescriptor(GUANINE,
-							    node->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'T')
-				writeNucleotideInDescriptor(THYMINE,
-							    node->
-							    descriptor,
-							    index);
-		}
+		    callocOrExit(arrayLength, Descriptor);
 
 		twin = node->twinNode;
 		twin->length = nodeLength;
 		twin->descriptor =
-		    mallocOrExit(arrayLength, Descriptor);
+		    callocOrExit(arrayLength, Descriptor);
 
-		for (index = 0; index < nodeLength; index++) {
-			readIndex = nodeLength - index - 1;
 
+		index = 0;
+		while ((c = getc(file)) != '\n') {
+			if (c == 'A') {
+				if (index - wordShift >= 0)
+					writeNucleotideInDescriptor(ADENINE,
+								    node->
+								    descriptor,
+								    index - wordShift);
+				if (nodeLength - index - 1 >= 0) {
 #ifndef COLOR
-			if (line[readIndex] == 'A')
-				writeNucleotideInDescriptor(THYMINE,
-							    twin->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'C')
-				writeNucleotideInDescriptor(GUANINE,
-							    twin->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'G')
-				writeNucleotideInDescriptor(CYTOSINE,
-							    twin->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'T')
-				writeNucleotideInDescriptor(ADENINE,
-							    twin->
-							    descriptor,
-							    index);
+					writeNucleotideInDescriptor(THYMINE,
+								    twin->
+								    descriptor,
+								    nodeLength - index - 1);
 #else
-			if (line[readIndex] == 'A')
-				writeNucleotideInDescriptor(ADENINE,
-							    twin->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'C')
-				writeNucleotideInDescriptor(CYTOSINE,
-							    twin->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'G')
-				writeNucleotideInDescriptor(GUANINE,
-							    twin->
-							    descriptor,
-							    index);
-			else if (line[readIndex] == 'T')
-				writeNucleotideInDescriptor(THYMINE,
-							    twin->
-							    descriptor,
-							    index);
+					writeNucleotideInDescriptor(ADENINE,
+								    twin->
+								    descriptor,
+								    nodeLength - index - 1);
 #endif
+				}
+			} else if (c == 'C') {
+				if (index - wordShift >= 0)
+					writeNucleotideInDescriptor(CYTOSINE,
+								    node->
+								    descriptor,
+								    index - wordShift);
+				if (nodeLength - index - 1 >= 0) {
+#ifndef COLOR
+					writeNucleotideInDescriptor(GUANINE,
+								    twin->
+								    descriptor,
+								    nodeLength - index - 1);
+#else
+					writeNucleotideInDescriptor(CYTOSINE,
+								    twin->
+								    descriptor,
+								    nodeLength - index - 1);
+#endif
+				}
+			} else if (c == 'G') {
+				if (index - wordShift >= 0)
+					writeNucleotideInDescriptor(GUANINE,
+								    node->
+								    descriptor,
+								    index - wordShift);
+				if (nodeLength - index - 1 >= 0) {
+#ifndef COLOR
+					writeNucleotideInDescriptor(CYTOSINE,
+								    twin->
+								    descriptor,
+								    nodeLength - index - 1);
+#else
+					writeNucleotideInDescriptor(GUANINE,
+								    twin->
+								    descriptor,
+								    nodeLength - index - 1);
+#endif
+				}
+			} else if (c == 'T') {
+				if (index - wordShift >= 0)
+					writeNucleotideInDescriptor(THYMINE,
+								    node->
+								    descriptor,
+								    index - wordShift);
+				if (nodeLength - index - 1 >= 0) {
+#ifndef COLOR
+					writeNucleotideInDescriptor(ADENINE,
+								    twin->
+								    descriptor,
+								    nodeLength - index - 1);
+#else
+					writeNucleotideInDescriptor(THYMINE,
+								    twin->
+								    descriptor,
+								    nodeLength - index - 1);
+#endif
+				}
+			}
+			
+			index++;
 		}
 
 		if (fgets(line, maxline, file) == NULL) {
@@ -3884,4 +3945,31 @@ Coordinate getGapStart(GapMarker * marker)
 Coordinate getGapFinish(GapMarker * marker)
 {
 	return marker->position + marker->length;
+}
+
+void reallocateNodeDescriptor(Node * node, Coordinate length) {
+	Coordinate arrayLength, index, shift;
+	Node * twin = node->twinNode;
+	Descriptor * array;
+	Nucleotide nucleotide;
+
+	if (length < node->length)
+		exitErrorf(EXIT_FAILURE, true, "Sum of node lengths smaller than first!");
+
+	shift = length - node->length;
+
+	arrayLength = length / 4;
+	if (length % 4)
+		arrayLength++;
+
+	node->descriptor = reallocOrExit(node->descriptor, arrayLength, Descriptor);
+
+	array = callocOrExit(arrayLength, Descriptor);
+	for (index = node->length - 1; index >= 0; index--) {
+		nucleotide = getNucleotideInDescriptor(twin->descriptor, index);
+		writeNucleotideInDescriptor(nucleotide, array, index + shift);
+	}
+	
+	free(twin->descriptor);
+	twin->descriptor = array;
 }

@@ -23,20 +23,74 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #include "globals.h"
 #include "preGraph.h"
+#include "utility.h"
 
 // Replaces two consecutive preNodes into a single equivalent preNode
 // The extra memory is freed
 static void concatenatePreNodes(IDnum preNodeAID, PreArc * oldPreArc,
 				PreGraph * preGraph)
 {
-	IDnum preNodeBID = getDestination_pg(oldPreArc, preNodeAID);
-	PreArc *preArc;
+	IDnum preNodeBID = preNodeAID;
+	IDnum currentPreNodeID, nextPreNodeID;
+	PreArc *preArc = oldPreArc;
+	Coordinate totalLength = 0;
+	Coordinate arrayLength;
+	Descriptor * descr, * ptr;
+	int writeOffset = 0;
+	int wordLength = getWordLength_pg(preGraph);
 
 	//printf("Concatenating nodes %li and %li\n", preNodeAID, preNodeBID);
 
-	// PreArc management:
-	// Freeing useless preArcs
-	destroyPreArc_pg(oldPreArc, preGraph);
+	while(hasSinglePreArc_pg(preNodeBID, preGraph)
+		       &&
+		       hasSinglePreArc_pg(getOtherEnd_pg
+					  (preArc, preNodeBID),
+					  preGraph)
+		       && !isLoop_pg(preArc) 
+		       && getDestination_pg(preArc, preNodeBID) != preNodeAID) {
+
+		totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
+		preNodeBID = getDestination_pg(preArc, preNodeBID);
+		preArc = getPreArc_pg(preNodeBID, preGraph);
+	}
+	totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
+	totalLength += wordLength - 1;
+
+	// Descriptor management (preNode)
+	arrayLength = totalLength / 4;
+	if (totalLength % 4)
+		arrayLength++;
+	descr = callocOrExit(arrayLength, Descriptor);
+	ptr = descr;
+	if (preNodeAID > 0) {
+		currentPreNodeID = preNodeAID;
+		appendDescriptors_pg(&ptr, &writeOffset, currentPreNodeID, preGraph, true);
+		preArc = getPreArc_pg(currentPreNodeID, preGraph);
+		currentPreNodeID = getDestination_pg(preArc, currentPreNodeID);
+		while (currentPreNodeID != preNodeBID) {
+			appendDescriptors_pg(&ptr, &writeOffset, currentPreNodeID, preGraph, false);
+			preArc = getPreArc_pg(currentPreNodeID, preGraph);
+			currentPreNodeID = getDestination_pg(preArc, currentPreNodeID);
+		}
+		appendDescriptors_pg(&ptr, &writeOffset, currentPreNodeID, preGraph, false);
+	} else {
+		currentPreNodeID = -preNodeBID;
+		appendDescriptors_pg(&ptr, &writeOffset ,currentPreNodeID, preGraph, true);
+		preArc = getPreArc_pg(currentPreNodeID, preGraph);
+		currentPreNodeID = getDestination_pg(preArc, currentPreNodeID);
+		while (currentPreNodeID != -preNodeAID) {
+			appendDescriptors_pg(&ptr, &writeOffset ,currentPreNodeID, preGraph, false);
+			preArc = getPreArc_pg(currentPreNodeID, preGraph);
+			currentPreNodeID = getDestination_pg(preArc, currentPreNodeID);
+		}
+		appendDescriptors_pg(&ptr, &writeOffset ,currentPreNodeID, preGraph, false);
+	}
+
+	if (writeOffset != 0) 
+		while (writeOffset++ != 4)
+			(*ptr) >>= 2;
+
+	setPreNodeDescriptor_pg(descr, totalLength - wordLength + 1, preNodeAID, preGraph); 
 
 	// Correct preArcs
 	for (preArc = getPreArc_pg(preNodeBID, preGraph); preArc != NULL;
@@ -51,11 +105,14 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArc * oldPreArc,
 						 preArc, preGraph);
 	}
 
-	// Descriptor management (preNode)
-	appendDescriptors_pg(preNodeAID, preNodeBID, preGraph);
-
 	// Freeing gobbled preNode
-	destroyPreNode_pg(preNodeBID, preGraph);
+	currentPreNodeID = -preNodeBID;
+	while (currentPreNodeID != -preNodeAID) {
+		preArc = getPreArc_pg(currentPreNodeID, preGraph);
+		nextPreNodeID = getDestination_pg(preArc, currentPreNodeID);
+		destroyPreNode_pg(currentPreNodeID, preGraph);
+		currentPreNodeID = nextPreNodeID;
+	}
 }
 
 // Detects sequences that could be simplified through concatentation

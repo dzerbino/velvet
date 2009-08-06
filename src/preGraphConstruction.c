@@ -362,8 +362,13 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		for (readIndex = 0; readIndex < WORDLENGTH - 1;
 		     readIndex++) {
 			if (!isalpha((c = getc(file)))) {
-				tooShort = true;
-				break;
+				if (c == '>') {
+					ungetc(c, file);
+					tooShort = true;
+					break;
+				} else {
+					continue;
+				}
 			}
 			//printf("%c", c);      
 			switch (c) {
