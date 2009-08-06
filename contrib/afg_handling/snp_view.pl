@@ -102,10 +102,10 @@ while(<IN>){
         }
         $_ = <IN>;
         chomp;
-        if(/clr:33,0/){
+        if(/clr:[0-9]+,0/){
             $revs{$src} = "r";
         }
-        if(/clr:0,33/){
+        if(/clr:0,[0-9]+/){
             $revs{$src} = "f";
         }
     }

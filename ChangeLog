@@ -162,3 +162,5 @@ V 0.7.47
 V 0.7.48
 - Accelerated concatenation (pre-graph and graph)
 - Unlimited contig size
+- Bug in parsing FASTA files with very long lines
+- Parsing bug in snp_view.pl script
