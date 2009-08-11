@@ -24,6 +24,8 @@ To this package I also bundled some third-party analysis scripts for Velvet:
   scans the parameter space to obtain the best possible assembly. 
 - Torsten Seeman provided a script which automatically analyses and displays 
   in ASCII mode the coverage distribution of a Velvet assembly.
+- David Studholme provided a script to convert a FASTA assembly into an AGP
+  file.
 
 Many thanks to: 
 - Darren Platt for his very thorough debugging.

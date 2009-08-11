@@ -557,6 +557,10 @@ static Nucleotide getNucleotideInDescriptor(Descriptor * descriptor,
 	return 0;
 }
 
+Nucleotide getNucleotideInNode(Node * node, Coordinate index) {
+        return getNucleotideInDescriptor(node->descriptor, index);
+}
+
 char *readNode(Node * node)
 {
 	char *s = callocOrExit(1000000, char);
@@ -2413,6 +2417,215 @@ Graph *importGraph(char *filename)
 
 	fclose(file);
 	//puts("Done, exiting");
+	return graph;
+}
+
+Graph *importSimplifiedGraph(char *filename)
+{
+	FILE *file = fopen(filename, "r");
+	const int maxline = MAXLINE;
+	char line[MAXLINE];
+	Graph *graph;
+	Coordinate coverage, originalCoverage;
+	IDnum nodeCounter, sequenceCount;
+	Node *node, *twin;
+	PassageMarker *newMarker, *marker;
+	IDnum nodeID, seqID;
+	Coordinate index;
+	Coordinate start, finish;
+	Coordinate startOffset, finishOffset;
+	boolean finished = false;
+	size_t arrayLength;
+	IDnum readCount;
+	ShortReadMarker *array;
+	int wordLength, sCount;
+	ShortLength length;
+	Category cat;
+	long long_var, long_var2;
+	long long longlong_var, longlong_var2, longlong_var3, longlong_var4;
+	short short_var;
+	char c;
+
+	if (file == NULL) 
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	printf("Reading graph file %s\n", filename);
+
+	// First  line
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
+	sscanf(line, "%ld\t%ld\t%i\n", &long_var, &long_var2,
+	       &wordLength);
+	nodeCounter = (IDnum) long_var;
+	sequenceCount = (IDnum) long_var2;
+	graph = emptyGraph(sequenceCount, wordLength);
+	resetWordFilter(wordLength);
+	allocateNodeSpace(graph, nodeCounter);
+	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
+	       (long) sequenceCount);
+
+	// Read nodes
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
+	while (strncmp(line, "NODE", 4) == 0) {
+		strtok(line, "\t\n");
+		sscanf(strtok(NULL, "\t\n"), "%ld", &long_var);
+		nodeID = (IDnum) long_var;
+		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
+
+		if (longlong_var < 50)
+			continue;
+		
+		node = addEmptyNodeToGraph(graph, nodeID);
+		node->length = (Coordinate) longlong_var;
+		for (cat = 0; cat < CATEGORIES; cat++) {
+			sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
+			coverage = (Coordinate) longlong_var;
+			setVirtualCoverage(node, cat, coverage);
+			sscanf(strtok(NULL, "\t\n"), "%lld",
+			       &longlong_var);
+			originalCoverage = (Coordinate) longlong_var;
+			setOriginalVirtualCoverage(node, cat,
+						   originalCoverage);
+		}
+
+		arrayLength = node->length / 4;
+		if (node->length % 4 > 0)
+			arrayLength++;
+		node->descriptor =
+		    callocOrExit(arrayLength, Descriptor);
+
+		index = 0;
+		while ((c = fgetc(file)) != '\n' && c != EOF) {
+			if (c == 'A')
+				writeNucleotideInDescriptor(ADENINE,
+							    node->
+							    descriptor,
+							    index++);
+			else if (c == 'C')
+				writeNucleotideInDescriptor(CYTOSINE,
+							    node->
+							    descriptor,
+							    index++);
+			else if (c == 'G')
+				writeNucleotideInDescriptor(GUANINE,
+							    node->
+							    descriptor,
+							    index++);
+			else if (c == 'T')
+				writeNucleotideInDescriptor(THYMINE,
+							    node->
+							    descriptor,
+							    index++);
+		}
+
+		twin = node->twinNode;
+		twin->length = node->length;
+		twin->descriptor =
+		    callocOrExit(arrayLength, Descriptor);
+		index = 0;
+		while ((c = fgetc(file)) != '\n' && c != EOF) {
+			if (c == 'A')
+				writeNucleotideInDescriptor(ADENINE,
+							    twin->
+							    descriptor,
+							    index++);
+			else if (c == 'C')
+				writeNucleotideInDescriptor(CYTOSINE,
+							    twin->
+							    descriptor,
+							    index++);
+			else if (c == 'G')
+				writeNucleotideInDescriptor(GUANINE,
+							    twin->
+							    descriptor,
+							    index++);
+			else if (c == 'T')
+				writeNucleotideInDescriptor(THYMINE,
+							    twin->
+							    descriptor,
+							    index++);
+		}
+
+		if (fgets(line, maxline, file) == NULL)
+			finished = true;
+	}
+
+	// Read sequences
+	while (!finished && line[0] != 'N') {
+		sscanf(line, "SEQ\t%ld\n", &long_var);
+		seqID = (IDnum) long_var;
+		marker = NULL;
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
+
+		while (!finished && line[0] != 'N' && line[0] != 'S') {
+			sCount =
+			    sscanf(line, "%ld\t%lld\t%lld\t%lld\t%lld\n",
+				   &long_var, &longlong_var, &longlong_var2, &longlong_var3,
+				   &longlong_var4);
+			nodeID = (IDnum) long_var;
+			startOffset = (Coordinate) longlong_var;
+			start = (Coordinate) longlong_var2;
+			finish = (Coordinate) longlong_var3;
+			finishOffset = (Coordinate) longlong_var4;
+			if (sCount != 5) {
+				printf
+				    ("ERROR: reading in graph - only %d items read for line '%s'",
+				     sCount, line);
+				exit(1);
+			}
+			if (getNodeInGraph(graph, nodeID)) {
+				newMarker =
+				    newPassageMarker(seqID, start, finish,
+						     startOffset, finishOffset);
+				transposePassageMarker(newMarker,
+						       getNodeInGraph(graph,
+								      nodeID));
+				connectPassageMarkers(marker, newMarker, graph);
+				marker = newMarker;
+			}
+			if (fgets(line, maxline, file) == NULL)
+				finished = true;
+		}
+	}
+
+	// Node reads
+	while (!finished) {
+		sscanf(line, "NR\t%ld\t%ld\n", &long_var, &long_var2);
+		nodeID = (IDnum) long_var;
+		readCount = (IDnum) long_var2;
+		if (!readStartsAreActivated(graph))
+			activateReadStarts(graph);
+
+		graph->nodeReadCounts[nodeID + graph->nodeCount] =
+		    readCount;
+		array = mallocOrExit(readCount, ShortReadMarker);
+		graph->nodeReads[nodeID + graph->nodeCount] = array;
+
+		readCount = 0;
+		if (!fgets(line, maxline, file))
+			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
+		while (!finished && line[0] != 'N') {
+			sscanf(line, "%ld\t%lld\t%hd\n", &long_var,
+			       &longlong_var, &short_var);
+			seqID = (IDnum) long_var;
+			startOffset = (Coordinate) longlong_var;
+			length = (ShortLength) short_var;
+			array[readCount].readID = seqID;
+			array[readCount].position = startOffset;
+			array[readCount].offset = length;
+			readCount++;
+			if (fgets(line, maxline, file) == NULL)
+				finished = true;
+		}
+	}
+
+	//printf("New graph has %d nodes\n", graph->nodeCount);
+
+	fclose(file);
+	//puts("Done, exiting");
+	renumberNodes(graph);
 	return graph;
 }
 

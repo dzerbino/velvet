@@ -63,6 +63,8 @@ Coordinate totalAssemblyLength(Graph * graph);
 
 void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *directory);
 
+void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLength, char* filename);
+
 ///////////////////////////////////////////////////////////////////
 // Dodgy functions
 ///////////////////////////////////////////////////////////////////

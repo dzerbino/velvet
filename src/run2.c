@@ -51,6 +51,7 @@ static void printUsage()
 	puts("\t-min_pair_count <integer>\t: minimum number of paired end connections to justify the scaffolding of two long contigs (default: 10)");
 	puts("\t-max_coverage <floating point>\t: removal of high coverage nodes AFTER tour bus (default: no removal)");
 	puts("\t-long_mult_cutoff <int>\t\t: minimum number of long reads required to merge contigs (default: 2)");
+	puts("\t-unused_reads <yes|no>\t\t: export unused reads in UnusedReads.fa file (default: no)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -81,6 +82,7 @@ int main(int argc, char **argv)
 	short int accelerationBits = 24;
 	boolean readTracking = false;
 	boolean exportAssembly = false;
+	boolean unusedReads = false;
 	FILE *file;
 	int arg_index, arg_int;
 	double arg_double;
@@ -234,6 +236,11 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-long_mult_cutoff") == 0) {
 			sscanf(argv[arg_index], "%i", &longMultCutoff);
 			setMultiplicityCutoff(longMultCutoff);
+		} else if (strcmp(arg, "-unused_reads") == 0) {
+			unusedReads =
+			    (strcmp(argv[arg_index], "yes") == 0);
+			if (unusedReads)
+				readTracking = true;
 		} else if (strcmp(arg, "--help") == 0) {
 			printUsage();
 			return 0;	
@@ -393,6 +400,8 @@ int main(int argc, char **argv)
 	}
 
 	logFinalStats(graph, minContigKmerLength, directory);
+	if (unusedReads)
+		exportUnusedReads(graph, sequences, minContigKmerLength, directory);
 
 	destroyGraph(graph);
 	free(graphFilename);

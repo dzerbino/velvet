@@ -783,7 +783,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv)
 	FILE *outfile = fopen(filename, "w");
 	int filetype = FASTA;
 	Category cat = 0;
-	IDnum sequenceIndex = 0;
+	IDnum sequenceIndex = 1;
 	short short_var;
 
 	if (argc < 2) {

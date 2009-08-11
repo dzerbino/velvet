@@ -164,3 +164,7 @@ V 0.7.48
 - Unlimited contig size
 - Bug in parsing FASTA files with very long lines
 - Parsing bug in snp_view.pl script
+
+V 0.7.49
+- Added the optional output of unused reads
+- Added David Studholme's FastA -> AGP script

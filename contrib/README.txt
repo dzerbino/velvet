@@ -26,3 +26,9 @@ This script automatically finds the optimal parameter settings for Velvet.
 - estimate-exp_cov by Torsten Seeman (torsten.seemann@infotech.monash.edu.au)
 
 This script automatically determines the expected coverage value as described in the manual, and displays an ASCII histogram, thus obviating the need to start R for each Velvet run.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- fasta2agp by David Studholme (david.studholme@tsl.ac.uk)
+
+This script converts a Velvet assembly in FastA format with N's in the gaps
+into a AGP file which can be submitted to the EMBL or the NCBI.

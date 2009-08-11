@@ -21,6 +21,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _TIGHTSTRING_H_
 #define _TIGHTSTRING_H_
 
+#include <stdio.h>
+
 //////////////////////////////////////////////////////////////
 // Creators and destructors
 /////////////////////////////////////////////////////////////
@@ -96,4 +98,5 @@ void clipTightString(TightString * sequence, Coordinate start,
 // Exports an array of sequences under FastA format
 void exportSequenceArray(char *filename, TightString ** array,
 			 IDnum sequenceCount);
+void exportTightString(FILE * outfile, TightString * sequence, IDnum index);
 #endif

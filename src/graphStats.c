@@ -2649,3 +2649,63 @@ void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *director
 	free(logFilename);
 	free(statsLine);
 }
+
+void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLength, char* directory) {
+	char *outFilename =
+	    mallocOrExit(strlen(directory) + 100, char);
+	FILE * outfile;
+	boolean * used = callocOrExit(sequenceCount(graph) + 1, boolean);
+	IDnum nodeID, readID;
+	Node * node;
+	PassageMarker * marker;
+	ShortReadMarker * shortReadArray, * shortReadMarker;
+	IDnum shortReadCount, shortReadIndex;
+
+	strcpy(outFilename, directory);
+	strcat(outFilename, "/UnusedReads.fa");
+	outfile = fopen(outFilename, "w");
+
+	printf("Printing unused reads into %s\n", outFilename);
+
+	for(nodeID = 1; nodeID <= nodeCount(graph); nodeID++) {
+		node = getNodeInGraph(graph, nodeID);
+		if (node == NULL || getNodeLength(node) < minContigKmerLength)
+			continue;
+		
+		// Long reads
+		for(marker = getMarker(node); marker != NULL; marker = getNextInNode(marker)) {
+			readID = getPassageMarkerSequenceID(marker);
+			if (readID < 0)
+				readID = -readID;
+			used[readID] = true;	
+		}	
+
+		// Short reads		
+		if (!readStartsAreActivated(graph))
+			continue;
+
+		shortReadArray = getNodeReads(node, graph);
+		shortReadCount = getNodeReadCount(node, graph);
+		for (shortReadIndex = 0; shortReadIndex < shortReadCount; shortReadIndex++) {
+			shortReadMarker = getShortReadMarkerAtIndex(shortReadArray, shortReadIndex);
+			readID = getShortReadMarkerID(shortReadMarker);
+			used[readID] = true;	
+		}
+		
+		shortReadArray = getNodeReads(getTwinNode(node), graph);
+		shortReadCount = getNodeReadCount(getTwinNode(node), graph);
+		for (shortReadIndex = 0; shortReadIndex < shortReadCount; shortReadIndex++) {
+			shortReadMarker = getShortReadMarkerAtIndex(shortReadArray, shortReadIndex);
+			readID = getShortReadMarkerID(shortReadMarker);
+			used[readID] = true;	
+		}
+	}
+
+	for (readID = 1; readID <= sequenceCount(graph); readID++) 
+		if (!used[readID])
+			exportTightString(outfile, reads->tSequences[readID - 1], readID);	
+
+	free(outFilename);
+	free(used);	
+	fclose(outfile);
+}

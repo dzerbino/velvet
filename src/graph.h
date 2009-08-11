@@ -54,6 +54,7 @@ void clipNodeLength(Node * node, Coordinate startClip,
 void splitNodeDescriptor(Node * source, Node * target, Coordinate offset);
 void reduceNode(Node * node);
 void reallocateNodeDescriptor(Node * node, Coordinate length);
+Nucleotide getNucleotideInNode(Node * node, Coordinate index);
 
 // Passage markers
 void insertPassageMarker(PassageMarker * marker, Node * destination);
@@ -206,6 +207,7 @@ void reassessArcMultiplicities(Graph * graph);
 // File IO
 void displayGraph(Graph * graph);
 Graph *importGraph(char *filename);
+Graph *importSimplifiedGraph(char *filename);
 void exportGraph(char *filename, Graph * graph, TightString ** sequences);
 void exportDOTGraph(char *filename, Graph * graph);
 Graph *readPreGraphFile(char *preGraphFilename);
