@@ -32,3 +32,16 @@ This script automatically determines the expected coverage value as described in
 
 This script converts a Velvet assembly in FastA format with N's in the gaps
 into a AGP file which can be submitted to the EMBL or the NCBI.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- extractContigReads by Daniel Zerbino (zerbino@ebi.ac.uk), suggested by
+  Jasper Rees
+
+This script scans the Graph2 file produced by Velvet and produces a FastA file
+of all the reads which belong to a given contig. 
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- observed-insert-length by Daniel Zerbino (zerbino@ebi.ac.uk)
+
+This scripts scans the Graph2 file produced by Velvet and computes the insert
+length distribution of a chosen short read library in the assembly.

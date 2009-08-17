@@ -2473,8 +2473,15 @@ Graph *importSimplifiedGraph(char *filename)
 		nodeID = (IDnum) long_var;
 		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
 
-		if (longlong_var < 50)
+		if (longlong_var < 50) {
+			if (fgets(line, maxline, file) == NULL)
+				finished = true;
+			if (fgets(line, maxline, file) == NULL)
+				finished = true;
+			if (fgets(line, maxline, file) == NULL)
+				finished = true;
 			continue;
+		}
 		
 		node = addEmptyNodeToGraph(graph, nodeID);
 		node->length = (Coordinate) longlong_var;

@@ -20,7 +20,6 @@ Copyright 2007, 2008, 2009 Daniel Zerbino (zerbino@ebi.ac.uk)
 */
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 
 #include "globals.h"
 #include "kmer.h"

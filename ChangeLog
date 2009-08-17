@@ -168,3 +168,9 @@ V 0.7.48
 V 0.7.49
 - Added the optional output of unused reads
 - Added David Studholme's FastA -> AGP script
+
+V 0.7.50
+- Added the extractContigReads script
+- Updated the FastA -> AGP script
+- Added the observed-insert-length script
+- Small parsing bug in simplified read import
