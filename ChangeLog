@@ -174,3 +174,9 @@ V 0.7.50
 - Updated the FastA -> AGP script
 - Added the observed-insert-length script
 - Small parsing bug in simplified read import
+
+V 0.7.51 
+- Small parsing bug
+- Correction to the observed-insert-length script
+- Verified strncpy calls
+- NCBI friendly 10bp N-gaps

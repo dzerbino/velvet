@@ -424,6 +424,7 @@ static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * 
 			start = 0;
 			while (start <= strlen(readSeq)) {
 				strncpy(str, readSeq + start, 60);
+				str[60] = '\0';
 				fprintf(outfile, "%s\n", str);
 				start += 60;
 			}
@@ -467,6 +468,7 @@ static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		start = 0;
 		while (start <= strlen(readSeq)) {
 			strncpy(str, readSeq + start, 60);
+			str[60] = '\0';
 			fprintf(outfile, "%s\n", str);
 			start += 60;
 		}
@@ -535,6 +537,7 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		start = 0;
 		while (start <= strlen(line)) {
 			strncpy(str, line + start, 60);
+			str[60] = '\0';
 			fprintf(outfile, "%s\n", str);
 			start += 60;
 		}
@@ -596,6 +599,7 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 		start = 0;
 		while (start <= strlen(line)) {
 			strncpy(str, line + start, 60);
+			str[60] = '\0';
 			fprintf(outfile, "%s\n", str);
 			start += 60;
 		}
@@ -621,6 +625,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	Coordinate i;
 	char c;
 	Coordinate start;
+	int offset = 0;
 
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
@@ -640,6 +645,11 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	while (fgets(line, maxline, file)) {
 		if (line[0] == '>') {
+			if (offset != 0) { 
+				fprintf(outfile, "\n");
+				offset = 0;
+			}
+
 			for (i = strlen(line) - 1;
 			     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
 				line[i] = '\0';
@@ -650,14 +660,22 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		} else {
 			velvetifySequence(line);
 			start = 0;
-			while (start <= strlen(line)) {
-				strncpy(str, line + start, 60);
-				fprintf(outfile, "%s\n", str);
+			while (start < strlen(line)) {
+				strncpy(str, line + start, 60 - offset);
+				str[60 - offset] = '\0';
+				fprintf(outfile, "%s", str);
+				offset += strlen(str);
+				if (offset >= 60) {
+					fprintf(outfile, "\n");
+					offset = 0;
+				}
 				start += 60;
 			}
 		}
 	}
 
+	if (offset != 0) 
+		fprintf(outfile, "\n");
 	fclose(file);
 
 	printf("%d sequences found\n", counter);
@@ -675,6 +693,7 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 	IDnum counter = 0;
 	Coordinate i, start;
 	char c;
+	int offset = 0;
 
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "r");
@@ -696,6 +715,11 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 
 	while (gzgets(file, line, maxline)) {
 		if (line[0] == '>') {
+			if (offset != 0) { 
+				fprintf(outfile, "\n");
+				offset = 0;
+			}
+
 			for (i = strlen(line) - 1;
 			     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
 				line[i] = '\0';
@@ -707,13 +731,23 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 			velvetifySequence(line);
 
 			start = 0;
-			while (start <= strlen(line)) {
-				strncpy(str, line + start, 60);
-				fprintf(outfile, "%s\n", str);
+			while (start < strlen(line)) {
+				strncpy(str, line + start, 60 - offset);
+				str[60 - offset] = '\0';
+				fprintf(outfile, "%s", str);
+				offset += strlen(str);
+				if (offset >= 60) {
+					fprintf(outfile, "\n");
+					offset = 0;
+				}
 				start += 60;
 			}
 		}
 	}
+
+	if (offset != 0) 
+		fprintf(outfile, "\n");
+	fclose(file);
 
 	gzclose(file);
 
@@ -754,6 +788,7 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		start = 0;
 		while (start <= strlen(readSeq)) {
 			strncpy(str, readSeq + start, 60);
+			str[60] = '\0';
 			fprintf(outfile, "%s\n", str);
 			start += 60;
 		}

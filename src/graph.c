@@ -2437,7 +2437,7 @@ Graph *importSimplifiedGraph(char *filename)
 	boolean finished = false;
 	size_t arrayLength;
 	IDnum readCount;
-	ShortReadMarker *array;
+	ShortReadMarker *array = NULL;
 	int wordLength, sCount;
 	ShortLength length;
 	Category cat;
@@ -2558,6 +2558,11 @@ Graph *importSimplifiedGraph(char *filename)
 			finished = true;
 	}
 
+	// Read arcs
+	while (!finished && line[0] == 'A')
+		if (fgets(line, maxline, file) == NULL)
+			finished = true;
+
 	// Read sequences
 	while (!finished && line[0] != 'N') {
 		sscanf(line, "SEQ\t%ld\n", &long_var);
@@ -2580,6 +2585,7 @@ Graph *importSimplifiedGraph(char *filename)
 				printf
 				    ("ERROR: reading in graph - only %d items read for line '%s'",
 				     sCount, line);
+				abort();
 				exit(1);
 			}
 			if (getNodeInGraph(graph, nodeID)) {
@@ -2605,24 +2611,28 @@ Graph *importSimplifiedGraph(char *filename)
 		if (!readStartsAreActivated(graph))
 			activateReadStarts(graph);
 
-		graph->nodeReadCounts[nodeID + graph->nodeCount] =
-		    readCount;
-		array = mallocOrExit(readCount, ShortReadMarker);
-		graph->nodeReads[nodeID + graph->nodeCount] = array;
+		if (getNodeInGraph(graph, nodeID)) {
+			graph->nodeReadCounts[nodeID + graph->nodeCount] =
+			    readCount;
+			array = mallocOrExit(readCount, ShortReadMarker);
+			graph->nodeReads[nodeID + graph->nodeCount] = array;
+		}
 
 		readCount = 0;
 		if (!fgets(line, maxline, file))
 			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 		while (!finished && line[0] != 'N') {
-			sscanf(line, "%ld\t%lld\t%hd\n", &long_var,
-			       &longlong_var, &short_var);
-			seqID = (IDnum) long_var;
-			startOffset = (Coordinate) longlong_var;
-			length = (ShortLength) short_var;
-			array[readCount].readID = seqID;
-			array[readCount].position = startOffset;
-			array[readCount].offset = length;
-			readCount++;
+			if (getNodeInGraph(graph, nodeID)) {
+				sscanf(line, "%ld\t%lld\t%hd\n", &long_var,
+				       &longlong_var, &short_var);
+				seqID = (IDnum) long_var;
+				startOffset = (Coordinate) longlong_var;
+				length = (ShortLength) short_var;
+				array[readCount].readID = seqID;
+				array[readCount].position = startOffset;
+				array[readCount].offset = length;
+				readCount++;
+			}
 			if (fgets(line, maxline, file) == NULL)
 				finished = true;
 		}

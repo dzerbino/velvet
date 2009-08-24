@@ -1680,12 +1680,12 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 	    && abs_ID(getNodeID(oppositeNode)) < abs_ID(getNodeID(node))) {
 		distance -= getNodeLength(node) / 2;
 		distance -= getNodeLength(oppositeNode) / 2;
-		if (distance > 1) {
+		if (distance > 10) {
 			adjustShortReadsByLength(node, distance);
 			appendGap(node, distance, graph);
 		} else {
-			adjustShortReadsByLength(node, 1);
-			appendGap(node, 1, graph);
+			adjustShortReadsByLength(node, 10);
+			appendGap(node, 10, graph);
 		}
 
 		concatenateReadStarts(node, oppositeNode, graph);

@@ -76,6 +76,10 @@ sub read_stats {
   close IN;
 
   open IN, "$directory/Graph2"; 
+  $_ = <IN>;
+  chomp;
+  my @line = split m/\t/;
+  my $kmer = $line[2];
   my @insert_lengths;
   my %read_position = ();
   my %node_lengths = ();
@@ -105,7 +109,7 @@ sub read_stats {
 	
       if ($read_position{$read_pair{$read_no}} && $read_position{ $read_pair{ $read_no }}->[0] == $node) {
 	my $length = abs($read_pos - $read_off - $read_position{ $read_pair{ $read_no} }->[1]); 	
-	push @insert_lengths, int($length);
+	push @insert_lengths, $length + $kmer - 1;
       }
     }
   }

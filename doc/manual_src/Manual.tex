@@ -429,6 +429,8 @@ This fasta file contains the sequences of the contigs longer than $2k$, where $k
 
 Note that the length and coverage information provided in the header of each contig should therefore be understood in k-mers and in k-mer coverage (cf. \ref{sec:kmercov}) respectively.
 
+The N's in the sequence correspond to gaps between scaffolded contigs. The number of N's corresponds to the estimated length of the gap. For reasons of compatibility with the archives, any gap shorter than 10bp is represented by a sequence of 10 N's.
+
 \subsubsection{The stats.txt file}
 
 \label{sec:stats}
