@@ -38,8 +38,11 @@
 #
 #			$outfile: set this parameter to whatever output filename you want.
 #
+# Modified by Daniel Zerbino (Aug 28 2009) to display reverse strand reads in the 
+# snp_view_reads file and to better handle the display of snps near the end of contigs
 
 use strict;
+use List::Util qw[min max];
 
 my $outfile = "snp_view.txt";
 my $readlength = 50;
@@ -112,7 +115,9 @@ while(<IN>){
 }
 
 print OUT "Contig $con, position of X below is: $posn\n";
-my $wantSeq = substr($seq, $low, $high-$low);
+my $wantSeqStart = max($low, 0);
+my $wantSeqFinish = min($high, length $seq);
+my $wantSeq = substr($seq, $wantSeqStart, $wantSeqFinish - $wantSeqStart);
 print OUT "Position:\t\t$low";
 my $num_spaces = 2 * $readlength - length($low) -1;
 for(my $i = 0; $i < $num_spaces; $i ++){
@@ -123,7 +128,13 @@ for(my $i = 0; $i < $num_spaces; $i ++){
 	}
 }
 print OUT "$high\n";
-print OUT "Read #\t\tdir\t$wantSeq\n";
+print OUT "Read #\t\tdir\t";
+if ($low < 0) { 
+	for(my $i = 0; $i > $low; $i--){
+	print OUT ".";
+	}
+}
+print OUT "$wantSeq\n";
 print OUT2 ">Reference\n";
 print OUT2 "$wantSeq\n";
 close IN;
@@ -135,7 +146,7 @@ while(<IN>){
         $_ = <IN>;
         chomp;
         my @temp = split /:/, $_;
-        if($offs{$temp[1]}){
+        if(defined $offs{$temp[1]}){
             $_ = <IN>;
             $_ = <IN>;
             $_ = <IN>;
@@ -165,5 +176,7 @@ foreach my $key (sort { $offs{$a} <=> $offs{$b} } keys %offs){
         my $rev = reverse($seqs{$key});
         $rev =~ tr /ATCG/TAGC/;
         print OUT "$rev\n";
+        print OUT3 ">$key\n";
+        print OUT3 $seqs{$key} . "\n";
     }
 }

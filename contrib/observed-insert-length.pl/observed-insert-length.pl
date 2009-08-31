@@ -40,9 +40,17 @@ my $insert_lengths = read_stats($ARGV[0]);
 print_histogram($insert_lengths);
 my $ins_length_mode = math_mode($insert_lengths);
 my $ins_length_median = math_median($insert_lengths);
+my $ins_length_sd = math_sd($insert_lengths);
 print "Observed median insert length: $ins_length_median\n";
 print "Observed mode of insert length: $ins_length_mode\n";
-print "Suggested velvetg parameters: -ins_length $ins_length_median\n";
+print "Observed sample standard deviation: $ins_length_sd\n"; 
+if ($library == 1) {
+	$library = "";
+}
+if ($ins_length_sd == 0) {
+	$ins_length_sd = 1;
+}	
+print "Suggested velvetg parameters: -ins_length$library $ins_length_median -ins_length${library}_sd $ins_length_sd\n";
 
 # END
 
@@ -63,7 +71,7 @@ sub read_stats {
     next unless @x > 1;
     my $read_no = $x[@x - 2];
     my $read_cat = $x[@x - 1];
-    next unless $read_cat == 1;
+    next unless $read_cat == $library;
     if ($unmatched_read == 0) {
       $unmatched_read = $read_no;
     } else {
@@ -72,6 +80,8 @@ sub read_stats {
       $unmatched_read = 0;
     }
   }
+
+  die "No paired reads found for library ".($library/2 + 0.5)."\n" unless scalar(keys %read_pair) > 0;
 
   close IN;
 
@@ -137,6 +147,18 @@ sub math_median {
   my($array_ref) = @_;
   my @sorted = sort { $a <=> $b } @{$array_ref};
   return $sorted[int(@sorted/2)]; 
+}
+
+# Standard error of dataset
+
+sub math_sd {
+  my($array_ref) = @_;
+  my $mean = 0;
+  ($mean += $_) for @{$array_ref};
+  $mean /= @{$array_ref};
+  my $total = 0;
+  ($total += ($_ - $mean)**2) for @{$array_ref};
+  return sqrt ($total / @{$array_ref});
 }
 
 # Print a bar graph of an array of values

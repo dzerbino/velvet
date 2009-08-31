@@ -125,7 +125,6 @@ while($_){
         $line = <IN>;
         if($line =~ /^eid:$contig$/){
             #found the right scaffold..
-            print STDERR "\nFound the start of scaffold $contig\n";
 	    $contigString .= "{SCF\n";
             $contigString .= $line;
             while(<IN>){

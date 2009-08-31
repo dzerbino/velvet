@@ -58,6 +58,7 @@ static void velvetifySequence(char * str) {
 		switch (c) {
 		case '\n':
 		case '\r':
+		case EOF:
 			str[i] = '\0';
 			break;
 		case 'C':
@@ -669,7 +670,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 					fprintf(outfile, "\n");
 					offset = 0;
 				}
-				start += 60;
+				start += strlen(str);
 			}
 		}
 	}
@@ -740,15 +741,13 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 					fprintf(outfile, "\n");
 					offset = 0;
 				}
-				start += 60;
+				start += strlen(str);
 			}
 		}
 	}
 
 	if (offset != 0) 
 		fprintf(outfile, "\n");
-	fclose(file);
-
 	gzclose(file);
 
 	printf("%d sequences found\n", counter);
@@ -945,7 +944,11 @@ void pairUpReads(ReadSet * reads, Category cat)
 
 	for (index = 0; index < reads->readCount; index++) {
 		if (reads->categories[index] != cat) {
-			phase = 0;
+			if (phase == 1) {
+				reads->mateReads[index - 1] = -1;
+				reads->categories[index - 1]--;
+				phase = 0;
+			}
 		} else if (phase == 0) {
 			reads->mateReads[index] = index + 1;
 			phase = 1;

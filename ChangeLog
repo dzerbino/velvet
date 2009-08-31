@@ -180,3 +180,14 @@ V 0.7.51
 - Correction to the observed-insert-length script
 - Verified strncpy calls
 - NCBI friendly 10bp N-gaps
+
+V 0.7.52
+- Crashing bug when parsing fa.gz files
+- Crashing bug with tiny Graph files
+- Bug when loading FASTA files with short lines
+- Corrected snp_view.pl script to write reverse strand reads in snp_view_reads file
+- Corrected snp_view.pl script to behave better near the edges of contigs
+- Updated observed_insert_length to compute the standard deviation of the set
+- Corrected observed_insert_length script so that it does not crash on empty libraries
+- Crashing bug when providing an odd number of paired reads
+- Mapping bug of reads during tour bus correction

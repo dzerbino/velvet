@@ -2250,7 +2250,7 @@ Graph *importGraph(char *filename)
 	// Read nodes
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-	while (strncmp(line, "NODE", 4) == 0) {
+	while (!finished && strncmp(line, "NODE", 4) == 0) {
 		strtok(line, "\t\n");
 		sscanf(strtok(NULL, "\t\n"), "%ld", &long_var);
 		nodeID = (IDnum) long_var;
@@ -2898,66 +2898,90 @@ TightString *expandNode(Node * node, int WORDLENGTH)
 }
 
 char *expandNodeFragment(Node * node, Coordinate contigStart,
-			 Coordinate contigFinish, int WORDLENGTH)
+			 Coordinate contigFinish, int wordLength)
 {
 	Nucleotide nucleotide;
 	Coordinate index;
 	Node *twin = node->twinNode;
 	Coordinate length = contigFinish - contigStart;
-	char *string = callocOrExit(length + WORDLENGTH, char);
+	int wordShift = wordLength - 1;
+	char *string;
 
-	if (length < WORDLENGTH - 1) {
-		puts("Overly short contig!");
-		abort();
-	}
+	if (length >= wordShift) {
+		string = callocOrExit(length + wordLength, char);
 
-	for (index = 0; index < WORDLENGTH; index++) {
-		nucleotide =
-		    getNucleotideInDescriptor(twin->descriptor,
-					      twin->length - contigStart -
-					      index - 1);
-#ifndef COLOR
-		nucleotide = 3 - nucleotide;
-#endif
+		for (index = 0; index < wordShift; index++) {
+			nucleotide =
+			    getNucleotideInDescriptor(twin->descriptor,
+						      twin->length - contigStart -
+						      index - 1);
+	#ifndef COLOR
+			nucleotide = 3 - nucleotide;
+	#endif
 
-		switch (nucleotide) {
-		case ADENINE:
-			string[index] = 'A';
-			break;
-		case CYTOSINE:
-			string[index] = 'C';
-			break;
-		case GUANINE:
-			string[index] = 'G';
-			break;
-		case THYMINE:
-			string[index] = 'T';
-			break;
+			switch (nucleotide) {
+			case ADENINE:
+				string[index] = 'A';
+				break;
+			case CYTOSINE:
+				string[index] = 'C';
+				break;
+			case GUANINE:
+				string[index] = 'G';
+				break;
+			case THYMINE:
+				string[index] = 'T';
+				break;
+			}
+
 		}
 
-	}
-
-	for (index = 1; index < length; index++) {
-		nucleotide =
-		    getNucleotideInDescriptor(node->descriptor,
-					      contigStart + index);
-		switch (nucleotide) {
-		case ADENINE:
-			string[index + WORDLENGTH - 1] = 'A';
-			break;
-		case CYTOSINE:
-			string[index + WORDLENGTH - 1] = 'C';
-			break;
-		case GUANINE:
-			string[index + WORDLENGTH - 1] = 'G';
-			break;
-		case THYMINE:
-			string[index + WORDLENGTH - 1] = 'T';
-			break;
+		for (index = 0; index < length; index++) {
+			nucleotide =
+			    getNucleotideInDescriptor(node->descriptor,
+						      contigStart + index);
+			switch (nucleotide) {
+			case ADENINE:
+				string[index + wordShift] = 'A';
+				break;
+			case CYTOSINE:
+				string[index + wordShift] = 'C';
+				break;
+			case GUANINE:
+				string[index + wordShift] = 'G';
+				break;
+			case THYMINE:
+				string[index + wordShift] = 'T';
+				break;
+			}
 		}
+
+		string[length + wordShift] = '\0';
+	} else {
+		string = callocOrExit(length + 1, char);
+
+		for (index = 0; index < length; index++) {
+			nucleotide =
+			    getNucleotideInDescriptor(node->descriptor, contigStart + index);
+			switch (nucleotide) {
+			case ADENINE:
+				string[index] = 'A';
+				break;
+			case CYTOSINE:
+				string[index] = 'C';
+				break;
+			case GUANINE:
+				string[index] = 'G';
+				break;
+			case THYMINE:
+				string[index] = 'T';
+				break;
+			}
+		}
+
+		string[length] = '\0';
 	}
 
-	string[length + WORDLENGTH - 1] = '\0';
 	return string;
 }
 
@@ -3216,6 +3240,7 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 	ShortReadMarker *mergeArray, *sourceArray, *newArray;
 	ShortReadMarker *mergePtr, *sourcePtr, *newPtr;
 	Coordinate finish;
+	Coordinate revBreakpoint;
 
 	if (graph->nodeReads == NULL) {
 		*length = 0;
@@ -3244,7 +3269,7 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 		return NULL;
 	}
 
-	breakpoint = node->length - breakpoint;
+	revBreakpoint = node->length - breakpoint;
 
 	mergeLength = 0;
 	newLength = 0;
@@ -3257,9 +3282,9 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 			finish =
 			    sourcePtr->position - sourcePtr->offset +
 			    lengths[sourcePtr->readID - 1];
-			if (sourcePtr->position < breakpoint)
+			if (sourcePtr->position < revBreakpoint)
 				newLength++;
-			if (finish > breakpoint)
+			if (finish > revBreakpoint)
 				mergeLength++;
 		}
 		sourcePtr++;
@@ -3289,7 +3314,7 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 			finish =
 			    sourcePtr->position - sourcePtr->offset +
 			    lengths[sourcePtr->readID - 1];
-			if (sourcePtr->position < breakpoint) {
+			if (sourcePtr->position < revBreakpoint) {
 				newPtr->readID = sourcePtr->readID;
 				setShortReadMarkerPosition(newPtr,
 							   sourcePtr->
@@ -3301,7 +3326,7 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 				newLength++;
 
 				// Saddle back reads:
-				if (finish > breakpoint) {
+				if (finish > revBreakpoint) {
 					mergePtr->readID =
 					    sourcePtr->readID;
 					setShortReadMarkerPosition
@@ -3309,17 +3334,17 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 					setShortReadMarkerOffset(mergePtr,
 								 sourcePtr->
 								 offset +
-								 breakpoint
+								 revBreakpoint
 								 -
 								 sourcePtr->
 								 position);
 					mergePtr++;
 				}
-			} else if (finish > breakpoint) {
+			} else if (finish > revBreakpoint) {
 				mergePtr->readID = sourcePtr->readID;
 				setShortReadMarkerPosition(mergePtr,
 							   sourcePtr->
-							   position);
+							   position - revBreakpoint);
 				setShortReadMarkerOffset(mergePtr,
 							 sourcePtr->
 							 offset);
