@@ -1449,6 +1449,92 @@ Coordinate n50(Graph * graph)
 	return getNodeLength(node);
 }
 
+static Coordinate getTotalCoverage(Node * node)
+{
+	Category cat;
+	Coordinate coverage = 0;
+
+	for (cat = 0; cat < CATEGORIES; cat++)
+		coverage += getVirtualCoverage(node, cat);
+
+	return coverage;
+}
+
+int compareNodeCovs(const void * A, const void * B) {
+	Node * nodeA = *((Node **) A);
+	Node * nodeB = *((Node **) B);
+	double covA;
+	double covB;
+	
+	if (getNodeLength(nodeA) == 0)
+		nodeA = NULL;
+
+	if (getNodeLength(nodeB) == 0)
+		nodeB = NULL;
+
+	// Null nodes considered to have infinite coverage
+	if (nodeA == NULL && nodeB == NULL)
+		return 0;
+	if (nodeA == NULL)
+		return 1;
+	if (nodeB == NULL)
+		return -1;
+
+	// Deal with real coverage numbers:
+	covA = getTotalCoverage(nodeA) / (double) getNodeLength(nodeA);	
+	covB = getTotalCoverage(nodeB) / (double) getNodeLength(nodeB);	
+
+	if (covA > covB)
+		return 1;
+	if (covA == covB)
+		return 0;
+	return 1;
+}
+
+double estimated_cov(Graph * graph)
+{
+	Node ** nodeArray = callocOrExit(nodeCount(graph), Node*); 
+	IDnum index;
+	Coordinate halfTotalLength = 0;
+	Coordinate sumLength = 0;
+	Node *node;
+
+	puts("Measuring median coverage depth...");
+
+	if (nodeCount(graph) == 0) {
+		puts("EMPTY GRAPH");
+		return 0;
+	}
+
+	// Write nodes into array and compute total assembly length
+	for (index = 1; index <= nodeCount(graph); index++) {
+		node = getNodeInGraph(graph, index);
+		nodeArray[index - 1] = node;
+		if (node == NULL)
+			continue;
+		halfTotalLength += getNodeLength(node);
+	}
+	halfTotalLength /= 2;
+
+	// Sort nodes
+	qsort(nodeArray, nodeCount(graph), sizeof(Node *), compareNodeCovs);
+
+	// Compute the length weighted median node coverage
+	for (index = 0; index < nodeCount(graph); index++) {
+		node = nodeArray[index];
+		sumLength += getNodeLength(node);
+		if (sumLength >= halfTotalLength) {
+			printf("Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
+			free(nodeArray);
+			return getTotalCoverage(node) / (double) getNodeLength(node);
+		}
+	}
+
+	// In case something went wrong...
+	free(nodeArray);
+	return -1;
+}
+
 static void destroyMixedNode(Node * node)
 {
 	PassageMarker *marker = getMarker(node);
@@ -1928,17 +2014,6 @@ void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
 	exportSequenceArray(filename, sequences, reads->readCount);
 }
 
-static Coordinate getTotalCoverage(Node * node)
-{
-	Category cat;
-	Coordinate coverage = 0;
-
-	for (cat = 0; cat < CATEGORIES; cat++)
-		coverage += getVirtualCoverage(node, cat);
-
-	return coverage;
-}
-
 boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 						       double minCov)
 {
@@ -1951,6 +2026,8 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 	IDnum maxIndex;
 	IDnum readID;
 	IDnum index2;
+
+	printf("Removing contigs with coverage < %f...\n", minCov);
 		
 	if (denounceReads)
 		res = callocOrExit(sequenceCount(graph), boolean);

@@ -937,10 +937,11 @@ void createReadPairingArray(ReadSet* reads) {
 	reads->mateReads = mateReads;
 }
 
-void pairUpReads(ReadSet * reads, Category cat)
+boolean pairUpReads(ReadSet * reads, Category cat)
 {
 	int phase = 0;
 	IDnum index;
+	boolean found = false;
 
 	for (index = 0; index < reads->readCount; index++) {
 		if (reads->categories[index] != cat) {
@@ -950,13 +951,17 @@ void pairUpReads(ReadSet * reads, Category cat)
 				phase = 0;
 			}
 		} else if (phase == 0) {
+			found = true;
 			reads->mateReads[index] = index + 1;
 			phase = 1;
 		} else {
+			found = true;
 			reads->mateReads[index] = index - 1;
 			phase = 0;
 		}
 	}
+
+	return found;
 }
 
 void detachDubiousReads(ReadSet * reads, boolean * dubiousReads)

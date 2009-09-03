@@ -32,6 +32,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "roadMap.h"
 #include "splayTable.h"
 #include "graph.h"
+#include "scaffold.h"
 
 // PreGraph operations
 #include "preGraph.h"

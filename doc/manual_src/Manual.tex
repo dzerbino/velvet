@@ -26,19 +26,28 @@
 
 > ./velveth sillyDirectory 21 -shortPaired data/test_reads.fa
 > ./velvetg sillyDirectory
-	(Final graph has 16 nodes and n50 of 24184 max 44966)
+	(Final graph has 16 nodes and n50 of 24184, max 44966, total 100080, using 0/142858 reads)
 > less sillyDirectory/stats.txt
 
 > ./velvetg sillyDirectory -cov_cutoff 5 -read_trkg yes -amos_file yes
-	(Final graph has 1 nodes and n50 of 99975 max 99975)
+	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, using 135862/142858 reads)
 > less sillyDirectory/velvet_asm.afg
 
+> ./velvetg sillyDirectory -cov_cutoff auto
+	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, using 0/142858 reads)
+
 > ./velvetg sillyDirectory -exp_cov 19 -ins_length 100
-	(Final graph has 12 nodes and n50 of 99975 max 99975)
+	(Final graph has 12 nodes and n50 of 99975, max 99975, total 100165, using 135855/142858 reads)
+	
+> ./velvetg sillyDirectory -exp_cov auto
+	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, using 135862/142858 reads)
 
 > ./velveth sillyDirectory 21 -short data/test_reads.fa -long data/test_long.fa
 > ./velvetg sillyDirectory -exp_cov 19
-	(Final graph has 2 nodes and n50 of 99893 max 99893)
+	(Final graph has 10 nodes and n50 of 80927, max 80927, total 100122, using 137863/144858 reads)
+	
+> ./velvetg sillyDirectory -exp_cov auto
+	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, using 137862/144858 reads)
 
 \end{verbatim}
 
@@ -238,18 +247,36 @@ On the other hand, if you want to exclude highly covered data from your assembly
 > ./velvetg output_directory/ -max_coverage 300 (... other parameters ...)
 \end{verbatim}
 
+The coverage cutoff can also be set automatically to half the length weighted median contig coverage depth. Although you may wish to optimise this parameter in further iterations, this option allows you to quickly obtain a decent assembly in your first run. To do so, type:
+
+\begin{verbatim}
+> ./velvetg output_directory/ -cov_cutoff auto
+\end{verbatim}
+
+Note that typing $-exp\_cov$ $auto$ (cf. next subsection) is equivalent to typing $-exp\_cov$ $auto$ $-cov\_cutoff$ $auto$, unless you decide to manually set the coverage cutoff. On the contrary, $-cov\_cutoff$ $auto$ does not affect the expected coverage setting.
+
 	\subsubsection{Adding long reads}
 	
 \textbf{Reminder:} you must have flagged your long reads as such when running
 velveth (cf. \ref{sec:hashing}).
 	
-If you have a sufficient coverage of short reads, and any quantity of long reads (obviously the more the coverage and the longer the reads, the better), you can use the long reads to resolve repeats in a greedy fashion. 
+If you have a sufficient coverage of short reads, and any quantity of long reads (obviously the deeper the coverage and the longer the reads, the better), you can use the long reads to resolve repeats in a greedy fashion. 
 
 To do this, Velvet needs to have a reasonable estimate of the expected coverage \emph{in short reads} of unique sequence (see \ref{sec:kmercov} for a definition of k-mer coverage). The simplest way to obtain this value is simply to observe the distribution of contig coverages (as described in \ref{sec:expcov}), and see around which value the coverages of nodes seem to cluster (especially the longer nodes in your dataset). Supposing the expected coverage is 19x, them you indicate it with the $exp\_cov$ marker:
 
 \begin{verbatim}
 > ./velvetg output_directory/ -exp_cov 19 (... other parameters ...)
 \end{verbatim}
+
+If you have reasons to believe that the coverage is reasonably uniform over your sample, you can request that Velvet estimate it for you, by typing:
+
+\begin{verbatim}
+> ./velvetg output_directory/ -exp_cov auto (... other parameters ...)
+\end{verbatim}
+
+This will set $exp\_cov$ to the length weighted median contig coverage, and $cov\_cutoff$ to half that value (unless you override it with a manual setting).
+
+\textbf{Caveat emptor:} if this option is used on datasets with very heterogeneous coverage (e.g. transcriptomes, ChIP-seq, etc) then the results are simply unpredictable, and mis-assemblies are to be expected. This option is intended mainly for standard genomic sequencing.
 
 	\subsubsection{Paired-ends reads}
 
@@ -269,6 +296,20 @@ If you happen to have hashed paired long reads and you ordered them as explained
 > ./velvetg output_directory/ -exp_cov 21 -ins_length_long 40000 
 		 (... other parameters ...)
 \end{verbatim}
+
+As with long reads, if you have reasons to believe that the coverage is reasonably uniform over your sample, you can request that Velvet estimate it for you, by typing:
+
+\begin{verbatim}
+> ./velvetg output_directory/ -exp_cov auto (... other parameters ...)
+\end{verbatim}
+
+This will set $exp\_cov$ to the length weighted median contig coverage, and $cov\_cutoff$ to half that value (unless you override it with a manual setting).
+
+\textbf{Caveat emptor:} if this option is used on datasets with very heterogeneous coverage (e.g. transcriptomes, ChIP-seq, etc) then the results are simply unpredictable, and mis-assemblies are to be expected. This option is intended mainly for standard genomic sequencing.
+
+\textbf{Automatically measuring the insert length} 
+
+If the insert length of a library is unspecified, Velvet will attempt to measure it for you, based on the read-pairs which happen to map onto a common node. The corresponding $ins\_length*$ and $ins_length*\_sd$ parameters are thus set for you. This option is designed as a convenience if your assembly is initially good enough to provide long contigs to bootstrap the process. If that is not the case, the library insert length will be determined from a small sample size, and is liable to produce a poor estimate. You should check the Velvet console output to make sure the insert length estimates are not absurd.
 
 \textbf{Scaffolding} By default, Velvet will try to scaffold contigs that it cannot quite connect. This results in sequences of \emph{N}s in the contigs.fa file, which correspond to the estimated distance between two neighbouring contigs. If you do not want this scaffolding, you can turn it off with the following switch:
 

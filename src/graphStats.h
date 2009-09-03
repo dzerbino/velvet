@@ -49,6 +49,8 @@ IDnum nodeMultiplicity(Node * node);
 
 Coordinate n50(Graph * graph);
 
+double estimated_cov(Graph * graph);
+
 Coordinate maxLength(Graph * graph);
 
 boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,

@@ -32,12 +32,14 @@ static void printUsage()
 	puts("\tdirectory\t\t\t: working directory name");
 	puts("");
 	puts("Standard options:");
-	puts("\t-cov_cutoff <floating-point>\t: removal of low coverage nodes AFTER tour bus (default: no removal)");
+	puts("\t-cov_cutoff <floating-point|auto>\t: removal of low coverage nodes AFTER tour bus or allow the system to infer it");
+	puts("\t\t(default: no removal)");
 	puts("\t-ins_length <integer>\t\t: expected distance between two paired end reads (default: no read pairing)");
 	puts("\t-read_trkg <yes|no>\t\t: tracking of short read positions in assembly (default: no tracking)");
 	puts("\t-min_contig_lgth <integer>\t: minimum contig length exported to contigs.fa file (default: hash length * 2)");
 	puts("\t-amos_file <yes|no>\t\t: export assembly to AMOS file (default: no export)");
-	puts("\t-exp_cov <floating point>\t: expected coverage of unique regions (default: no long or paired-end read resolution)");
+	puts("\t-exp_cov <floating point|auto>\t: expected coverage of unique regions or allow the system to infer it");
+	puts("\t\t(default: no long or paired-end read resolution)");
 	puts("");
 	puts("Advanced options:");
 	puts("\t-ins_length2 <integer>\t\t: expected distance between two paired-end reads in the second short-read dataset (default: no read pairing)");
@@ -83,6 +85,8 @@ int main(int argc, char **argv)
 	boolean readTracking = false;
 	boolean exportAssembly = false;
 	boolean unusedReads = false;
+	boolean estimateCoverage = false;
+	boolean estimateCutoff = false;
 	FILE *file;
 	int arg_index, arg_int;
 	double arg_double;
@@ -139,11 +143,20 @@ int main(int argc, char **argv)
 		}
 
 		if (strcmp(arg, "-cov_cutoff") == 0) {
-			sscanf(argv[arg_index], "%lf", &coverageCutoff);
+			if (strcmp(argv[arg_index], "auto") == 0) {
+				estimateCutoff = true;
+			} else {
+				sscanf(argv[arg_index], "%lf", &coverageCutoff);
+			}
 		} else if (strcmp(arg, "-exp_cov") == 0) {
-			sscanf(argv[arg_index], "%lf", &expectedCoverage);
-			if (expectedCoverage > 0)
+			if (strcmp(argv[arg_index], "auto") == 0) {
+				estimateCoverage = true;
 				readTracking = true;
+			} else {
+				sscanf(argv[arg_index], "%lf", &expectedCoverage);
+				if (expectedCoverage > 0)
+					readTracking = true;
+			}
 		} else if (strcmp(arg, "-ins_length") == 0) {
 			sscanf(argv[arg_index], "%lli", &longlong_var);
 			insertLength[0] = (Coordinate) longlong_var;
@@ -322,6 +335,20 @@ int main(int argc, char **argv)
 			 insertLengthLong, std_dev_long);
 
 	// Coverage cutoff
+	if (expectedCoverage < 0 && estimateCoverage == true) {
+		expectedCoverage = estimated_cov(graph);
+		if (coverageCutoff < 0) {
+			coverageCutoff = expectedCoverage / 2;
+			estimateCutoff = true;
+		}
+	} else { 
+		estimateCoverage = false;
+		if (coverageCutoff < 0 && estimateCutoff) 
+			coverageCutoff = estimated_cov(graph) / 2;
+		else 
+			estimateCutoff = false;
+	}
+
 	if (coverageCutoff < 0) {
 		puts("WARNING: NO COVERAGE CUTOFF PROVIDED");
 		puts("Velvet will probably leave behind many detectable errors");
@@ -345,17 +372,12 @@ int main(int argc, char **argv)
 
 		// Paired ends module
 		createReadPairingArray(sequences);
-		for (cat = 0; cat < CATEGORIES; cat++) {
-			if (insertLength[cat] > -1) {
-				pairUpReads(sequences, 2 * cat + 1);
+		for (cat = 0; cat < CATEGORIES; cat++) 
+			if(pairUpReads(sequences, 2 * cat + 1))
 				pebbleRounds++;
-			}
-		}
 
-		if (insertLengthLong > -1) {
-			pairUpReads(sequences, 2 * CATEGORIES + 1);
+		if (pairUpReads(sequences, 2 * CATEGORIES + 1))
 			pebbleRounds++;
-		}
 
 		detachDubiousReads(sequences, dubious);
 		activateGapMarkers(graph);
@@ -399,9 +421,15 @@ int main(int argc, char **argv)
 		exportAMOSContigs(graphFilename, graph, minContigKmerLength, sequences);
 	}
 
-	logFinalStats(graph, minContigKmerLength, directory);
 	if (unusedReads)
 		exportUnusedReads(graph, sequences, minContigKmerLength, directory);
+
+	if (estimateCoverage) 
+		printf("Estimated Coverage = %f\n", expectedCoverage);
+	if (estimateCutoff) 
+		printf("Estimated Coverage cutoff = %f\n", coverageCutoff);
+
+	logFinalStats(graph, minContigKmerLength, directory);
 
 	destroyGraph(graph);
 	free(graphFilename);

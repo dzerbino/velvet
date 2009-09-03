@@ -27,7 +27,4 @@ void detachImprobablePairs(ReadSet * sequences, Graph * graph);
 void handicapNode(Node * node);
 NodeList *getMarkedNodeList();
 
-// Hocus pocus
-void setUnreliableConnectionCutoff(int val);
-
 #endif

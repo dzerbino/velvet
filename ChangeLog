@@ -191,3 +191,8 @@ V 0.7.52
 - Corrected observed_insert_length script so that it does not crash on empty libraries
 - Crashing bug when providing an odd number of paired reads
 - Mapping bug of reads during tour bus correction
+
+V 0.7.53
+- Ignored reads in Pebble corrected
+- Added automatic measure of median coverage and median insert length
+- Updated manual to cover the above

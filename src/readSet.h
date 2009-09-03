@@ -61,7 +61,7 @@ void logInstructions(int argc, char **argv, char *directory);
 
 // Read pairing info
 void createReadPairingArray(ReadSet* reads);
-void pairUpReads(ReadSet * reads, Category cat);
+boolean pairUpReads(ReadSet * reads, Category cat);
 void detachDubiousReads(ReadSet * reads, boolean * dubiousReads);
 
 void destroyReadSet(ReadSet * reads);

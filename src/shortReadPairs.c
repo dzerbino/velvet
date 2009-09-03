@@ -31,25 +31,13 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "passageMarker.h"
 #include "readSet.h"
 #include "utility.h"
+#include "scaffold.h"
 
 #define BLOCK_SIZE  100000
 #define LN2 1.4
 #define BACKTRACK_CUTOFF 100
 
-typedef struct connection_st Connection;
 typedef struct miniConnection_st MiniConnection;
-typedef struct readOccurence_st ReadOccurence;
-
-struct connection_st {
-	Node *destination;
-	Connection *next;
-	Connection *previous;
-	Connection *twin;
-	Coordinate distance;
-	double variance;
-	IDnum direct_count;
-	IDnum paired_count;
-};
 
 struct miniConnection_st {
 	Coordinate distance;
@@ -59,37 +47,12 @@ struct miniConnection_st {
 	NodeList *nodeList;
 };
 
-struct readOccurence_st {
-	Coordinate position;
-	Coordinate offset;
-	IDnum nodeID;
-};
-
-// Global params
-static Graph *graph;
-static ReadSet *reads;
-static RecycleBin *connectionMemory = NULL;
-static RecycleBin *nodeListMemory = NULL;
-static IDnum UNRELIABLE_CONNECTION_CUTOFF = 10;
 
 // Global pointers
+static Graph *graph;
 static NodeList *markedNodes;
-static Connection **scaffold = NULL;
+static RecycleBin *nodeListMemory = NULL;
 static MiniConnection *localScaffold = NULL;
-
-static Connection *allocateConnection()
-{
-	if (connectionMemory == NULL)
-		connectionMemory =
-		    newRecycleBin(sizeof(Connection), BLOCK_SIZE);
-
-	return allocatePointer(connectionMemory);
-}
-
-static void deallocateConnection(Connection * connect)
-{
-	deallocatePointer(connectionMemory, connect);
-}
 
 static NodeList *allocateNodeList()
 {
@@ -160,113 +123,6 @@ static Node *popNodeRecord()
 	return node;
 }
 
-static double norm(double X)
-{
-	return 0.4 * exp(-X * X / 2);
-}
-
-static double normInt(double X, double Y)
-{
-	return (erf(0.7 * Y) - erf(0.7 * X)) / 2;
-}
-
-static IDnum expectedNumberOfConnections(IDnum IDA, Connection * connect,
-					 IDnum ** counts, Category cat)
-{
-	Node *A = getNodeInGraph(graph, IDA);
-	Node *B = connect->destination;
-	double left, middle, right;
-	Coordinate longLength, shortLength, D;
-	IDnum longCount;
-	double M, N, O, P;
-	Coordinate mu = getInsertLength(graph, cat);
-	double sigma = sqrt(getInsertLength_var(graph, cat));
-	double result;
-
-	if (mu <= 0)
-		return 0;
-
-	if (getNodeLength(A) < getNodeLength(B)) {
-		longLength = getNodeLength(B);
-		shortLength = getNodeLength(A);
-		longCount = counts[cat][getNodeID(B) + nodeCount(graph)];
-	} else {
-		longLength = getNodeLength(A);
-		shortLength = getNodeLength(B);
-		longCount = counts[cat][IDA + nodeCount(graph)];
-	}
-
-	D = connect->distance - (longLength + shortLength) / 2;
-
-	M = (D - mu) / sigma;
-	N = (D + shortLength - mu) / sigma;
-	O = (D + longLength - mu) / sigma;
-	P = (D + shortLength + longLength - mu) / sigma;
-
-	left = ((norm(M) - norm(N)) - M * normInt(M, N)) * sigma;
-	middle = shortLength * normInt(N, O);
-	right = ((norm(O) - norm(P)) - P * normInt(O, P)) * (-sigma);
-
-	result = (longCount * (left + middle + right)) / longLength;
-
-	if (result > 0)
-		return (IDnum) result;
-	else
-		return 0;
-}
-
-static void destroyConnection(Connection * connect, IDnum nodeID)
-{
-	Connection *previous, *next;
-
-	//printf("Destroying connection from %li to %li\n", nodeID, getNodeID(connect->destination));
-
-	if (connect == NULL)
-		return;
-
-	previous = connect->previous;
-	next = connect->next;
-
-	if (previous != NULL)
-		previous->next = next;
-	if (next != NULL)
-		next->previous = previous;
-
-	if (scaffold[nodeID + nodeCount(graph)] == connect)
-		scaffold[nodeID + nodeCount(graph)] = next;
-
-	if (connect->twin != NULL) {
-		connect->twin->twin = NULL;
-		destroyConnection(connect->twin,
-				  getNodeID(connect->destination));
-	}
-
-	deallocateConnection(connect);
-}
-
-static boolean testConnection(IDnum IDA, Connection * connect,
-			      IDnum ** counts)
-{
-	IDnum total = 0;
-	Category cat;
-
-	// Spare unique -> undetermined node connections
-	if (!getUniqueness(connect->destination))
-		return true;
-
-	// Destroy tenuous connections
-	if (connect->paired_count + connect->direct_count <
-	    UNRELIABLE_CONNECTION_CUTOFF)
-		return false;
-
-	for (cat = 0; cat <= CATEGORIES; cat++)
-		total +=
-		    expectedNumberOfConnections(IDA, connect, counts, cat);
-
-	// Remove inconsistent connections
-	return connect->paired_count >= total / 10;
-}
-
 void detachImprobablePairs(ReadSet * sequences)
 {
 	IDnum index, nodeIndex;
@@ -306,507 +162,6 @@ void detachImprobablePairs(ReadSet * sequences)
 			}
 		}
 	}
-}
-
-static IDnum *computeReadToNodeCounts()
-{
-	IDnum readIndex, nodeIndex;
-	IDnum maxNodeIndex = 2 * nodeCount(graph) + 1;
-	IDnum maxReadIndex = sequenceCount(graph) + 1;
-	IDnum *readNodeCounts = callocOrExit(maxReadIndex, IDnum);
-	boolean *readMarker = callocOrExit(maxReadIndex, boolean);
-	ShortReadMarker *nodeArray, *shortMarker;
-	PassageMarker *marker;
-	Node *node;
-	IDnum nodeReadCount;
-
-	puts("Computing read to node mapping array sizes");
-
-	for (nodeIndex = 0; nodeIndex < maxNodeIndex; nodeIndex++) {
-		node = getNodeInGraph(graph, nodeIndex - nodeCount(graph));
-		if (node == NULL)
-			continue;
-		nodeArray = getNodeReads(node, graph);
-		nodeReadCount = getNodeReadCount(node, graph);
-
-		// Short reads
-		for (readIndex = 0; readIndex < nodeReadCount; readIndex++) {
-			shortMarker =
-			    getShortReadMarkerAtIndex(nodeArray,
-						      readIndex);
-			readNodeCounts[getShortReadMarkerID
-				       (shortMarker)]++;
-		}
-
-		// Long reads
-		for (marker = getMarker(node); marker != NULL;
-		     marker = getNextInNode(marker)) {
-			readIndex = getPassageMarkerSequenceID(marker);
-			if (readIndex < 0)
-				continue;
-
-			if (readMarker[readIndex])
-				continue;
-
-			readNodeCounts[readIndex]++;
-			readMarker[readIndex] = true;
-		}
-
-		// Clean up marker array
-		for (marker = getMarker(node); marker != NULL;
-		     marker = getNextInNode(marker)) {
-			readIndex = getPassageMarkerSequenceID(marker);
-			if (readIndex > 0)
-				readMarker[readIndex] = false;
-		}
-	}
-
-	free(readMarker);
-	return readNodeCounts;
-}
-
-static ReadOccurence **allocateReadToNodeTables(IDnum * readNodeCounts)
-{
-	IDnum readIndex;
-	IDnum maxReadIndex = sequenceCount(graph) + 1;
-	ReadOccurence **readNodes =
-	    callocOrExit(maxReadIndex, ReadOccurence *);
-
-	for (readIndex = 1; readIndex < maxReadIndex; readIndex++) {
-		if (readNodeCounts[readIndex] != 0) {
-			readNodes[readIndex] =
-			    callocOrExit(readNodeCounts[readIndex],
-				   ReadOccurence);
-			readNodeCounts[readIndex] = 0;
-		}
-	}
-
-	return readNodes;
-}
-
-static void computePartialReadToNodeMapping(IDnum nodeID,
-					    ReadOccurence ** readNodes,
-					    IDnum * readNodeCounts,
-					    boolean * readMarker)
-{
-	ShortReadMarker *shortMarker;
-	IDnum index, readIndex;
-	ReadOccurence *readArray, *readOccurence;
-	Node *node = getNodeInGraph(graph, nodeID);
-	ShortReadMarker *nodeArray = getNodeReads(node, graph);
-	IDnum nodeReadCount = getNodeReadCount(node, graph);
-	PassageMarker *marker;
-
-	for (index = 0; index < nodeReadCount; index++) {
-		shortMarker = getShortReadMarkerAtIndex(nodeArray, index);
-		readIndex = getShortReadMarkerID(shortMarker);
-		readArray = readNodes[readIndex];
-		readOccurence = &readArray[readNodeCounts[readIndex]];
-		readOccurence->nodeID = nodeID;
-		readOccurence->position =
-		    getShortReadMarkerPosition(shortMarker);
-		readOccurence->offset =
-		    getShortReadMarkerOffset(shortMarker);
-		readNodeCounts[readIndex]++;
-	}
-
-	for (marker = getMarker(node); marker != NULL;
-	     marker = getNextInNode(marker)) {
-		readIndex = getPassageMarkerSequenceID(marker);
-		if (readIndex < 0)
-			continue;
-
-		if (!readMarker[readIndex]) {
-			readArray = readNodes[readIndex];
-			readOccurence =
-			    &readArray[readNodeCounts[readIndex]];
-			readOccurence->nodeID = nodeID;
-			readOccurence->position = getStartOffset(marker);
-			readOccurence->offset =
-			    getPassageMarkerStart(marker);
-			readNodeCounts[readIndex]++;
-			readMarker[readIndex] = true;
-		} else {
-			readArray = readNodes[readIndex];
-			readOccurence =
-			    &readArray[readNodeCounts[readIndex] - 1];
-			readOccurence->position = -1;
-			readOccurence->offset = -1;
-		}
-	}
-
-	for (marker = getMarker(node); marker != NULL;
-	     marker = getNextInNode(marker)) {
-		readIndex = getPassageMarkerSequenceID(marker);
-		if (readIndex > 0)
-			readMarker[readIndex] = false;
-	}
-}
-
-static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts)
-{
-	IDnum nodeID;
-	IDnum nodes = nodeCount(graph);
-	ReadOccurence **readNodes =
-	    allocateReadToNodeTables(readNodeCounts);
-	boolean *readMarker =
-	    callocOrExit(sequenceCount(graph) + 1, boolean);
-
-	puts("Computing read to node mappings");
-
-	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
-		if (nodeID != 0 && getNodeInGraph(graph, nodeID))
-			computePartialReadToNodeMapping(nodeID, readNodes,
-							readNodeCounts,
-							readMarker);
-
-	free(readMarker);
-	return readNodes;
-}
-
-static Connection *findConnection(IDnum nodeID, IDnum node2ID)
-{
-	Node *node2 = getNodeInGraph(graph, node2ID);
-	Connection *connect;
-
-	if (node2 == NULL)
-		return NULL;
-
-	for (connect = scaffold[nodeID + nodeCount(graph)];
-	     connect != NULL; connect = connect->next)
-		if (connect->destination == node2)
-			break;
-
-	return connect;
-}
-
-static void createTwinConnection(IDnum nodeID, IDnum node2ID,
-				 Connection * connect)
-{
-	Connection *newConnection = allocateConnection();
-	IDnum nodeIndex = nodeID + nodeCount(graph);
-
-	// Fill in
-	newConnection->distance = connect->distance;
-	newConnection->variance = connect->variance;
-	newConnection->direct_count = connect->direct_count;
-	newConnection->paired_count = connect->paired_count;
-	newConnection->destination = getNodeInGraph(graph, node2ID);
-
-	// Batch to twin
-	newConnection->twin = connect;
-	connect->twin = newConnection;
-
-	// Insert in scaffold
-	newConnection->previous = NULL;
-	newConnection->next = scaffold[nodeIndex];
-	if (scaffold[nodeIndex] != NULL)
-		scaffold[nodeIndex]->previous = newConnection;
-	scaffold[nodeIndex] = newConnection;
-}
-
-static Connection *createNewConnection(IDnum nodeID, IDnum node2ID,
-				       IDnum direct_count,
-				       IDnum paired_count,
-				       Coordinate distance,
-				       double variance)
-{
-	Node *destination = getNodeInGraph(graph, node2ID);
-	IDnum nodeIndex = nodeID + nodeCount(graph);
-	Connection *connect = allocateConnection();
-
-	// Fill in 
-	connect->destination = destination;
-	connect->direct_count = direct_count;
-	connect->paired_count = paired_count;
-	connect->distance = distance;
-	connect->variance = variance;
-
-	// Insert in scaffold
-	connect->previous = NULL;
-	connect->next = scaffold[nodeIndex];
-	if (scaffold[nodeIndex] != NULL)
-		scaffold[nodeIndex]->previous = connect;
-	scaffold[nodeIndex] = connect;
-
-	// Event. pair up to twin
-	if (getUniqueness(destination))
-		createTwinConnection(node2ID, nodeID, connect);
-	else
-		connect->twin = NULL;
-
-	return connect;
-}
-
-static void readjustConnection(Connection * connect, Coordinate distance,
-			       double variance, IDnum direct_count,
-			       IDnum paired_count)
-{
-	connect->direct_count += direct_count;
-	connect->paired_count += paired_count;
-	connect->distance =
-	    (variance * connect->distance +
-	     distance * connect->variance) / (variance +
-					      connect->variance);
-	connect->variance =
-	    (variance *
-	     connect->variance) / (variance + connect->variance);
-
-	if (connect->twin != NULL) {
-		connect->twin->distance = connect->distance;
-		connect->twin->variance = connect->variance;
-		connect->twin->direct_count = connect->direct_count;
-		connect->twin->paired_count = connect->paired_count;
-	}
-}
-
-static void createConnection(IDnum nodeID, IDnum node2ID,
-			     IDnum direct_count,
-			     IDnum paired_count,
-			     Coordinate distance, double variance)
-{
-	Connection *connect = findConnection(nodeID, node2ID);
-
-	if (connect != NULL)
-		readjustConnection(connect, distance, variance,
-				   direct_count, paired_count);
-	else
-		createNewConnection(nodeID, node2ID, direct_count,
-				    paired_count, distance, variance);
-}
-
-static void projectFromSingleRead(Node * node,
-				  ReadOccurence * readOccurence,
-				  Coordinate position,
-				  Coordinate offset, Coordinate length)
-{
-	Coordinate distance = 0;
-	Node *target = getNodeInGraph(graph, -readOccurence->nodeID);
-	double variance = 1;
-
-	if (target == getTwinNode(node) || target == node)
-		return;
-
-	if (position < 0) {
-		variance += getNodeLength(node) * getNodeLength(node) / 16;
-		// distance += 0;
-	} else {
-		// variance += 0;
-		distance += position - offset - getNodeLength(node) / 2;
-	}
-
-	if (readOccurence->position < 0) {
-		variance +=
-		    getNodeLength(target) * getNodeLength(target) / 16;
-		//distance += 0;
-	} else {
-		// variance += 0;
-		distance +=
-		    -readOccurence->position + readOccurence->offset +
-		    getNodeLength(target) / 2;
-	}
-
-	if (position < 0 || readOccurence->position < 0) {
-		variance += length * length / 16;
-		createConnection(getNodeID(node), getNodeID(target), 1, 0,
-				 distance, variance);
-		createConnection(-getNodeID(node), -getNodeID(target), 1,
-				 0, -distance, variance);
-	} else if (distance > 0) {
-		createConnection(getNodeID(node), getNodeID(target), 1, 0,
-				 distance, variance);
-	} else {
-		createConnection(-getNodeID(node), -getNodeID(target), 1,
-				 0, -distance, variance);
-	}
-}
-
-static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
-				Coordinate position, Coordinate offset,
-				Coordinate insertLength,
-				double insertVariance)
-{
-	Coordinate distance = insertLength;
-	Coordinate variance = insertVariance;
-	Node *target = getNodeInGraph(graph, readOccurence->nodeID);
-
-	if (target == getTwinNode(node) || target == node)
-		return;
-
-	if (getUniqueness(target) && getNodeID(target) < getNodeID(node))
-		return;
-
-	if (position < 0) {
-		variance += getNodeLength(node) * getNodeLength(node) / 16;
-		// distance += 0;
-	} else {
-		// variance += 0;
-		distance += position - offset - getNodeLength(node) / 2;
-	}
-
-	if (readOccurence->position < 0) {
-		variance +=
-		    getNodeLength(target) * getNodeLength(target) / 16;
-		//distance += 0;
-	} else {
-		// variance += 0;
-		distance +=
-		    readOccurence->position - readOccurence->offset -
-		    getNodeLength(target) / 2;
-	}
-
-	createConnection(getNodeID(node), getNodeID(target), 0, 1,
-			 distance, variance);
-}
-
-static void projectFromShortRead(Node * node,
-				 ShortReadMarker * shortMarker,
-				 IDnum * readPairs, Category * cats,
-				 ReadOccurence ** readNodes,
-				 IDnum * readNodeCounts,
-				 Coordinate * lengths)
-{
-	IDnum index;
-	IDnum readIndex = getShortReadMarkerID(shortMarker);
-	ReadOccurence *readArray;
-	IDnum readPairIndex;
-	Category cat;
-	Coordinate position = getShortReadMarkerPosition(shortMarker);
-	Coordinate offset = getShortReadMarkerOffset(shortMarker);
-	Coordinate length = lengths[getShortReadMarkerID(shortMarker) - 1];
-	Coordinate insertLength;
-	double insertVariance;
-
-	// Going through single-read information
-	if (readNodeCounts[readIndex] > 1 && position > 0) {
-		readArray = readNodes[readIndex];
-		for (index = 0; index < readNodeCounts[readIndex]; index++)
-			projectFromSingleRead(node, &readArray[index],
-					      position, offset, length);
-	}
-	// Going through paired read information
-	if (readPairs == NULL)
-		return;
-
-	readPairIndex = readPairs[readIndex - 1] + 1;
-
-	if (readPairIndex == 0)
-		return;
-
-	cat = cats[readIndex - 1];
-	insertLength = getInsertLength(graph, cat);
-	insertVariance = getInsertLength_var(graph, cat);
-
-	readArray = readNodes[readPairIndex];
-	for (index = 0; index < readNodeCounts[readPairIndex]; index++)
-		projectFromReadPair(node, &readArray[index], position,
-				    offset, insertLength, insertVariance);
-
-}
-
-static void projectFromLongRead(Node * node, PassageMarker * marker,
-				IDnum * readPairs, Category * cats,
-				ReadOccurence ** readNodes,
-				IDnum * readNodeCounts,
-				Coordinate * lengths)
-{
-	IDnum index;
-	IDnum readIndex = getPassageMarkerSequenceID(marker);
-	ReadOccurence *readArray;
-	IDnum readPairIndex;
-	Category cat;
-	Coordinate position = getStartOffset(marker);
-	Coordinate offset = getPassageMarkerStart(marker);
-	Coordinate length =
-	    lengths[getPassageMarkerSequenceID(marker) - 1];
-	Coordinate insertLength;
-	double insertVariance;
-
-	// Going through single-read information
-	if (readNodeCounts[readIndex] > 1 && position > 0) {
-		readArray = readNodes[readIndex];
-		for (index = 0; index < readNodeCounts[readIndex]; index++)
-			projectFromSingleRead(node, &readArray[index],
-					      position, offset, length);
-	}
-	// Going through paired read information
-	if (readPairs == NULL)
-		return;
-
-	readPairIndex = readPairs[readIndex - 1] + 1;
-
-	if (readPairIndex == 0)
-		return;
-
-	cat = cats[readIndex - 1];
-	insertLength = getInsertLength(graph, cat);
-	insertVariance = getInsertLength_var(graph, cat);
-
-	readArray = readNodes[readPairIndex];
-	for (index = 0; index < readNodeCounts[readPairIndex]; index++)
-		projectFromReadPair(node, &readArray[index], position,
-				    offset, insertLength, insertVariance);
-
-}
-
-static void projectFromNode(IDnum nodeID,
-			    ReadOccurence ** readNodes,
-			    IDnum * readNodeCounts,
-			    IDnum * readPairs, Category * cats,
-			    boolean * dubious, Coordinate * lengths)
-{
-	IDnum index;
-	ShortReadMarker *nodeArray, *shortMarker;
-	PassageMarker *marker;
-	Node *node;
-	IDnum nodeReadCount;
-
-	node = getNodeInGraph(graph, nodeID);
-
-	if (node == NULL || !getUniqueness(node))
-		return;
-
-	nodeArray = getNodeReads(node, graph);
-	nodeReadCount = getNodeReadCount(node, graph);
-	for (index = 0; index < nodeReadCount; index++) {
-		shortMarker = getShortReadMarkerAtIndex(nodeArray, index);
-		if (dubious[getShortReadMarkerID(shortMarker) - 1])
-			continue;
-		projectFromShortRead(node, shortMarker, readPairs, cats,
-				     readNodes, readNodeCounts, lengths);
-	}
-
-	for (marker = getMarker(node); marker != NULL;
-	     marker = getNextInNode(marker)) {
-		if (getPassageMarkerSequenceID(marker) > 0)
-			projectFromLongRead(node, marker, readPairs, cats,
-					    readNodes, readNodeCounts,
-					    lengths);
-	}
-}
-
-static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
-					      IDnum * readNodeCounts,
-					      IDnum * readPairs,
-					      Category * cats,
-					      boolean * dubious,
-					      Coordinate * lengths)
-{
-	IDnum nodeID;
-	IDnum nodes = nodeCount(graph);
-	scaffold = callocOrExit(2 * nodes + 1, Connection *);
-
-	puts("Computing direct node to node mappings");
-
-	for (nodeID = -nodes; nodeID <= nodes; nodeID++) {
-		if (nodeID % 10000 == 0)
-			printf("Scaffolding node %d\n", nodeID);
-
-		projectFromNode(nodeID, readNodes, readNodeCounts,
-				readPairs, cats, dubious, lengths);
-	}
-
-	return scaffold;
 }
 
 static void resetMiniConnection(Node * node, MiniConnection * localConnect,
@@ -866,7 +221,7 @@ static void integrateDerivativeDistances(Connection * connect,
 					 Coordinate min_distance,
 					 boolean direction)
 {
-	Node *reference = connect->destination;
+	Node *reference = getConnectionDestination(connect);
 	Node *destination;
 	IDnum destinationID;
 	Coordinate distance, baseDistance;
@@ -880,19 +235,18 @@ static void integrateDerivativeDistances(Connection * connect,
 	if (!getUniqueness(reference))
 		return;
 
-	//printf("Opposite node %li length %li at %li ± %f\n", getNodeID(reference), getNodeLength(reference), connect->distance, connect->variance);
+	//printf("Opposite node %li length %li at %li ± %f\n", getNodeID(reference), getNodeLength(reference), getConnectionDistance(connect), getConnectionVariance(connect));
 
-	baseDistance = connect->distance;
-	baseVariance = connect->variance;
+	baseDistance = getConnectionDistance(connect);
+	baseVariance = getConnectionVariance(connect);
 
-	for (connect2 =
-	     scaffold[getNodeID(reference) + nodeCount(graph)];
-	     connect2 != NULL; connect2 = connect2->next) {
+	for (connect2 = getConnection(reference);
+	     connect2 != NULL; connect2 = getNextConnection(connect2)) {
 		// Avoid null derivative
-		if (connect2 == connect->twin)
+		if (connect2 == getTwinConnection(connect))
 			continue;
 
-		destination = connect2->destination;
+		destination = getConnectionDestination(connect2);
 
 		// Beware of directionality
 		if (!direction)
@@ -902,10 +256,10 @@ static void integrateDerivativeDistances(Connection * connect,
 		destinationID = getNodeID(destination);
 		// Beware of directionality (bis)
 		if (direction)
-			distance = baseDistance - connect2->distance;
+			distance = baseDistance - getConnectionDistance(connect2);
 		else
-			distance = connect2->distance - baseDistance;
-		variance = connect2->variance + baseVariance;
+			distance = getConnectionDistance(connect2) - baseDistance;
+		variance = getConnectionVariance(connect2) + baseVariance;
 		localConnect =
 		    &localScaffold[destinationID + nodeCount(graph)];
 
@@ -934,9 +288,6 @@ static void integrateDerivativeDistances(Connection * connect,
 
 static void markInterestingNodes(Node * node)
 {
-	IDnum nodeID = getNodeID(node);
-	IDnum nodeIndex = nodeID + nodeCount(graph);
-	IDnum twinNodeIndex = -nodeID + nodeCount(graph);
 	Connection *connect;
 	Node *destination;
 	MiniConnection *localConnect;
@@ -947,9 +298,9 @@ static void markInterestingNodes(Node * node)
 	setEmptyMiniConnection(node);
 
 	// Loop thru primary scaffold
-	for (connect = scaffold[nodeIndex]; connect != NULL;
-	     connect = connect->next) {
-		destination = getTwinNode(connect->destination);
+	for (connect = getConnection(node); connect != NULL;
+	     connect = getNextConnection(connect)) {
+		destination = getTwinNode(getConnectionDestination(connect));
 
 		// DEBUG
 		if (destination == node
@@ -962,15 +313,15 @@ static void markInterestingNodes(Node * node)
 
 		if (getNodeStatus(destination)) {
 			readjustMiniConnection(destination, localConnect,
-					       connect->distance,
+					       getConnectionDistance(connect),
 					       min_distance,
-					       connect->variance, connect,
+					       getConnectionVariance(connect), connect,
 					       NULL);
 			localConnect->backReference = NULL;
 		} else {
 			resetMiniConnection(destination, localConnect,
-					    connect->distance,
-					    connect->variance, connect,
+					    getConnectionDistance(connect),
+					    getConnectionVariance(connect), connect,
 					    NULL, true);
 		}
 
@@ -978,23 +329,23 @@ static void markInterestingNodes(Node * node)
 	}
 
 	// Loop thru twin's primary scaffold
-	for (connect = scaffold[twinNodeIndex]; connect != NULL;
-	     connect = connect->next) {
-		destination = connect->destination;
+	for (connect = getConnection(getTwinNode(node)); connect != NULL;
+	     connect = getNextConnection(connect)) {
+		destination = getConnectionDestination(connect);
 		localConnect =
 		    &localScaffold[getNodeID(destination) +
 				   nodeCount(graph)];
 
 		if (getNodeStatus(destination))
 			readjustMiniConnection(destination, localConnect,
-					       -connect->distance,
+					       -getConnectionDistance(connect),
 					       min_distance,
-					       connect->variance, NULL,
+					       getConnectionVariance(connect), NULL,
 					       connect);
 		else
 			resetMiniConnection(destination, localConnect,
-					    -connect->distance,
-					    connect->variance, NULL,
+					    -getConnectionDistance(connect),
+					    getConnectionVariance(connect), NULL,
 					    connect, -1);
 
 		integrateDerivativeDistances(connect, min_distance, false);
@@ -1067,8 +418,8 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 	IDnum direct_count;
 	IDnum paired_count;
 
-	while ((connect = scaffold[sourceIndex])) {
-		destination = getTwinNode(connect->destination);
+	while ((connect = getConnection(source))) {
+		destination = getTwinNode(getConnectionDestination(connect));
 
 		if (destination == getTwinNode(node)) {
 			localConnect = &localScaffold[twinSourceIndex];
@@ -1088,11 +439,11 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 		destinationID = getNodeID(destination);
 		localConnect =
 		    &localScaffold[destinationID + nodeCount(graph)];
-		connect->distance += distance_shift;
-		distance = connect->distance;
-		variance = connect->variance;
-		direct_count = connect->direct_count;
-		paired_count = connect->paired_count;
+		incrementConnectionDistance(connect, distance_shift);
+		distance = getConnectionDistance(connect);
+		variance = getConnectionVariance(connect);
+		direct_count = getConnectionDirectCount(connect);
+		paired_count = getConnectionPairedCount(connect);
 
 		if (getNodeStatus(destination)) {
 			readjustMiniConnection(destination, localConnect,
@@ -1127,8 +478,8 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 	}
 
 	// Loop thru twin's primary scaffold
-	while ((connect = scaffold[twinSourceIndex])) {
-		destination = connect->destination;
+	while ((connect = getConnection(getTwinNode(source)))) {
+		destination = getConnectionDestination(connect);
 
 		if (destination == node) {
 			localConnect = &localScaffold[sourceIndex];
@@ -1149,11 +500,11 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 
 		localConnect =
 		    &localScaffold[destinationID + nodeCount(graph)];
-		connect->distance -= distance_shift;
-		distance = connect->distance;
-		variance = connect->variance;
-		direct_count = connect->direct_count;
-		paired_count = connect->paired_count;
+		incrementConnectionDistance(connect, -distance_shift);
+		distance = getConnectionDistance(connect);
+		variance = getConnectionVariance(connect);
+		direct_count = getConnectionDirectCount(connect);
+		paired_count = getConnectionPairedCount(connect);
 
 		if (getNodeStatus(destination) < 0) {
 			readjustMiniConnection(destination, localConnect,
@@ -1188,8 +539,6 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 static void recenterNode(Node * node, Coordinate oldLength)
 {
 	IDnum nodeID = getNodeID(node);
-	IDnum nodeIndex = nodeID + nodeCount(graph);
-	IDnum twinNodeIndex = -nodeID + nodeCount(graph);
 	Connection *connect, *next;
 	Coordinate distance_shift = (getNodeLength(node) - oldLength) / 2;
 	Coordinate min_distance =
@@ -1198,32 +547,32 @@ static void recenterNode(Node * node, Coordinate oldLength)
 
 	//puts("Recentering node");
 
-	for (connect = scaffold[nodeIndex]; connect != NULL;
+	for (connect = getConnection(node); connect != NULL;
 	     connect = next) {
-		next = connect->next;
-		connect->distance -= distance_shift;
+		next = getNextConnection(connect);
+		incrementConnectionDistance(connect, -distance_shift);
 
-		if (connect->distance < min_distance) {
+		if (getConnectionDistance(connect) < min_distance) {
 			//printf("Unrecording %li\n",
-			//       -getNodeID(connect->destination));
+			//       -getNodeID(getConnectionDestination(connect)));
 			localConnect =
-			    &localScaffold[-getNodeID(connect->destination)
+			    &localScaffold[-getNodeID(getConnectionDestination(connect))
 					   + nodeCount(graph)];
 			localConnect->frontReference = NULL;
-			unmarkNode(getTwinNode(connect->destination),
+			unmarkNode(getTwinNode(getConnectionDestination(connect)),
 				   localConnect);
 			destroyConnection(connect, nodeID);
-		} else if (connect->twin != NULL)
-			connect->twin->distance -= distance_shift;
+		} else if (getTwinConnection(connect) != NULL)
+			incrementConnectionDistance(getTwinConnection(connect), -distance_shift);
 	}
 
-	for (connect = scaffold[twinNodeIndex]; connect != NULL;
+	for (connect = getConnection(getTwinNode(node)); connect != NULL;
 	     connect = next) {
-		next = connect->next;
-		connect->distance += distance_shift;
+		next = getNextConnection(connect);
+		incrementConnectionDistance(connect, distance_shift);
 
-		if (connect->twin != NULL)
-			connect->twin->distance += distance_shift;
+		if (getTwinConnection(connect) != NULL)
+			incrementConnectionDistance(getTwinConnection(connect), distance_shift);
 	}
 }
 
@@ -1842,170 +1191,24 @@ static boolean expandLongNodes(boolean force_jumps)
 	return modified;
 }
 
-static void cleanMemory(ReadOccurence ** readNodes, IDnum * readNodeCounts,
-			Coordinate * lengths)
+static void cleanMemory()
 {
-	IDnum index;
-
 	puts("Cleaning memory");
 
-	for (index = 1; index <= sequenceCount(graph); index++)
-		free(readNodes[index]);
-
-	free(readNodes);
-	free(readNodeCounts);
-
-	destroyRecycleBin(connectionMemory);
-	connectionMemory = NULL;
-	free(scaffold);
+	cleanScaffoldMemory();
 
 	destroyRecycleBin(nodeListMemory);
 	nodeListMemory = NULL;
 
 	free(localScaffold);
-
-	free(lengths);
 }
 
-static IDnum **countShortReads(Graph * graph)
-{
-	IDnum **counts = callocOrExit(CATEGORIES + 1, IDnum *);
-	Category cat;
-	IDnum nodeIndex;
-	IDnum nodes = nodeCount(graph);
-	Node *node;
-	ShortReadMarker *array, *marker;
-	IDnum readCount, readIndex, readID;
-
-	// Allocate memory where needed
-	for (cat = 0; cat <= CATEGORIES; cat++)
-		if (getInsertLength(graph, cat) > 0)
-			counts[cat] =
-			    callocOrExit(2 * nodeCount(graph) + 1,
-				   IDnum);
-
-	// Start fillin'
-	for (nodeIndex = 0; nodeIndex < 2 * nodes + 1; nodeIndex++) {
-		node = getNodeInGraph(graph, nodeIndex - nodes);
-
-		if (node == NULL || !getUniqueness(node))
-			continue;
-
-		array = getNodeReads(node, graph);
-		readCount = getNodeReadCount(node, graph);
-		for (readIndex = 0; readIndex < readCount; readIndex++) {
-			marker =
-			    getShortReadMarkerAtIndex(array, readIndex);
-			readID = getShortReadMarkerID(marker);
-			cat = reads->categories[readID - 1];
-			if (cat % 2 == 1 && counts[cat / 2] != NULL)
-				counts[cat / 2][nodeIndex]++;
-		}
-	}
-
-	return counts;
-}
-
-void printConnections()
-{
-	IDnum maxNodeIndex = nodeCount(graph) * 2 + 1;
-	IDnum index;
-	Connection *connect, *next;
-	Node *node;
-	IDnum **counts = countShortReads(graph);
-	IDnum nodes = nodeCount(graph);
-
-	puts("CONNECT IDA IDB dcount pcount dist lengthA lengthB var countA countB coordA coordB real exp distance test");
-
-	for (index = 0; index < maxNodeIndex; index++) {
-		node = getNodeInGraph(graph, index - nodeCount(graph));
-		for (connect = scaffold[index]; connect != NULL;
-		     connect = next) {
-			next = connect->next;
-			if (getUniqueness(connect->destination)) {
-				printf
-				    ("CONNECT %ld %ld %ld %ld %lld %lld %lld %f %ld %ld",
-				     (long) index - nodeCount(graph),
-				     (long) getNodeID(connect->destination),
-				     (long) connect->direct_count,
-				     (long) connect->paired_count,
-				     (long long) connect->distance,
-				     (long long) getNodeLength(node),
-				     (long long) getNodeLength(connect->destination),
-				     connect->variance,
-				     (long) getNodeReadCount(node, graph),
-				     (long) getNodeReadCount(connect->destination,
-						      graph));
-				if (markerCount(node) == 1
-				    && markerCount(connect->destination) ==
-				    1)
-					printf(" %lld %lld %lld",
-					       (long long) getPassageMarkerFinish
-					       (getMarker(node)),
-					       (long long) getPassageMarkerFinish
-					       (getMarker
-						(connect->destination)),
-					       (long long) (getPassageMarkerFinish
-					       (getMarker(node)) - 
-					       getPassageMarkerFinish
-					       (getMarker
-						(connect->destination))));
-				else
-					printf(" ? ?");
-				printf(" %ld", (long) expectedNumberOfConnections(index-nodeCount(graph), connect, counts, 0));
-				printf(" %lld", (long long) (connect->distance - (getNodeLength(node) + getNodeLength(connect->destination))/2));
-				if (testConnection
-				    (index - nodes, connect, counts))
-					puts(" OK");
-				else
-					puts(" NG");
-			}
-		}
-	}
-}
-
-static void removeUnreliableConnections()
-{
-	IDnum maxNodeIndex = nodeCount(graph) * 2 + 1;
-	IDnum index;
-	Connection *connect, *next;
-	Category cat;
-	IDnum **counts = countShortReads(graph);
-	IDnum nodes = nodeCount(graph);
-
-	for (index = 0; index < maxNodeIndex; index++) {
-		for (connect = scaffold[index]; connect != NULL;
-		     connect = next) {
-			next = connect->next;
-			if (!testConnection
-			    (index - nodes, connect, counts))
-				destroyConnection(connect, index - nodes);
-		}
-	}
-
-	// Free memory
-	for (cat = 0; cat <= CATEGORIES; cat++)
-		if (counts[cat])
-			free(counts[cat]);
-	free(counts);
-}
-
-void exploitShortReadPairs(Graph * argGraph, ReadSet * argReads,
+void exploitShortReadPairs(Graph * argGraph, ReadSet * reads,
 			   boolean * dubious, boolean force_jumps)
 {
-	IDnum *readPairs;
-	Category *cats;
-	IDnum *readNodeCounts;
-	ReadOccurence **readNodes;
 	boolean modified = true;
-	Coordinate *lengths =
-	    getSequenceLengths(argReads, getWordLength(argGraph));
 
-	// Globals
 	graph = argGraph;
-	reads = argReads;
-	readPairs = reads->mateReads;
-	cats = reads->categories;
 
 	if (!readStartsAreActivated(graph))
 		return;
@@ -2016,31 +1219,22 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * argReads,
 	resetNodeStatus(graph);
 	prepareGraphForLocalCorrections(graph);
 
-	// Memory allocation
+	// Prepare scaffold
+	buildScaffold(graph, reads, dubious);
+
+	// Prepare local scaffold 
 	localScaffold =
 	    callocOrExit(2 * nodeCount(graph) + 1, MiniConnection);
-	// Prepare primary scaffold
-	readNodeCounts = computeReadToNodeCounts();
-	readNodes = computeReadToNodeMappings(readNodeCounts);
-	scaffold =
-	    computeNodeToNodeMappings(readNodes, readNodeCounts,
-				      readPairs, cats, dubious, lengths);
-	removeUnreliableConnections();
 
 	// Loop until convergence
 	while (modified)
 		modified = expandLongNodes(force_jumps);
 
 	// Clean up memory
-	cleanMemory(readNodes, readNodeCounts, lengths);
+	cleanMemory();
 	deactivateLocalCorrectionSettings();
 
 	sortGapMarkers(graph);
 
 	puts("Pebble done.");
-}
-
-void setUnreliableConnectionCutoff(int val)
-{
-	UNRELIABLE_CONNECTION_CUTOFF = (IDnum) val;
 }
