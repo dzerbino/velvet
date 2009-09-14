@@ -56,7 +56,7 @@ struct readOccurence_st {
 };
 
 // Global params
-static IDnum UNRELIABLE_CONNECTION_CUTOFF = 10;
+static IDnum UNRELIABLE_CONNECTION_CUTOFF = 5;
 
 // Global pointers
 static Graph *graph;
@@ -410,9 +410,16 @@ static boolean * countCoOccurences(IDnum * coOccurencesCount, ReadOccurence ** r
 
 		while (readOccurenceIndex < readNodeCount && readPairOccurenceIndex >= 0) {
 			if (readOccurence->nodeID == -readPairOccurence->nodeID) {
-				coOccurencesCount[libID]++;
-				interestingReads[readIndex] = true;
-				break;
+				if (readOccurence->position > 0 && readPairOccurence->position > 0) {
+					coOccurencesCount[libID]++;
+					interestingReads[readIndex] = true;
+					break;
+				} else {
+					readOccurence++;
+					readOccurenceIndex++;	
+					readPairOccurence--;
+					readPairOccurenceIndex--;	
+				}
 			} else if (readOccurence->nodeID < -readPairOccurence->nodeID) {
 				readOccurence++;
 				readOccurenceIndex++;	
@@ -430,7 +437,7 @@ static void measureCoOccurences(Coordinate ** coOccurences, boolean * interestin
 	IDnum coOccurencesIndex[CATEGORIES + 1];
 	IDnum observationIndex;
 	IDnum readIndex, readPairIndex;
-	IDnum readNodeCount, readPairNodeCount;
+	IDnum readNodeCount;
 	IDnum readOccurenceIndex, readPairOccurenceIndex;
 	ReadOccurence * readOccurence, *readPairOccurence;
 	Category libID;
@@ -452,25 +459,32 @@ static void measureCoOccurences(Coordinate ** coOccurences, boolean * interestin
 		readOccurence = readNodes[readIndex + 1];
 		readOccurenceIndex = 0;
 		readNodeCount = readNodeCounts[readIndex + 1];
-		readPairOccurence = readNodes[readPairIndex + 1];
-		readPairOccurenceIndex = 0;
-		readPairNodeCount = readNodeCounts[readPairIndex + 1];
 
-		while (readOccurenceIndex < readNodeCount && readPairOccurenceIndex < readPairNodeCount) {
+		readPairOccurenceIndex = readNodeCounts[readPairIndex + 1] - 1;
+		readPairOccurence = &(readNodes[readPairIndex + 1][readPairOccurenceIndex]);
+
+		while (readOccurenceIndex < readNodeCount && readPairOccurenceIndex >= 0) {
 			if (readOccurence->nodeID == -readPairOccurence->nodeID) {
-				coOccurences[libID][observationIndex] = 
-				      getNodeLength(getNodeInGraph(graph, readOccurence->nodeID))
-				      + getWordLength(graph) - 1
-				      - (readOccurence->position - readOccurence->offset)	
-				      - (readPairOccurence->position - readPairOccurence->offset);
-				coOccurencesIndex[libID]++;
-				break;
+				if (readOccurence->position > 0 && readPairOccurence->position > 0) {
+					coOccurences[libID][observationIndex] = 
+					      getNodeLength(getNodeInGraph(graph, readOccurence->nodeID))
+					      + getWordLength(graph) - 1
+					      - (readOccurence->position - readOccurence->offset)	
+					      - (readPairOccurence->position - readPairOccurence->offset);
+					coOccurencesIndex[libID]++;
+					break;
+				} else {
+					readOccurence++;
+					readOccurenceIndex++;	
+					readPairOccurence--;
+					readPairOccurenceIndex--;	
+				}
 			} else if (readOccurence->nodeID < -readPairOccurence->nodeID) {
 				readOccurence++;
 				readOccurenceIndex++;	
 			} else {
-				readPairOccurence++;
-				readPairOccurenceIndex++;	
+				readPairOccurence--;
+				readPairOccurenceIndex--;	
 			}
 		}
 	}
@@ -505,11 +519,11 @@ static void estimateLibraryInsertLength(Coordinate * coOccurences, IDnum coOccur
 	variance /= coOccurencesCount;
 	
 	// To avoid subsequent divisions by zero
-	if (variance = 0)
+	if (variance == 0)
 		variance = 1;
 
 	printf("Paired-end library %i has length: %lli, sample standard deviation: %lli\n", libID + 1, (long long) median, (long long) sqrt(variance));
-	setInsertLengths(graph, libID, median, variance);
+	setInsertLengths(graph, libID, median, sqrt(variance));
 	estimated[libID] = true;
 }
 
@@ -627,6 +641,7 @@ void readjustConnection(Connection * connect, Coordinate distance,
 {
 	connect->direct_count += direct_count;
 	connect->paired_count += paired_count;
+
 	connect->distance =
 	    (variance * connect->distance +
 	     distance * connect->variance) / (variance +
@@ -690,6 +705,11 @@ static void projectFromSingleRead(Node * node,
 	}
 
 	if (position < 0 || readOccurence->position < 0) {
+		if (offset < readOccurence->offset && distance - getNodeLength(node)/2 - getNodeLength(target)/2 < -10)
+			return;
+		if (offset > readOccurence->offset && distance - getNodeLength(node)/2 - getNodeLength(target)/2 > 10)
+			return;
+
 		variance += length * length / 16;
 		createConnection(getNodeID(node), getNodeID(target), 1, 0,
 				 distance, variance);
@@ -737,6 +757,9 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 		    readOccurence->position - readOccurence->offset -
 		    getNodeLength(target) / 2;
 	}
+
+	if (distance - getNodeLength(node)/2 - getNodeLength(target)/2 < -6 * sqrt(insertVariance))
+		return;
 
 	createConnection(getNodeID(node), getNodeID(target), 0, 1,
 			 distance, variance);

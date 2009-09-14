@@ -614,7 +614,6 @@ void exportMarker(FILE * outfile, PassageMarker * marker,
 		  TightString ** sequences, int WORDLENGTH)
 {
 	PassageMarker *current;
-	char *string;
 
 	if (marker->sequenceID > 0) {
 		if (!isInitial(marker)) {
@@ -635,13 +634,6 @@ void exportMarker(FILE * outfile, PassageMarker * marker,
 			(long long) getPassageMarkerStart(current),
 			(long long) getPassageMarkerFinish(current),
 			(long long) getFinishOffset(current));
-		if (sequences != NULL) {
-			string =
-			    readPassageMarkerSequence(current, sequences,
-						      WORDLENGTH);
-			fprintf(outfile, "\t%s", string);
-			free(string);
-		}
 		fprintf(outfile, "\n");
 	}
 }

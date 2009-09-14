@@ -196,3 +196,9 @@ V 0.7.53
 - Ignored reads in Pebble corrected
 - Added automatic measure of median coverage and median insert length
 - Updated manual to cover the above
+
+V 0.7.54
+- Corrected insert length variance estimate bugs
+- Corrected observed-insert_length script for warning message
+- Added an extra error detection filter in Pebble
+- Prevented divergence of distance estimates in Pebble

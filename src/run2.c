@@ -366,6 +366,7 @@ int main(int argc, char **argv)
 			sequences = importReadSet(seqFilename);
 			convertSequences(sequences);
 		}
+
 		// Mixed length sequencing
 		readCoherentGraph(graph, isUniqueSolexa, expectedCoverage,
 				  sequences);

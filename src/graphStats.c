@@ -1297,6 +1297,8 @@ void exportLongNodeSequences(char *filename, Graph * graph,
 	if (outfile == NULL) {
 		printf("Could not write into %s, sorry\n", filename);
 		return;
+	} else {
+		printf("Writing contigs into %s...\n", filename);
 	}
 
 	for (nodeIndex = 1; nodeIndex <= nodeCount(graph); nodeIndex++) {

@@ -704,15 +704,6 @@ void resetPassageMarkersStatus(Graph * graph)
 
 Node *getNodeInGraph(Graph * graph, IDnum nodeID)
 {
-	// DEBUG
-	if (nodeID > graph->nodeCount || nodeID < -graph->nodeCount) {
-		printf
-		    ("Required node does not exist !!! Node %d Max node ID %d\n",
-		     nodeID, graph->nodeCount);
-		abort();
-	}
-	// END OF DEBUG
-
 	if (nodeID == 0)
 		return NULL;
 	else if (nodeID > 0)

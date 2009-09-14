@@ -85,7 +85,7 @@ sub read_stats {
 
   close IN;
 
-  open IN, "$directory/Graph2"; 
+  open IN, "$directory/Graph2";
   $_ = <IN>;
   chomp;
   my @line = split m/\t/;
@@ -97,6 +97,7 @@ sub read_stats {
   while (<IN>) {
     chomp;
     my @x = split m/\t/;
+    next unless defined $x[0];
     if ($x[0] =~ m/NODE/) {
 	$node_lengths{ $x[1] } = $x[2];
 	next;
@@ -111,13 +112,13 @@ sub read_stats {
 	my $read_no = $x[0];
 	my $read_pos = $x[1];
 	my $read_off = $x[2];
-	$read_position{ $read_no } = [-$node, $node_lengths{ -$node } - $read_pos + $read_off]; 
+	if ($read_pos > 0) {$read_position{ $read_no } = [-$node, $node_lengths{ -$node } - $read_pos + $read_off];}
     } else {
       my $read_no = $x[0];
       my $read_pos = $x[1];
       my $read_off = $x[2];
 	
-      if ($read_position{$read_pair{$read_no}} && $read_position{ $read_pair{ $read_no }}->[0] == $node) {
+      if ($read_pos > 0 && $read_pair{$read_no} && $read_position{$read_pair{$read_no}} && $read_position{ $read_pair{ $read_no }}->[0] == $node) {
 	my $length = abs($read_pos - $read_off - $read_position{ $read_pair{ $read_no} }->[1]); 	
 	push @insert_lengths, $length + $kmer - 1;
       }

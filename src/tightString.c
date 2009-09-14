@@ -292,10 +292,6 @@ char getNucleotideChar(Coordinate nucleotideIndex, TightString * tString)
 {
 	Codon codon;
 
-	// DEBUG
-	if (nucleotideIndex >= tString->length)
-		abort();
-
 	codon = tString->sequence[nucleotideIndex / 4];
 
 	switch (nucleotideIndex % 4) {

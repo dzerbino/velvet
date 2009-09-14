@@ -229,10 +229,8 @@ void activateGapMarkers(Graph * graph);
 void deactivateGapMarkers(Graph * graph);
 void sortGapMarkers(Graph * graph);
 
-// DEBUG
 void displayArcMemory();
 void displayNodeMemory();
-// END OF DEBUG
 
 void checkPassageMarkersStatus(Graph * graph);
 #endif

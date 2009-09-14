@@ -63,9 +63,7 @@ void *dfh_replacedata(DFibHeapNode *, void *);
 void *dfh_delete(DFibHeap *, DFibHeapNode *);
 void dfh_deleteheap(DFibHeap *);
 
-// DEBUG
 IDnum dfibheap_getSize(DFibHeap *);
 Time dfibheap_el_getKey(DFibHeapNode *);
-// END DEBUG
 
 #endif				/* _FIB_H_ */

@@ -70,6 +70,7 @@ static Node *activeNode;
 static Node *startingNode;
 static int WORDLENGTH;
 static Graph *graph;
+static IDnum dbgCounter;
 
 static PassageMarker *fastPath;
 static PassageMarker *slowPath;
@@ -90,9 +91,6 @@ static boolean *progressStatus;
 
 static Coordinate *sequenceLengths;
 
-// DEBUG
-static IDnum dbgCounter;
-
 //End of global variables;
 
 static void setNodeTime(Node * node, Time time)
@@ -107,12 +105,6 @@ static Time getNodeTime(Node * node)
 
 static void setNodePrevious(Node * previousNode, Node * node)
 {
-	// DEBUG
-	if (getNodeID(previousNode) > nodeCount(graph)
-	    || getNodeID(previousNode) < -nodeCount(graph))
-		abort();
-	// END OF DEBUG
-
 	previous[getNodeID(node) + nodeCount(graph)] = previousNode;
 }
 

@@ -302,11 +302,6 @@ static void markInterestingNodes(Node * node)
 	     connect = getNextConnection(connect)) {
 		destination = getTwinNode(getConnectionDestination(connect));
 
-		// DEBUG
-		if (destination == node
-		    || destination == getTwinNode(node))
-			abort();
-
 		localConnect =
 		    &localScaffold[getNodeID(destination) +
 				   nodeCount(graph)];
@@ -506,7 +501,7 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 		direct_count = getConnectionDirectCount(connect);
 		paired_count = getConnectionPairedCount(connect);
 
-		if (getNodeStatus(destination) < 0) {
+		if (distance > min_distance && getNodeStatus(destination) < 0) {
 			readjustMiniConnection(destination, localConnect,
 					       -distance, min_distance,
 					       variance, NULL, NULL);
@@ -514,13 +509,19 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 				readjustConnection(original, distance,
 						   variance, direct_count,
 						   paired_count);
+		} else if (getNodeStatus(destination) < 0) {
+			if ((original = localConnect->backReference)) {
+				destroyConnection(original, -nodeID);
+				localConnect->backReference = NULL;
+			}
+			unmarkNode(destination, localConnect);
 		} else if (getNodeStatus(destination) > 0) {
 			if ((original = localConnect->frontReference)) {
 				destroyConnection(original, nodeID);
 				localConnect->frontReference = NULL;
 			}
 			unmarkNode(destination, localConnect);
-		} else if (distance > min_distance)
+		} else if (distance > min_distance) {
 			resetMiniConnection(destination, localConnect,
 					    -distance, variance, NULL,
 					    createNewConnection(-nodeID,
@@ -530,8 +531,9 @@ static void absorbExtensionInScaffold(Node * node, Node * source)
 								distance,
 								variance),
 					    -1);
+			integrateDerivativeDistances(connect, min_distance, true);
+		}
 
-		integrateDerivativeDistances(connect, min_distance, true);
 		destroyConnection(connect, -sourceID);
 	}
 }
@@ -1117,8 +1119,6 @@ static void findOppositeNode(Node * node, Node ** oppositeNode,
 	NodeList *nodeList;
 	MiniConnection *localConnect;
 	Node *node2;
-	Coordinate min_distance =
-	    getNodeLength(node) / 2 - BACKTRACK_CUTOFF;
 	IDnum node2ID;
 
 	*oppositeNode = NULL;
@@ -1136,7 +1136,7 @@ static void findOppositeNode(Node * node, Node ** oppositeNode,
 		if (!getUniqueness(node2))
 			continue;
 
-		if (localConnect->distance < min_distance)
+		if (localConnect->distance < 0)
 			continue;
 
 		if (*oppositeNode == NULL

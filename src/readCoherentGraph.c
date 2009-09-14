@@ -46,12 +46,12 @@ static IDnum multCounter = 0;
 static IDnum dbgCounter = 0;
 static IDnum nullCounter = 0;
 
-typedef struct connection_st Connection;
+typedef struct rb_connection_st RBConnection;
 
-struct connection_st {
+struct rb_connection_st {
 	Node *node;
 	PassageMarker *marker;
-	Connection *next;
+	RBConnection *next;
 	IDnum multiplicity;
 };
 
@@ -59,16 +59,16 @@ static RecycleBin *nodeListMemory = NULL;
 
 #define BLOCKSIZE 1000
 
-static Connection *allocateConnection()
+static RBConnection *allocateRBConnection()
 {
 	if (nodeListMemory == NULL)
 		nodeListMemory =
-		    newRecycleBin(sizeof(Connection), BLOCKSIZE);
+		    newRecycleBin(sizeof(RBConnection), BLOCKSIZE);
 
 	return allocatePointer(nodeListMemory);
 }
 
-static void deallocateConnection(Connection * nodeList)
+static void deallocateRBConnection(RBConnection * nodeList)
 {
 	deallocatePointer(nodeListMemory, nodeList);
 }
@@ -146,8 +146,8 @@ static boolean uniqueNodesConnect(Node * startingNode)
 {
 	Node *destination = NULL;
 	PassageMarker *startMarker, *currentMarker;
-	Connection *newList;
-	Connection *list = NULL;
+	RBConnection *newList;
+	RBConnection *list = NULL;
 	boolean multipleHits = false;
 
 	if (arcCount(startingNode) == 0)
@@ -191,7 +191,7 @@ static boolean uniqueNodesConnect(Node * startingNode)
 					break;
 				setSingleNodeStatus(getNode(currentMarker),
 						    true);
-				newList = allocateConnection();
+				newList = allocateRBConnection();
 				newList->node = getNode(currentMarker);
 				newList->multiplicity = 1;
 				newList->marker = startMarker;
@@ -213,7 +213,7 @@ static boolean uniqueNodesConnect(Node * startingNode)
 			} else if (destination != newList->node)
 				multipleHits = true;
 		}
-		deallocateConnection(newList);
+		deallocateRBConnection(newList);
 	}
 
 	if (multipleHits) {
@@ -261,7 +261,7 @@ static boolean uniqueNodesConnect(Node * startingNode)
 					break;
 				setSingleNodeStatus(getNode(currentMarker),
 						    true);
-				newList = allocateConnection();
+				newList = allocateRBConnection();
 				newList->node = getNode(currentMarker);
 				newList->multiplicity = 1;
 				newList->next = list;
@@ -278,7 +278,7 @@ static boolean uniqueNodesConnect(Node * startingNode)
 		if (newList->multiplicity >= MULTIPLICITY_CUTOFF
 		    && newList->node != getTwinNode(startingNode))
 			multipleHits = true;
-		deallocateConnection(newList);
+		deallocateRBConnection(newList);
 	}
 
 	if (multipleHits) {
@@ -440,10 +440,6 @@ static Node *bypass()
 		if (isTerminal(path) || getUniqueness(next))
 			break;
 	}
-
-	// DEBUG 
-	if (next == bypass || next == getTwinNode(bypass))
-		abort();
 
 	// Remove unique groupies from arrival 
 	admitGroupies(next, bypass);
