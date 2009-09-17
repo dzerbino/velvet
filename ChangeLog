@@ -202,3 +202,12 @@ V 0.7.54
 - Corrected observed-insert_length script for warning message
 - Added an extra error detection filter in Pebble
 - Prevented divergence of distance estimates in Pebble
+ 
+V 0.7.55
+- Applied Jonathan Hoser's patch to the VelvetOptimiser script
+- Parsing bug in extractContigReads.pl
+- Updated the FASTA read shuffling script
+- Updated the Manual
+- Implemented strand specific sequencing
+- Parsing bug of the Sequences file
+- Added sequence shuffling scripts

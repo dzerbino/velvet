@@ -210,7 +210,7 @@ Graph *importGraph(char *filename);
 Graph *importSimplifiedGraph(char *filename);
 void exportGraph(char *filename, Graph * graph, TightString ** sequences);
 void exportDOTGraph(char *filename, Graph * graph);
-Graph *readPreGraphFile(char *preGraphFilename);
+Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand);
 
 // Read starts
 void activateReadStarts(Graph * graph);

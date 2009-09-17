@@ -33,7 +33,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 static void printUsage()
 {
 	puts("Usage:");
-	puts("./velveth directory hash_length {[-file_format][-read_type] filename}");
+	puts("./velveth directory hash_length {[-file_format][-read_type] filename} [options]");
 	puts("");
 	puts("\tdirectory\t\t: directory name for output files");
 	printf("\thash_length\t\t: odd integer (if even, it will be decremented) <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
@@ -55,6 +55,9 @@ static void printUsage()
 	puts("\t-long");
 	puts("\t-longPaired");
 	puts("");
+	puts("Options:");
+	puts("\t-strand_specific\t: for strand specific transcriptome sequencing data (default: off)");
+	puts("");
 	puts("Output:");
 	puts("\tdirectory/Roadmaps");
 	puts("\tdirectory/Sequences");
@@ -67,6 +70,7 @@ int main(int argc, char **argv)
 	SplayTable *splayTable;
 	int hashLength;
 	char *directory, *filename, *buf;
+	boolean double_strand = true;
 	DIR *dir;
 
 	setProgramName("velveth");
@@ -136,7 +140,7 @@ int main(int argc, char **argv)
 
 	strcpy(filename, directory);
 	strcat(filename, "/Sequences");
-	parseDataAndReadFiles(filename, argc - 2, &(argv[2]));
+	parseDataAndReadFiles(filename, argc - 2, &(argv[2]), &double_strand);
 
 	allSequences = importReadSet(filename);
 	printf("%i sequences in total.\n", allSequences->readCount);
@@ -144,7 +148,8 @@ int main(int argc, char **argv)
 	strcpy(filename, directory);
 	strcat(filename, "/Roadmaps");
 	inputSequenceArrayIntoSplayTableAndArchive(allSequences,
-						   splayTable, filename);
+						   splayTable, filename, 
+						   double_strand);
 
 	destroySplayTable(splayTable);
 	closedir(dir);

@@ -106,6 +106,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 	RoadMapArray *result = mallocOrExit(1, RoadMapArray);
 	IDnum sequenceCount;
 	IDnum annotationCount = 0;
+	short short_var;
 	long long_var;
 	long long longlong_var, longlong_var2, longlong_var3;
 
@@ -114,12 +115,13 @@ RoadMapArray *importRoadMapArray(char *filename)
 	file = fopen(filename, "r");
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
-	sscanf(line, "%ld\t%i\n", &long_var, &(result->WORDLENGTH));
+	sscanf(line, "%ld\t%i\t%hi\n", &long_var, &(result->WORDLENGTH), &short_var);
 	sequenceCount = (IDnum) long_var;
 	resetWordFilter(result->WORDLENGTH);
 	result->length = sequenceCount;
 	array = mallocOrExit(sequenceCount, RoadMap);
 	result->array = array;
+	result->double_strand = (boolean) short_var;
 
 	while (fgets(line, maxline, file) != NULL)
 		if (line[0] != 'R')

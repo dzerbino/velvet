@@ -28,6 +28,7 @@ struct roadMapArray_st {
 	Annotation *annotations;
 	IDnum length;
 	int WORDLENGTH;
+	boolean double_strand;
 };
 
 ////////////////////////////////////////////////////////////////////

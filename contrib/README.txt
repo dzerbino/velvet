@@ -45,3 +45,10 @@ of all the reads which belong to a given contig.
 
 This scripts scans the Graph2 file produced by Velvet and computes the insert
 length distribution of a chosen short read library in the assembly.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- shuffleSequences by Eric Cabot (ecabot@wisc.edu) Peter (peter@maubp.freeserve.co.uk) and Daniel Zerbino
+  (zerbino@ebi.ac.uk)
+
+Alternative ways to efficiently shuffle your reads produced in the language of
+your choice: C, BioPython, Perl or Bash

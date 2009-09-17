@@ -76,7 +76,7 @@ static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
 }
 
 void inputSequenceIntoSplayTable(TightString * tString,
-				 SplayTable * table, FILE * file)
+				 SplayTable * table, FILE * file, boolean double_strand)
 {
 	IDnum currentIndex;
 	Coordinate readNucleotideIndex = 0;
@@ -112,27 +112,31 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	     readNucleotideIndex++) { 
 		nucleotide = getNucleotide(readNucleotideIndex, tString);
 		pushNucleotide(&word, nucleotide);
+		if (double_strand) {
 #ifdef COLOR
-		reversePushNucleotide(&antiWord, nucleotide);
+			reversePushNucleotide(&antiWord, nucleotide);
 #else
-		reversePushNucleotide(&antiWord, 3 - nucleotide);
+			reversePushNucleotide(&antiWord, 3 - nucleotide);
 #endif
+		}
 	}
 
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
 		nucleotide = getNucleotide(readNucleotideIndex++, tString);
 		pushNucleotide(&word, nucleotide);
+		if (double_strand) {
 #ifdef COLOR
-		reversePushNucleotide(&antiWord, nucleotide);
+			reversePushNucleotide(&antiWord, nucleotide);
 #else
-		reversePushNucleotide(&antiWord, 3 - nucleotide);
+			reversePushNucleotide(&antiWord, 3 - nucleotide);
 #endif
+		}
 
 		sequenceID = currentIndex;
 		coord = writeNucleotideIndex;
 
-		if (compareKmers(&word, &antiWord) <= 0) {
+		if (!double_strand || compareKmers(&word, &antiWord) <= 0) {
 			found =
 			    findOrInsertOccurenceInSplayTable(&word,
 							      &sequenceID,
@@ -212,7 +216,8 @@ void inputSequenceIntoSplayTable(TightString * tString,
 
 void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 						SplayTable * table,
-						char *filename)
+						char *filename, 
+						boolean double_strand)
 {
 	IDnum index;
 	IDnum sequenceCount = reads->readCount;
@@ -224,7 +229,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	else
 		printf("Writing into roadmap file %s...\n", filename);
 
-	fprintf(outfile, "%d\t%i\n", sequenceCount, table->WORDLENGTH);
+	fprintf(outfile, "%ld\t%i\t%hi\n", (long) sequenceCount, table->WORDLENGTH, (short) double_strand);
 
 	if (reads->tSequences == NULL)
 		convertSequences(reads);
@@ -238,7 +243,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 			       sequenceCount);
 			fflush(stdout);
 		}
-		inputSequenceIntoSplayTable(array[index], table, outfile);
+		inputSequenceIntoSplayTable(array[index], table, outfile, double_strand);
 	}
 
 	fclose(outfile);

@@ -2637,7 +2637,7 @@ Graph *importSimplifiedGraph(char *filename)
 	return graph;
 }
 
-Graph *readPreGraphFile(char *preGraphFilename)
+Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 {
 	FILE *file = fopen(preGraphFilename, "r");
 	const int maxline = MAXLINE;
@@ -2652,6 +2652,7 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	char c;
 	int wordLength, wordShift;
 	size_t arrayLength;
+	short short_var;
 	long long_var, long_var2;
 	long long longlong_var;
 
@@ -2663,10 +2664,11 @@ Graph *readPreGraphFile(char *preGraphFilename)
 	// First  line
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
-	sscanf(line, "%ld\t%ld\t%i\n", &long_var, &long_var2,
-	       &wordLength);
+	sscanf(line, "%ld\t%ld\t%i\t%hi\n", &long_var, &long_var2,
+	       &wordLength, &short_var);
 	nodeCounter = (IDnum) long_var;
 	sequenceCount = (IDnum) long_var2;
+	*double_strand = (boolean) short_var;
 	wordShift = wordLength - 1;
 	graph = emptyGraph(sequenceCount, wordLength);
 	resetWordFilter(wordLength);

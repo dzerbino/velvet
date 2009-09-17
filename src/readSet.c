@@ -811,7 +811,7 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 // General argument parser for most functions
 // Basically a reused portion of toplevel code dumped into here
-void parseDataAndReadFiles(char * filename, int argc, char **argv)
+void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand)
 {
 	int argIndex = 1;
 	FILE *outfile = fopen(filename, "w");
@@ -884,6 +884,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv)
 			else if (strcmp(argv[argIndex], "-longPaired") ==
 				 0)
 				cat = CATEGORIES * 2 + 1;
+			else if (strcmp(argv[argIndex], "-strand_specific") 
+				 == 0)
+				*double_strand = false;
 			else {
 				printf("Unknown option: %s\n",
 				       argv[argIndex]);

@@ -27,7 +27,6 @@ void destroySplayTable(SplayTable * table);
 
 void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 						SplayTable * table,
-						char *filename);
-
-void inputMaskArrayIntoSplayTable(ReadSet * reads, SplayTable * table);
+						char *filename,
+						boolean double_strand);
 #endif

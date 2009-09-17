@@ -77,7 +77,7 @@ boolean isLoop_pg(PreArc * preArc);
 ////////////////////////////////////////////////////////////
 
 // Memory allocation
-PreGraph *emptyPreGraph_pg(IDnum sequenceCount, int wordLength);
+PreGraph *emptyPreGraph_pg(IDnum sequenceCount, int wordLength, boolean double_strand);
 void allocatePreNodeSpace_pg(PreGraph * preGraph, IDnum preNodeCount);
 void addPreNodeToPreGraph_pg(PreGraph * preGraph, Coordinate start,
 			     Coordinate stop, FILE * file,

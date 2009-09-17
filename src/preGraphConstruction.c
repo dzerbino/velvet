@@ -503,7 +503,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		}
 
 		// End of sequence
-		if (!fgets(line, lineLength, file))
+		if (!fgets(line, lineLength, file) && sequenceIndex < sequenceCount_pg(preGraph))
 			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
 		//puts(" ");
 
@@ -659,7 +659,7 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 	InsertionMarker *veryLastMarker;
 
 	PreGraph *preGraph =
-	    emptyPreGraph_pg(sequenceCount, rdmapArray->WORDLENGTH);
+	    emptyPreGraph_pg(sequenceCount, rdmapArray->WORDLENGTH, rdmapArray->double_strand);
 
 	puts("Creating insertion markers");
 	setInsertionMarkers(rdmapArray, markerCounters, &veryLastMarker,

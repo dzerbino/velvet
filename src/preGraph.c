@@ -55,6 +55,7 @@ struct preGraph_st {
 	IDnum sequenceCount;
 	IDnum preNodeCount;
 	int wordLength;
+	boolean double_strand;
 };
 
 static RecycleBin *preArcMemory = NULL;
@@ -880,12 +881,13 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 }
 
 // Allocate memory for an empty preGraph created with sequenceCount different sequences
-PreGraph *emptyPreGraph_pg(IDnum sequenceCount, int wordLength)
+PreGraph *emptyPreGraph_pg(IDnum sequenceCount, int wordLength, boolean double_strand)
 {
 	PreGraph *newPreGraph = mallocOrExit(1, PreGraph);
 	newPreGraph->sequenceCount = sequenceCount;
 	newPreGraph->wordLength = wordLength;
 	newPreGraph->preNodeCount = 0;
+	newPreGraph->double_strand = double_strand;
 	return newPreGraph;
 }
 
@@ -1023,8 +1025,8 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 		printf("Writing into pregraph file %s...\n", filename);
 
 	// General data
-	fprintf(outfile, "%d\t%d\t%i\n", preGraph->preNodeCount,
-		preGraph->sequenceCount, preGraph->wordLength);
+	fprintf(outfile, "%ld\t%ld\t%i\t%hi\n", (long) preGraph->preNodeCount,
+		(long) preGraph->sequenceCount, preGraph->wordLength, (short) preGraph->double_strand);
 
 	// PreNode info
 	for (index = 1; index <= preGraph->preNodeCount; index++) {
