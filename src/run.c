@@ -152,7 +152,8 @@ int main(int argc, char **argv)
 						   double_strand);
 
 	destroySplayTable(splayTable);
-	closedir(dir);
+	if (dir)
+		closedir(dir);
 	free(filename);
 	free(buf);
 

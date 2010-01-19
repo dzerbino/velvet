@@ -43,7 +43,7 @@ struct connection_st {
 	Connection *next;
 	Connection *previous;
 	Connection *twin;
-	Coordinate distance;
+	double distance;
 	double variance;
 	IDnum direct_count;
 	IDnum paired_count;
@@ -91,7 +91,7 @@ Connection * getTwinConnection(Connection * connect) {
 }
 
 Coordinate getConnectionDistance(Connection * connect) {
-	return connect->distance;
+	return (Coordinate) connect->distance;
 }
 
 double getConnectionVariance(Connection * connect) {
@@ -150,7 +150,7 @@ static IDnum expectedNumberOfConnections(IDnum IDA, Connection * connect,
 		longCount = counts[cat][IDA + nodeCount(graph)];
 	}
 
-	D = connect->distance - (longLength + shortLength) / 2;
+	D = getConnectionDistance(connect) - (longLength + shortLength) / 2;
 
 	M = (D - mu) / sigma;
 	N = (D + shortLength - mu) / sigma;
@@ -616,7 +616,7 @@ Connection *createNewConnection(IDnum nodeID, IDnum node2ID,
 	connect->destination = destination;
 	connect->direct_count = direct_count;
 	connect->paired_count = paired_count;
-	connect->distance = distance;
+	connect->distance = (double) distance;
 	connect->variance = variance;
 
 	// Insert in scaffold
@@ -977,7 +977,7 @@ void printConnections(ReadSet * reads)
 				     (long) getNodeID(connect->destination),
 				     (long) connect->direct_count,
 				     (long) connect->paired_count,
-				     (long long) connect->distance,
+				     (long long) getConnectionDistance(connect),
 				     (long long) getNodeLength(node),
 				     (long long) getNodeLength(connect->destination),
 				     connect->variance,
@@ -1001,7 +1001,7 @@ void printConnections(ReadSet * reads)
 				else
 					printf(" ? ?");
 				printf(" %ld", (long) expectedNumberOfConnections(index-nodeCount(graph), connect, counts, 0));
-				printf(" %lld", (long long) (connect->distance - (getNodeLength(node) + getNodeLength(connect->destination))/2));
+				printf(" %lld", (long long) (getConnectionDistance(connect) - (getNodeLength(node) + getNodeLength(connect->destination))/2));
 				if (testConnection
 				    (index - nodes, connect, counts))
 					puts(" OK");

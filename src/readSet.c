@@ -1248,6 +1248,7 @@ Coordinate *getSequenceLengthsFromFile(char *filename, int wordLength)
 			bpCount += (Coordinate) strlen(line) - 1;
 		}
 	}
+	lengths[sequenceIndex] =  bpCount - lengthOffset;
 	fclose(file);
 
 	return lengths;

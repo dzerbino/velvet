@@ -1490,7 +1490,7 @@ int compareNodeCovs(const void * A, const void * B) {
 		return 1;
 	if (covA == covB)
 		return 0;
-	return 1;
+	return -1;
 }
 
 double estimated_cov(Graph * graph)

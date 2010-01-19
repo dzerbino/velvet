@@ -211,3 +211,14 @@ V 0.7.55
 - Implemented strand specific sequencing
 - Parsing bug of the Sequences file
 - Added sequence shuffling scripts
+
+V 0.7.56
+- Amended contrib files for Debian release  
+- Amended inline function for C99 compatibility
+- Crashing NULL pointer bug
+- Bug in shuffling script
+- Updated VelvetOptimiser
+- Added Ken Doig's show_repeats script
+- Bug in estimated coverage
+- Bug in reading sequence lengths
+- Rounding error in scaffolding

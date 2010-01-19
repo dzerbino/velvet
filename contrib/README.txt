@@ -52,3 +52,8 @@ length distribution of a chosen short read library in the assembly.
 
 Alternative ways to efficiently shuffle your reads produced in the language of
 your choice: C, BioPython, Perl or Bash
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- show_repeats by Ken Doig (kdd@doig.org)
+
+Plots out the length of the larger repeated contigs in the assembly. 

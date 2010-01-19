@@ -163,12 +163,12 @@ ShortReadMarker *getShortReadMarkerAtIndex(ShortReadMarker * array,
 
 IDnum getShortReadMarkerID(ShortReadMarker * marker);
 
-inline Coordinate getShortReadMarkerPosition(ShortReadMarker * marker);
-inline void setShortReadMarkerPosition(ShortReadMarker * marker,
+extern inline Coordinate getShortReadMarkerPosition(ShortReadMarker * marker);
+extern inline void setShortReadMarkerPosition(ShortReadMarker * marker,
 				       Coordinate position);
 
-inline ShortLength getShortReadMarkerOffset(ShortReadMarker * marker);
-inline void setShortReadMarkerOffset(ShortReadMarker * marker,
+extern inline ShortLength getShortReadMarkerOffset(ShortReadMarker * marker);
+extern inline void setShortReadMarkerOffset(ShortReadMarker * marker,
 				     ShortLength offset);
 
 ////////////////////////////////////////////////////////////
