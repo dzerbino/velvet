@@ -403,14 +403,14 @@ int main(int argc, char **argv)
 	strcat(graphFilename, "/contigs.fa");
 	exportLongNodeSequences(graphFilename, graph, minContigKmerLength); 
 
-	strcpy(graphFilename, directory);
-	strcat(graphFilename, "/stats.txt");
-	displayGeneralStatistics(graph, graphFilename);
-
 	if (sequences == NULL) {
 		sequences = importReadSet(seqFilename);
 		convertSequences(sequences);
 	}
+
+	strcpy(graphFilename, directory);
+	strcat(graphFilename, "/stats.txt");
+	displayGeneralStatistics(graph, graphFilename, sequences);
 
 	strcpy(graphFilename, directory);
 	strcat(graphFilename, "/LastGraph");

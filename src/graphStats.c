@@ -798,7 +798,39 @@ IDnum readStarts(Node * node)
 	return sum;
 }
 
-void displayGeneralStatistics(Graph * graph, char *filename)
+static void printShortCounts(FILE * outfile, Node * node, Graph * graph, ReadSet * reads) {
+	IDnum counts[CATEGORIES];
+	Category cat;
+	IDnum shortReadIndex;
+	IDnum readID;
+	IDnum shortReadCount;
+	ShortReadMarker *array;
+	ShortReadMarker *marker;
+
+	if (!readStartsAreActivated(graph)) {
+		for (cat = 0; cat < CATEGORIES; cat++)
+			fprintf(outfile, "\tN/A");
+		return;
+	}
+
+	shortReadCount = getNodeReadCount(node, graph);
+	array = getNodeReads(node, graph);
+
+	for (cat = 0; cat < CATEGORIES; cat++)
+		counts[cat] = 0;
+
+	for (shortReadIndex = 0; shortReadIndex < shortReadCount; shortReadIndex++) {
+		marker = getShortReadMarkerAtIndex(array, shortReadIndex);
+		readID = getShortReadMarkerID(marker);
+		cat = reads->categories[readID - 1] / 2;
+		counts[cat]++;
+	}
+
+	for (cat = 0; cat < CATEGORIES; cat++)
+		fprintf(outfile, "\t%li", (long) counts[cat]);
+}
+
+void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads)
 {
 	IDnum nodeIndex;
 	Node *node;
@@ -817,6 +849,11 @@ void displayGeneralStatistics(Graph * graph, char *filename)
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		fprintf(outfile, "\tshort%i_cov", (int) (cat + 1));
 		fprintf(outfile, "\tshort%i_Ocov", (int) (cat + 1));
+	}
+
+	fprintf(outfile, "\tlong_nb");
+	for (cat = 0; cat < CATEGORIES; cat++) {
+		fprintf(outfile, "\tshort%i_nb", (int) (cat + 1));
 	}
 
 	fprintf(outfile, "\n");
@@ -849,6 +886,9 @@ void displayGeneralStatistics(Graph * graph, char *filename)
 			for (cat = 0; cat < CATEGORIES; cat++)
 				fprintf(outfile, "\tInf\tInf");
 		}
+
+		fprintf(outfile, "\t%li", (long) markerCount(node));
+		printShortCounts(outfile, node, graph, reads); 
 
 		fprintf(outfile, "\n");
 	}

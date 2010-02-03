@@ -10,6 +10,7 @@ in this text file, plus much more!
 > SUMMARY
 	* A/ REQUIREMENTS
 	* B/ COMPILING INSTRUCTIONS
+	* C/ WHERE IS THE MANUAL?
 
 ----------------------------------------------------------------------------------
 A/ REQUIREMENTS
@@ -31,3 +32,11 @@ For colorspace Velvet replace that command with
 
 Otherwise compile each *.c file separately, then execute the default
 instructions at the top of Makefile. 
+
+----------------------------------------------------------------------------------
+C/ WHERE IS THE MANUAL?
+
+If you cannot find the PDF manual in the source directory (probably because
+you downloaded Velvet through git), you can simply compile it:
+
+> make doc

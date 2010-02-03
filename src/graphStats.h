@@ -31,7 +31,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 ///////////////////////////////////////////////////////////////////
 void displayGraphStatistics(Graph * graph);
 
-void displayGeneralStatistics(Graph * graph, char *filename);
+void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads);
 
 void exportLongNodeSequences(char *filename, Graph * graph,
 			     Coordinate minLength);

@@ -222,3 +222,8 @@ V 0.7.56
 - Bug in estimated coverage
 - Bug in reading sequence lengths
 - Rounding error in scaffolding
+
+V 0.7.57
+- Added document compilation to the README file
+- Patched the VelvetOptimiser copy
+- Added read count in stats file
