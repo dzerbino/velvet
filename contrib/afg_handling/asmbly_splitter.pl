@@ -33,7 +33,8 @@
 #
 #####################################################################
 #
-# Modified by Daniel Zerbino to allow for scaffolding
+# Modified by Daniel Zerbino to allow for scaffolding and to preserve read
+# information
 use strict;
 
 my $usage = "Usage: $0 <contig number> <afg file>\n";
@@ -149,25 +150,79 @@ while($_){
 close IN;
 
 print STDERR "Found the end of contig $contig\nNumber of reads = $readcount\nStarting to sort reads\n";
+
 #remove double entries in read list
 my @uniq = keys %{{ map { $_ => 1 } @reads }};
 #sort the reads.
 my @sorted = sort { $a <=> $b } @uniq;
 @reads = @sorted;
-print STDERR "Finished sorting reads\nStarting to look for reads\n";
+my @reads_copy = @reads;
+print STDERR "Finished sorting reads\nStarting to look for fragments\n";
 
-#now do second pass of the file looking for the reads...
+# Second pass through the file to print out all the appropriate
+# library, fragment, read, contig and scaffold info
+
 open IN, $file;
 my $currentread = shift @reads;
+my $currentread_copy = shift @reads_copy;
 my $foundreads = 0;
 
 print STDERR "Reads to find = " . ($readcount - $foundreads) . "\tCurrent read: $currentread\n";
 
 while(<IN>){
-	if($foundreads == $readcount){
-		last;
+	# All library info is printed out
+	if(/\{LIB/){
+		print OUT $_;
+		while(<IN>){
+			print OUT $_;
+			if(/\}/){
+				last;
+			}
+		}
+		$_ = <IN>;
+		print OUT $_;
+
 	}
-	if(/\{RED/){
+
+	# All fragment blocks that contain two selected reads are printed out
+	elsif(/\{FRG/){
+		my $frgString = $_;
+		$frgString .= <IN>;
+
+		$_ = <IN>;
+		chomp;
+		my @tmp = split /[:,]/, $_;
+		my $read = $tmp[1];
+
+		while ($currentread_copy < $read) {
+			$currentread_copy = shift @reads_copy;
+		}
+
+		if ($currentread_copy > $read) {
+			next;
+		} else {
+			$currentread_copy = shift @reads_copy;
+		}
+
+		$read = $tmp[2];
+
+		if ($read < $currentread_copy) {
+			next;
+		}
+	
+		# If we got to this line then both read IDs were recognized!
+		print OUT $frgString;
+		print OUT "$_\n";
+		while(<IN>){
+			print OUT $_;
+			if(/\}/){
+				last;
+			}
+		}
+	}
+
+	# All selected read blocks are printed out
+	elsif(/\{RED/){
 		my $line = <IN>;
 		if($line =~ /^iid:$currentread/){
 			$foundreads ++;
@@ -182,6 +237,9 @@ while(<IN>){
 			$currentread = shift @reads;
 			if($foundreads % 100 == 0){
 				print STDERR "Reads to find = " . ($readcount - $foundreads) . "\tCurrent read: $currentread\n";
+			}
+			if($foundreads == $readcount){
+				last;
 			}
 		}
 	}
