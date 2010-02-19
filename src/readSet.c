@@ -567,10 +567,10 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 	char c;
 
 	if (strcmp(filename, "-"))
-		file = gzopen(filename, "r");
+		file = gzopen(filename, "rb");
 	else { 
 		file = gzdopen(fileno(stdin), "rb");
-		SET_BINARY_MODE(file);
+		SET_BINARY_MODE(stdin);
 	}
 
 	if (file != NULL)
@@ -697,10 +697,10 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 	int offset = 0;
 
 	if (strcmp(filename, "-"))
-		file = gzopen(filename, "r");
+		file = gzopen(filename, "rb");
 	else { 
 		file = gzdopen(fileno(stdin), "rb");
-		SET_BINARY_MODE(file);
+		SET_BINARY_MODE(stdin);
 	}
 
 	if (file != NULL)
@@ -767,10 +767,10 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	Coordinate start;
 
 	if (strcmp(filename, "-"))
-		file = gzopen(filename, "r");
+		file = gzopen(filename, "rb");
 	else { 
 		file = gzdopen(fileno(stdin), "rb");
-		SET_BINARY_MODE(file);
+		SET_BINARY_MODE(stdin);
 	}
 
 	if (file != NULL)

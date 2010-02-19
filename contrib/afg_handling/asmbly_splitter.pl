@@ -166,10 +166,11 @@ open IN, $file;
 my $currentread = shift @reads;
 my $currentread_copy = shift @reads_copy;
 my $foundreads = 0;
+my @foundfrags = ();  
 
 print STDERR "Reads to find = " . ($readcount - $foundreads) . "\tCurrent read: $currentread\n";
 
-while(<IN>){
+while(<IN>) {
 	# All library info is printed out
 	if(/\{LIB/){
 		print OUT $_;
@@ -193,24 +194,26 @@ while(<IN>){
 		chomp;
 		my @tmp = split /[:,]/, $_;
 		my $read = $tmp[1];
+		my $read2 = $tmp[2];
 
-		while ($currentread_copy < $read) {
+		while (defined($currentread_copy) && $currentread_copy < $read) {
 			$currentread_copy = shift @reads_copy;
 		}
 
-		if ($currentread_copy > $read) {
+		if (!defined($currentread_copy) || $currentread_copy > $read) {
 			next;
 		} else {
 			$currentread_copy = shift @reads_copy;
 		}
 
-		$read = $tmp[2];
-
-		if ($read < $currentread_copy) {
+		if (!defined($currentread_copy) || $read2 < $currentread_copy) {
 			next;
 		}
-	
+
 		# If we got to this line then both read IDs were recognized!
+		push @foundfrags, $read;
+		push @foundfrags, $read2;
+	
 		print OUT $frgString;
 		print OUT "$_\n";
 		while(<IN>){
@@ -224,26 +227,43 @@ while(<IN>){
 	# All selected read blocks are printed out
 	elsif(/\{RED/){
 		my $line = <IN>;
-		if($line =~ /^iid:$currentread/){
+		if(defined $currentread && $line =~ /^iid:$currentread/){
 			$foundreads ++;
 			print OUT "\{RED\n";
 			print OUT $line;
 			while(<IN>){
+				if (/frg:/) {
+					if (defined $foundfrags[0] && $currentread != $foundfrags[0]) {
+						next;
+					} else {
+						shift @foundfrags;
+					}
+				}
 				print OUT $_;
 				if(/\}/){
 					last;
 				}
 			}
-			$currentread = shift @reads;
-			if($foundreads % 100 == 0){
-				print STDERR "Reads to find = " . ($readcount - $foundreads) . "\tCurrent read: $currentread\n";
-			}
-			if($foundreads == $readcount){
-				last;
-			}
+			if (scalar( @reads) != 0) {
+			  $currentread = shift @reads;
+
+		
+			  if($foundreads % 100 == 0){
+			    print STDERR "Reads to find = " . ($readcount - $foundreads) . "\tCurrent read: $currentread\n";
+			  }
+			  if($foundreads == $readcount){
+			    last;
+			  }
 		}
+			else {
+			  print STDERR 'No reads left in RED!';
+			  next;
+			}
+			      
+
 	}
 }
+      }
 print "\n";
 
 

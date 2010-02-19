@@ -227,3 +227,11 @@ V 0.7.57
 - Added document compilation to the README file
 - Patched the VelvetOptimiser copy
 - Added read count in stats file
+
+V 0.7.58
+- Modified to asmbly_splitter script to conserve pairing information
+- Modified the Makefile to make the compilation of Oases safer
+
+V 0.7.59
+- Correction to the asmbly_splitter script
+- Correction to the zipped file reading
