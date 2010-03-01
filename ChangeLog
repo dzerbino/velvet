@@ -235,3 +235,7 @@ V 0.7.58
 V 0.7.59
 - Correction to the asmbly_splitter script
 - Correction to the zipped file reading
+ 
+V 0.7.60
+- Amended Makefile for colorspace Oases users
+- Measured coverage is printed in log file

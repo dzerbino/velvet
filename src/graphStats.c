@@ -1533,13 +1533,26 @@ int compareNodeCovs(const void * A, const void * B) {
 	return -1;
 }
 
-double estimated_cov(Graph * graph)
+double estimated_cov(Graph * graph, char * directory)
 {
 	Node ** nodeArray = callocOrExit(nodeCount(graph), Node*); 
 	IDnum index;
 	Coordinate halfTotalLength = 0;
 	Coordinate sumLength = 0;
 	Node *node;
+	char *logFilename =
+	    mallocOrExit(strlen(directory) + 100, char);
+	char *statsLine = 
+	    mallocOrExit(5000, char);
+	FILE *logFile;
+
+	strcpy(logFilename, directory);
+	strcat(logFilename, "/Log");
+	logFile = fopen(logFilename, "a");
+
+	if (logFile == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not write to %s",
+		       logFilename);
 
 	puts("Measuring median coverage depth...");
 
@@ -1567,13 +1580,21 @@ double estimated_cov(Graph * graph)
 		sumLength += getNodeLength(node);
 		if (sumLength >= halfTotalLength) {
 			printf("Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
+			fprintf(logFile, "Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
 			free(nodeArray);
+			fclose(logFile);
+			free(logFilename);
+			free(statsLine);
 			return getTotalCoverage(node) / (double) getNodeLength(node);
 		}
 	}
 
 	// In case something went wrong...
 	free(nodeArray);
+	fclose(logFile);
+	free(logFilename);
+	free(statsLine);
+
 	return -1;
 }
 

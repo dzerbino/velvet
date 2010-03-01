@@ -49,7 +49,7 @@ IDnum nodeMultiplicity(Node * node);
 
 Coordinate n50(Graph * graph);
 
-double estimated_cov(Graph * graph);
+double estimated_cov(Graph * graph, char * directory);
 
 Coordinate maxLength(Graph * graph);
 

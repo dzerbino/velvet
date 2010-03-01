@@ -336,7 +336,7 @@ int main(int argc, char **argv)
 
 	// Coverage cutoff
 	if (expectedCoverage < 0 && estimateCoverage == true) {
-		expectedCoverage = estimated_cov(graph);
+		expectedCoverage = estimated_cov(graph, directory);
 		if (coverageCutoff < 0) {
 			coverageCutoff = expectedCoverage / 2;
 			estimateCutoff = true;
@@ -344,7 +344,7 @@ int main(int argc, char **argv)
 	} else { 
 		estimateCoverage = false;
 		if (coverageCutoff < 0 && estimateCutoff) 
-			coverageCutoff = estimated_cov(graph) / 2;
+			coverageCutoff = estimated_cov(graph, directory) / 2;
 		else 
 			estimateCutoff = false;
 	}
