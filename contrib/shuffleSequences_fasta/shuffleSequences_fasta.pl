@@ -32,20 +32,6 @@ while(defined $lineA) {
 		$lineA = <FILEA>;
 	}
 
-	print OUTFILE $lineA;
-	$lineA = <FILEA>;
-	while (defined $lineA && $lineA !~ m/>/) { 
-		print OUTFILE $lineA;
-		$lineA = <FILEA>;
-	}
-
-	print OUTFILE $lineB;
-	$lineB = <FILEB>;
-	while (defined $lineB && $lineB !~ m/>/) { 
-		print OUTFILE $lineB;
-		$lineB = <FILEB>;
-	}
-
 	print OUTFILE $lineB;
 	$lineB = <FILEB>;
 	while (defined $lineB && $lineB !~ m/>/) { 

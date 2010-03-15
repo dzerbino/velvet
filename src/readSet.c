@@ -79,6 +79,47 @@ static void velvetifySequence(char * str) {
 	} 
 }
 
+static void reverseComplementSequence(char * str)
+{
+       size_t length = strlen(str);
+       size_t i;
+
+       for (i = 0; i < length-1 - i; i++) {
+	       char c = str[i];
+	       str[i] = str[length-1 - i];
+	       str[length-1 - i] = c;
+       }
+
+       for (i = 0; i < length; i++) {
+	       switch (str[i]) {
+	       case 'A':
+	       case 'a':
+		       str[i] = 'T';
+		       break;
+	       case 'C':
+	       case 'c':
+		       str[i] = 'G';
+		       break;
+	       case 'G':
+	       case 'g':
+		       str[i] = 'C';
+		       break;
+	       // As in velvetifySequence(), anything unusual ends up as 'A'
+	       default:
+		       str[i] = 'A';
+		       break;
+	       }
+       }
+}
+
+static void writeFastaSequence(FILE * outfile, const char * str)
+{
+       size_t length = strlen(str);
+       size_t start;
+       for (start = 0; start < length; start += 60)
+	       fprintf(outfile, "%.60s\n", &str[start]);
+}
+ 
 ReadSet *newReadSetAroundTightStringArray(TightString ** array,
 					  IDnum length)
 {
@@ -393,6 +434,16 @@ void exportIDMapping(char *filename, ReadSet * reads)
 
 }
 
+// Returns the value of a 32-bit little-endian-stored integer.
+static int int32(const unsigned char * ptr)
+{
+	int x = ptr[3];
+	x = (x << 8) | ptr[2];
+	x = (x << 8) | ptr[1];
+	x = (x << 8) | ptr[0];
+	return x;
+}
+
 // Imports sequences from a fastq file 
 // Memory space allocated within this function.
 static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
@@ -646,6 +697,13 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	while (fgets(line, maxline, file)) {
 		if (line[0] == '>') {
+			if (strchr(line,'\t')) {
+				printf("FastA headers in %s contain tabs, please remove them.\n", filename);
+				printf("E.g.: %s", line);
+				puts("Exiting");
+				exit(1);
+			}
+
 			if (offset != 0) { 
 				fprintf(outfile, "\n");
 				offset = 0;
@@ -801,6 +859,287 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	puts("Done");
 }
 
+static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex)
+{
+	char line[5000];
+	unsigned long lineno, readCount;
+	char previous_qname_pairing[10];
+	char previous_qname[5000];
+	char previous_seq[5000];
+	boolean previous_paired = false;
+
+	FILE *file = (strcmp(filename, "-") != 0)? fopen(filename, "r") : stdin;
+	if (file)
+		printf("Reading SAM file %s\n", filename);
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	readCount = 0;
+	for (lineno = 1; fgets(line, sizeof(line), file); lineno++)
+		if (line[0] != '@') {
+			char *qname, *flag, *seq;
+			int i;
+
+			qname = strtok(line, "\t");
+			flag  = strtok(NULL, "\t");
+			for (i = 3; i < 10; i++)
+				(void) strtok(NULL, "\t");
+			seq = strtok(NULL, "\t");
+
+			if (seq == NULL) {
+				fprintf(stderr,
+					"Line #%lu: ignoring SAM record with too few fields\n",
+					lineno);
+			}
+			else if (strcmp(seq, "*") == 0) {
+				fprintf(stderr,
+					"Line #%lu: ignoring SAM record with omitted SEQ field\n",
+					lineno);
+			}
+			else {
+				// Accept flags represented in either decimal or hex:
+				int flagbits = strtol(flag, NULL, 0);
+
+				const char *qname_pairing = "";
+				if (flagbits & 0x40)
+					qname_pairing = "/1";
+				else if (flagbits & 0x80)
+					qname_pairing = "/2";
+
+				if (flagbits & 0x10)
+					reverseComplementSequence(seq);
+
+				// Determine if paired to previous read
+				if (readCount > 0) {
+					if (cat % 2) {
+						if (previous_paired) {
+							// Last read paired to penultimate read
+							fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+								(long) ((*sequenceIndex)++), (int) cat);
+							writeFastaSequence(outfile, previous_seq);
+							previous_paired = false;
+						} else if (strcmp(qname, previous_qname) == 0) {
+							// Last read paired to current reads
+							fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+								(long) ((*sequenceIndex)++), (int) cat);
+							writeFastaSequence(outfile, previous_seq);
+							previous_paired = true;
+						} else {
+							// Last read unpaired
+							fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+								(long) ((*sequenceIndex)++), (int) cat - 1);
+							writeFastaSequence(outfile, previous_seq);
+							previous_paired = false;
+						}
+					} else {
+						// Unpaired dataset 
+						fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							(long) ((*sequenceIndex)++), (int) cat);
+						writeFastaSequence(outfile, previous_seq);
+					}
+				}
+
+				strcpy(previous_qname, qname);
+				strcpy(previous_qname_pairing, qname_pairing);
+				strcpy(previous_seq, seq);
+				velvetifySequence(previous_seq);
+
+				readCount++;
+			}
+		}
+
+	if (readCount) {
+		if (cat % 2) {
+			if (previous_paired) {
+				// Last read paired to penultimate read
+				fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+					(long) ((*sequenceIndex)++), (int) cat);
+				writeFastaSequence(outfile, previous_seq);
+			} else {
+				// Last read unpaired
+				fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+					(long) ((*sequenceIndex)++), (int) cat - 1);
+				writeFastaSequence(outfile, previous_seq);
+			}
+		} else {
+			// Unpaired dataset 
+			fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+				(long) ((*sequenceIndex)++), (int) cat);
+			writeFastaSequence(outfile, previous_seq);
+		}
+
+	}
+
+	fclose(file);
+	printf("%lu reads found.\nDone\n", readCount);
+}
+
+static int readBAMint32(gzFile file)
+{
+	unsigned char buffer[4];
+	if (gzread(file, buffer, 4) != 4)
+		exitErrorf(EXIT_FAILURE, false, "BAM file header truncated");
+
+	return int32(buffer);
+}
+
+static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex)
+{
+	size_t seqCapacity = 0;
+	char *seq = NULL;
+	size_t bufferCapacity = 4;
+	unsigned char *buffer = mallocOrExit(bufferCapacity, unsigned char);
+	unsigned long recno, readCount;
+	int i, refCount;
+	gzFile file;
+	char previous_qname_pairing[10];
+	char previous_qname[5000];
+	char previous_seq[5000];
+	boolean previous_paired = false;
+
+	if (strcmp(filename, "-") != 0)
+		file = gzopen(filename, "rb");
+	else {
+		file = gzdopen(fileno(stdin), "rb");
+		SET_BINARY_MODE(stdin);
+	}
+
+	if (file != NULL)
+		printf("Reading BAM file %s\n", filename);
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	if (! (gzread(file, buffer, 4) == 4 && memcmp(buffer, "BAM\1", 4) == 0))
+		exitErrorf(EXIT_FAILURE, false, "%s is not in BAM format", filename);
+
+	// Skip header text
+	if (gzseek(file, readBAMint32(file), SEEK_CUR) == -1)
+		exitErrorf(EXIT_FAILURE, false, "gzseek failed");
+
+	// Skip header reference list
+	refCount = readBAMint32(file);
+	for (i = 0; i < refCount; i++) {
+		if (gzseek(file, readBAMint32(file) + 4, SEEK_CUR) == -1)
+			exitErrorf(EXIT_FAILURE, false, "gzseek failed");
+	}
+
+	readCount = 0;
+	for (recno = 1; gzread(file, buffer, 4) == 4; recno++) {
+		int blockSize = int32(buffer);
+		int readLength;
+
+		if (bufferCapacity < 4 + blockSize) {
+			bufferCapacity = 4 + blockSize + 4096;
+			buffer = reallocOrExit(buffer, bufferCapacity, unsigned char);
+		}
+
+		if (gzread(file, &buffer[4], blockSize) != blockSize)
+			exitErrorf(EXIT_FAILURE, false, "BAM alignment record truncated");
+
+		readLength = int32(&buffer[20]);
+		if (readLength == 0) {
+			fprintf(stderr,
+				"Record #%lu: ignoring BAM record with omitted SEQ field\n",
+				recno);
+		}
+		else {
+			int readNameLength = buffer[12];
+			int flag_nc = int32(&buffer[16]);
+			int flagbits = flag_nc >> 16;
+			int cigarLength = flag_nc & 0xffff;
+			char *qname = (char *)&buffer[36];
+			unsigned char *rawseq =
+					&buffer[36 + readNameLength + 4 * cigarLength];
+
+			const char *qname_pairing = "";
+			if (flagbits & 0x40)
+				qname_pairing = "/1";
+			else if (flagbits & 0x80)
+				qname_pairing = "/2";
+
+			if (seqCapacity < readLength + 1) {
+				seqCapacity = readLength * 2 + 1;
+				seq = reallocOrExit(seq, seqCapacity, char);
+			}
+
+			for (i = 0; i < readLength; i += 2) {
+				static const char decode_bases[] = "=ACMGRSVTWYHKDBN";
+				unsigned int packed = *rawseq++;
+				seq[i] = decode_bases[packed >> 4];
+				seq[i+1] = decode_bases[packed & 0xf];
+			}
+			seq[readLength] = '\0';
+
+			if (flagbits & 0x10)
+				reverseComplementSequence(seq);
+
+			// Determine if paired to previous read
+			if (readCount > 0) {
+				if (cat % 2) {
+					 if (previous_paired) {
+						// Last read paired to penultimate read
+						fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							(long) ((*sequenceIndex)++), (int) cat);
+						writeFastaSequence(outfile, previous_seq);
+						previous_paired = false;
+					} else if (strcmp(qname, previous_qname) == 0) {
+						// Last read paired to current reads
+						fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							(long) ((*sequenceIndex)++), (int) cat);
+						writeFastaSequence(outfile, previous_seq);
+						previous_paired = true;
+					} else {
+						// Last read unpaired
+						fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							(long) ((*sequenceIndex)++), (int) cat - 1);
+						writeFastaSequence(outfile, previous_seq);
+						previous_paired = false;
+					}
+				} else {
+					// Unpaired dataset 
+					fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+						(long) ((*sequenceIndex)++), (int) cat);
+					writeFastaSequence(outfile, previous_seq);
+				}
+			}
+
+			strcpy(previous_qname, qname);
+			strcpy(previous_qname_pairing, qname_pairing);
+			strcpy(previous_seq, seq);
+			velvetifySequence(previous_seq);
+
+			readCount++;
+		}
+	}
+
+	if (readCount) {
+		if (cat % 2) {
+			if (previous_paired) {
+				// Last read paired to penultimate read
+				fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+					(long) ((*sequenceIndex)++), (int) cat);
+				writeFastaSequence(outfile, previous_seq);
+			} else {
+				// Last read unpaired
+				fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+					(long) ((*sequenceIndex)++), (int) cat - 1);
+				writeFastaSequence(outfile, previous_seq);
+			}
+		} else {
+			// Unpaired dataset 
+			fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+				(long) ((*sequenceIndex)++), (int) cat);
+			writeFastaSequence(outfile, previous_seq);
+		}
+	}
+
+	free(seq);
+	free(buffer);
+
+	gzclose(file);
+	printf("%lu reads found.\nDone\n", readCount);
+}
+
 #define FASTQ 1
 #define FASTA 2
 #define GERALD 3
@@ -808,6 +1147,8 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 #define FASTA_GZ 5
 #define FASTQ_GZ 6
 #define MAQ_GZ 7
+#define SAM 8
+#define BAM 9
 
 // General argument parser for most functions
 // Basically a reused portion of toplevel code dumped into here
@@ -848,6 +1189,10 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				filetype = FASTQ_GZ;
 			else if (strcmp(argv[argIndex], "-fasta.gz") == 0)
 				filetype = FASTA_GZ;
+			else if (strcmp(argv[argIndex], "-sam") == 0)
+				filetype = SAM;
+			else if (strcmp(argv[argIndex], "-bam") == 0)
+				filetype = BAM;
 			else if (strcmp(argv[argIndex], "-maq.gz") == 0)
 				filetype = MAQ_GZ;
 			else if (strcmp(argv[argIndex], "-short") == 0)
@@ -917,6 +1262,12 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			break;
 		case FASTQ_GZ:
 			readFastQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			break;
+		case SAM:
+			readSAMFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			break;
+		case BAM:
+			readBAMFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case MAQ_GZ:
 			readMAQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);

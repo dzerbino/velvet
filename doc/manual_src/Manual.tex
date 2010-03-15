@@ -71,7 +71,9 @@ From a GNU environment, simply type:
 > make
 \end{verbatim}
 
-\subsection{Colorspace Velvet}
+\subsection{Compilation settings}
+
+\subsubsection{Colorspace Velvet}
 
 To produce the colorspace version of Velvet, compile with the instruction:
 
@@ -83,7 +85,7 @@ All the rest of the manual remains valid, except that the executables are now ca
 
 \textbf{Beware} that color- and sequence space are incompatible, hence separate sets of executables. In other words, don't try to hash sequence files with colorspace velvet or vice-versa, under penalty of meaningless results!
 
-\subsection{Compilation settings: CATEGORIES}
+\subsubsection{CATEGORIES}
 
 Because of the use of fixed-length arrays, a number of variables have to be set at compilation time. 
 
@@ -99,7 +101,7 @@ make 'CATEGORIES=57'
 
 Obviously, the greater the number, the longer the corresponding arrays, the more memory will be required to run Velvet. Adjust this variable according to your needs and your memory requirements. 
 
-\subsection{Compilation settings: MAXKMERLENGTH.}
+\subsubsection{MAXKMERLENGTH.}
 
 \label{sec:maxlength}
 
@@ -190,6 +192,14 @@ You can simply do:
 \begin{verbatim}
 > myprogram | velveth directory 21 -fastq other_reads.fastq -fasta -
 > velvetg directory (... parameters...) 
+\end{verbatim}
+
+\subsubsection{Strand specific sequencing}
+
+If you are using a strand specific transcriptome sequencing protocol, you may wish to use this option for better results. Even though it can be used anywhere on the command line, it applies to all the dataset. To toggle it on, type:
+
+\begin{verbatim}
+> ./velveth output_directory/ 21 (...data files...) -strand_specific
 \end{verbatim}
 
 \subsection{Running velvetg}
@@ -377,6 +387,16 @@ expensive memory-wise.
 
 \textbf{Note:} In the stats.txt file, you will find all three categories (long,
 short1 and short2) treated separately.
+
+	\paragraph{Obtaining reads unused in the assembly}
+	
+	If you wish to obtain the reads which do not belong in the assembly, you should type:
+	
+\begin{verbatim}
+> ./velvetg output_directory/  -unused_reads yes (... other parameters ...)
+\end{verbatim}	
+
+	The reads will be copied into a FastA file called UnusedReads.fa .
 
 \subsection{Advanced parameters: Tour Bus}
 
@@ -658,6 +678,14 @@ of all the reads which belong to a given contig.
 \item[observed-insert-lengths] by Daniel Zerbino
 
 This scripts scans the Graph2 file produced by velvetg then computes and displays the insert length distribution of a chosen short read library in the assembly.
+
+\item[shuffleSequences] by Eric Cabot (ecabot@wisc.edu) Peter (peter@maubp.freeserve.co.uk) and Daniel Zerbino (zerbino@ebi.ac.uk)
+
+Alternative ways to efficiently shuffle your reads produced in the language of your choice: C, BioPython, Perl or Bash.
+
+\item[show\_repeata] by Ken Doig (kdd@doig.org)
+
+Plots out the length of the larger repeated contigs in the assembly.
 
 \end{description}
 

@@ -367,7 +367,8 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 					    kmerOccurences, Graph * graph,
 					    IDnum seqID, Category category,
 					    boolean readTracking,
-					    boolean double_strand)
+					    boolean double_strand,
+					    boolean second_in_pair)
 {
 	Kmer word;
 	Kmer antiWord;
@@ -375,6 +376,7 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 	KmerOccurence *kmerOccurence;
 	int wordLength = getWordLength(graph);
 	Nucleotide nucleotide;
+	boolean reversed;
 
 	Node *node;
 	Node *previousNode = NULL;
@@ -430,22 +432,39 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 		}
 
 		// Search in table
-		if ((!double_strand || compareKmers(&word, &antiWord) <= 0)
-		    && (kmerOccurence =
-			findKmerOccurenceInSortedTable(&word,
-						       kmerOccurences))) {
-			node =
-			    getNodeInGraph(graph, kmerOccurence->nodeID);
-		} else if ((double_strand && compareKmers(&word, &antiWord) > 0)
-			   && (kmerOccurence =
-			       findKmerOccurenceInSortedTable(&antiWord,
-							      kmerOccurences)))
-		{
-			node =
-			    getNodeInGraph(graph, -kmerOccurence->nodeID);
+		reversed = false;
+		if (double_strand) {
+			if (compareKmers(&word, &antiWord) <= 0) {
+			    	kmerOccurence =
+				findKmerOccurenceInSortedTable(&word,
+							       kmerOccurences);
+			} else { 
+				kmerOccurence =
+				       findKmerOccurenceInSortedTable(&antiWord,
+				        kmerOccurences);
+				reversed = true;
+			}
+		} else {
+			if (!second_in_pair) {
+			    	kmerOccurence =
+				findKmerOccurenceInSortedTable(&word,
+							       kmerOccurences);
+			} else { 
+				kmerOccurence =
+				       findKmerOccurenceInSortedTable(&antiWord,
+				        kmerOccurences);
+				reversed = true;
+			}
+		}
+		
+		if (kmerOccurence) {
+			if (!reversed) 
+				node = getNodeInGraph(graph, kmerOccurence->nodeID);
+			else
+				node = getNodeInGraph(graph, -kmerOccurence->nodeID);
 		} else {
 			node = NULL;
-			if (previousNode)
+			if (previousNode) 
 				break;
 		}
 
@@ -467,7 +486,8 @@ static void threadSequenceThroughGraph(TightString * tString,
 				       Graph * graph,
 				       IDnum seqID, Category category,
 				       boolean readTracking,
-				       boolean double_strand)
+				       boolean double_strand, 
+				       boolean second_in_pair)
 {
 	Kmer word;
 	Kmer antiWord;
@@ -483,6 +503,7 @@ static void threadSequenceThroughGraph(TightString * tString,
 	Coordinate coord;
 	Coordinate previousCoord = 0;
 	Nucleotide nucleotide;
+	boolean reversed;
 
 	clearKmer(&word);
 	clearKmer(&antiWord);
@@ -518,28 +539,43 @@ static void threadSequenceThroughGraph(TightString * tString,
 		}
 
 		// Search in table
-		if ((!double_strand || compareKmers(&word, &antiWord) <= 0)
-		    && (kmerOccurence =
-			findKmerOccurenceInSortedTable(&word,
-						       kmerOccurences))) {
-			node =
-			    getNodeInGraph(graph, kmerOccurence->nodeID);
-			coord = kmerOccurence->position;
-		} else if ((double_strand && compareKmers(&word, &antiWord) > 0)
-			   && (kmerOccurence =
-			       findKmerOccurenceInSortedTable(&antiWord,
-							      kmerOccurences)))
-		{
-			node =
-			    getNodeInGraph(graph, -kmerOccurence->nodeID);
-			coord =
-			    getNodeLength(node) - kmerOccurence->position -
-			    1;
+		reversed = false;
+		if (double_strand) {
+			if (compareKmers(&word, &antiWord) <= 0) {
+			    	kmerOccurence =
+				findKmerOccurenceInSortedTable(&word,
+							       kmerOccurences);
+			} else { 
+				kmerOccurence =
+				       findKmerOccurenceInSortedTable(&antiWord,
+				        kmerOccurences);
+				reversed = true;
+			}
+		} else {
+			if (!second_in_pair) {
+			    	kmerOccurence =
+				findKmerOccurenceInSortedTable(&word,
+							       kmerOccurences);
+			} else { 
+				kmerOccurence =
+				       findKmerOccurenceInSortedTable(&antiWord,
+				        kmerOccurences);
+				reversed = true;
+			}
+		}
+		
+		if (kmerOccurence) {
+			if (!reversed) {
+				node = getNodeInGraph(graph, kmerOccurence->nodeID);
+				coord = kmerOccurence->position;
+			} else {
+				node = getNodeInGraph(graph, -kmerOccurence->nodeID);
+				coord = getNodeLength(node) - kmerOccurence->position - 1;
+			}
 		} else {
 			node = NULL;
-			if (previousNode) {
+			if (previousNode) 
 				break;
-			}
 		}
 
 		// Fill in graph
@@ -620,6 +656,7 @@ static void fillUpGraph(ReadSet * reads,
 {
 	IDnum readIndex;
 	Category category;
+	boolean second_in_pair = false;
 
 	resetNodeStatus(graph);
 
@@ -630,11 +667,17 @@ static void fillUpGraph(ReadSet * reads,
 						kmerOccurences,
 						graph, readIndex + 1,
 						category, 
-						readTracking, double_strand);
+						readTracking, double_strand, second_in_pair);
+
+		if (category % 2) 
+			second_in_pair = (second_in_pair? false : true);
+		else 
+			second_in_pair = false;
 	}
 
 	createNodeReadStartArrays(graph);
 
+	second_in_pair = false;
 	for (readIndex = 0; readIndex < reads->readCount; readIndex++) {
 		category = reads->categories[readIndex];
 
@@ -645,7 +688,12 @@ static void fillUpGraph(ReadSet * reads,
 		threadSequenceThroughGraph(reads->tSequences[readIndex],
 					   kmerOccurences,
 					   graph, readIndex + 1, category,
-					   readTracking, double_strand);
+					   readTracking, double_strand, second_in_pair);
+
+		if (category % 2) 
+			second_in_pair = (second_in_pair? false : true);
+		else 
+			second_in_pair = false;
 	}
 
 	orderNodeReadStartArrays(graph);

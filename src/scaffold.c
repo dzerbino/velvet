@@ -502,21 +502,23 @@ int compareReadOccurences(const void *A, const void * B) {
 }
 
 static void estimateLibraryInsertLength(Coordinate * coOccurences, IDnum coOccurencesCount, Category libID) {
-	Coordinate mean, median, variance;
+	Coordinate median, variance;
 	IDnum index;
+	int counter = 0;
 	qsort(coOccurences, coOccurencesCount, sizeof(Coordinate), compareReadOccurences);
 
 	median = coOccurences[coOccurencesCount / 2];
 
-	mean = 0;
-	for (index = 0; index < coOccurencesCount; index++)
-		mean += coOccurences[index];
-	mean /= coOccurencesCount;
-
+	// Modified variance around the median (proxy for expected value) 
+	// interval censoring
 	variance = 0;
-	for (index = 0; index < coOccurencesCount; index++)
-		variance += (coOccurences[index] - mean) * (coOccurences[index] - mean);
-	variance /= coOccurencesCount;
+	for (index = 0; index < coOccurencesCount; index++) {
+		if (coOccurences[index] > 0 && coOccurences[index] < 5 * median) {
+			variance += (coOccurences[index] - median) * (coOccurences[index] - median);
+			counter++;
+		}
+	}
+	variance /= counter;
 	
 	// To avoid subsequent divisions by zero
 	if (variance == 0)
@@ -690,7 +692,7 @@ static void projectFromSingleRead(Node * node,
 		// distance += 0;
 	} else {
 		// variance += 0;
-		distance += position - offset - getNodeLength(node) / 2;
+		distance += position - getNodeLength(node) / 2;
 	}
 
 	if (readOccurence->position < 0) {
@@ -700,27 +702,69 @@ static void projectFromSingleRead(Node * node,
 	} else {
 		// variance += 0;
 		distance +=
-		    -readOccurence->position + readOccurence->offset +
-		    getNodeLength(target) / 2;
+		    -readOccurence->position + getNodeLength(target) / 2;
 	}
 
-	if (position < 0 || readOccurence->position < 0) {
-		if (offset < readOccurence->offset && distance - getNodeLength(node)/2 - getNodeLength(target)/2 < -10)
-			return;
-		if (offset > readOccurence->offset && distance - getNodeLength(node)/2 - getNodeLength(target)/2 > 10)
-			return;
-
+	if (readOccurence->offset < 0 || offset < 0) { 
 		variance += length * length / 16;
-		createConnection(getNodeID(node), getNodeID(target), 1, 0,
-				 distance, variance);
-		createConnection(-getNodeID(node), -getNodeID(target), 1,
-				 0, -distance, variance);
-	} else if (distance > 0) {
-		createConnection(getNodeID(node), getNodeID(target), 1, 0,
-				 distance, variance);
+		//distance += 0;
 	} else {
-		createConnection(-getNodeID(node), -getNodeID(target), 1,
-				 0, -distance, variance);
+		// variance += 0;
+		distance += readOccurence->offset - offset;
+	}
+
+	// Relative ordering
+	if (offset > 0 && readOccurence->offset > 0) {
+		if (offset < readOccurence->offset) {
+			if (distance - getNodeLength(node)/2 - getNodeLength(target)/2 < -10)
+				;
+			else if (distance < getNodeLength(node)/2 + getNodeLength(target)/2)
+				createConnection(getNodeID(node), getNodeID(target), 1, 0,
+						 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+			else
+				createConnection(getNodeID(node), getNodeID(target), 1, 0,
+						 distance, variance);
+		} else if (offset > readOccurence->offset) {
+			if (-distance - getNodeLength(node)/2 - getNodeLength(target)/2 < -10)
+				;
+			else if (-distance < getNodeLength(node)/2 + getNodeLength(target)/2)
+				createConnection(-getNodeID(node), -getNodeID(target), 1,
+						 0, getNodeLength(node)/2 + getNodeLength(target)/2 , variance);
+			else 
+				createConnection(-getNodeID(node), -getNodeID(target), 1,
+						 0, -distance, variance);
+		}
+	} else if (offset > 0 && position > 0) {
+		if (distance - offset > -getNodeLength(node)/2 && distance - offset + length > getNodeLength(node)/2)
+			createConnection(getNodeID(node), getNodeID(target), 1, 0,
+					 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+		else if (distance - offset < -getNodeLength(node)/2 && distance - offset + length < getNodeLength(node)/2)
+			createConnection(-getNodeID(node), -getNodeID(target), 1, 0,
+					 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+		else {
+			createConnection(getNodeID(node), getNodeID(target), 1, 0,
+					 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+			createConnection(-getNodeID(node), -getNodeID(target), 1, 0,
+					 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+		}
+	} else if (readOccurence->offset > 0 && readOccurence->position > 0) {
+		if (-distance - readOccurence->offset > -getNodeLength(target)/2 && -distance - readOccurence->offset + length > getNodeLength(target)/2)
+			createConnection(-getNodeID(node), -getNodeID(target), 1, 0,
+					 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+		if (-distance - readOccurence->offset < -getNodeLength(target)/2 && -distance - readOccurence->offset + length < getNodeLength(target)/2)
+			createConnection(getNodeID(node), getNodeID(target), 1, 0,
+					 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+		else {
+			createConnection(getNodeID(node), getNodeID(target), 1, 0,
+					 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+			createConnection(-getNodeID(node), -getNodeID(target), 1, 0,
+					 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+		}
+	} else {
+		createConnection(getNodeID(node), getNodeID(target), 1, 0,
+				 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
+		createConnection(-getNodeID(node), -getNodeID(target), 1, 0,
+				 getNodeLength(node)/2 + getNodeLength(target)/2, variance);
 	}
 }
 
@@ -760,6 +804,8 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 
 	if (distance - getNodeLength(node)/2 - getNodeLength(target)/2 < -6 * sqrt(insertVariance))
 		return;
+	else if (distance < getNodeLength(node)/2 + getNodeLength(target)/2)
+		distance = getNodeLength(node)/2 + getNodeLength(target)/2;
 
 	createConnection(getNodeID(node), getNodeID(target), 0, 1,
 			 distance, variance);

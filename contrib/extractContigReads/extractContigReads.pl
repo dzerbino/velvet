@@ -19,7 +19,7 @@
 ##       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 ##       MA 02110-1301, USA.
 ##
-##       A script to split out a single contig's reads from an Graph2 file
+##       A script to split out a single contig's reads from an LastGraph file
 ##       produced by the Velvet assembler.  The output is in fasta format.
 ##
 ##       Usage:  ./extractContigReads.pl <contig number> <directory> 
@@ -39,7 +39,7 @@ my $directory=$ARGV[1];
 
 unless($directory){die "Usage: $usage\n"};
 
-my $graphfile = "$directory/Graph2";
+my $graphfile = "$directory/LastGraph";
 
 unless(-e $directory){die "$directory does not exist\n"};
 unless(-e $graphfile){die "$graphfile does not exist, please re-run Velvet with the reads tracking on"};
@@ -54,7 +54,7 @@ my $read_no;
 my $readingSeqPath = 0;
 my $recordReadIDs = 0;
 
-unless ($data[2] >= $contig_no) {die "Contig $contig_no does not exist in the Graph2 file.\n"};
+unless ($data[0] >= $contig_no) {die "Contig $contig_no does not exist in the LastGraph file.\n"};
 
 while(<GRAPH>) {
 	if (/SEQ/) {
@@ -104,11 +104,9 @@ while(<SEQ>) {
 		@data = split /\t/;
 		if ($reads{$data[1]}) {
 			$printRead = 1;
+			print "${data[0]}\n";
 		} else {
 			$printRead = 0;
-		}
-		if ($printRead == 1) {
-			print "$_\n";
 		}
 	} elsif ($printRead) {
 		print $_;

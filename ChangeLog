@@ -239,3 +239,13 @@ V 0.7.59
 V 0.7.60
 - Amended Makefile for colorspace Oases users
 - Measured coverage is printed in log file
+
+V 0.7.61
+- Amended the extractContigReads script to produce correct fasta files
+- Corrected graph2.py file for python call
+- Synchronised some scripts on the git which were outdated
+- Corrected bug regarding paired strand specific RNA sequencing
+- Integrated SAM/BAM parser functions
+- Corrected bug which created extremely long poly-A stretches in scaffolding
+- Corrected the insert length estimateion for stability
+- Added a sanity check for FastA reader

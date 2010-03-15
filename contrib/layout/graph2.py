@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #    Copyright 2008 Paul Harrison (pfh@logarithmic.net)
 
 #    This file is part of Velvet.

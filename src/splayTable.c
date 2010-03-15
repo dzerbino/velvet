@@ -76,7 +76,7 @@ static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
 }
 
 void inputSequenceIntoSplayTable(TightString * tString,
-				 SplayTable * table, FILE * file, boolean double_strand)
+				 SplayTable * table, FILE * file, boolean double_strand, boolean second_in_pair)
 {
 	IDnum currentIndex;
 	Coordinate readNucleotideIndex = 0;
@@ -136,20 +136,38 @@ void inputSequenceIntoSplayTable(TightString * tString,
 		sequenceID = currentIndex;
 		coord = writeNucleotideIndex;
 
-		if (!double_strand || compareKmers(&word, &antiWord) <= 0) {
-			found =
-			    findOrInsertOccurenceInSplayTable(&word,
-							      &sequenceID,
-							      &coord,
-							      table);
+		if (double_strand) {
+			if (compareKmers(&word, &antiWord) <= 0) {
+				found =
+				    findOrInsertOccurenceInSplayTable(&word,
+								      &sequenceID,
+								      &coord,
+								      table);
+			} else {
+				sequenceID = -sequenceID;
+				found =
+				    findOrInsertOccurenceInSplayTable(&antiWord,
+								      &sequenceID,
+								      &coord,
+								      table);
+				sequenceID = -sequenceID;
+			}
 		} else {
-			sequenceID = -sequenceID;
-			found =
-			    findOrInsertOccurenceInSplayTable(&antiWord,
-							      &sequenceID,
-							      &coord,
-							      table);
-			sequenceID = -sequenceID;
+			if (!second_in_pair) {
+				found =
+				    findOrInsertOccurenceInSplayTable(&word,
+								      &sequenceID,
+								      &coord,
+								      table);
+			} else {
+				sequenceID = -sequenceID;
+				found =
+				    findOrInsertOccurenceInSplayTable(&antiWord,
+								      &sequenceID,
+								      &coord,
+								      table);
+				sequenceID = -sequenceID;
+			}
 		}
 
 		if (!found) {
@@ -223,6 +241,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	IDnum sequenceCount = reads->readCount;
 	TightString **array;
 	FILE *outfile = fopen(filename, "w");
+	boolean second_in_pair = false;
 
 	if (outfile == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", filename);
@@ -243,7 +262,12 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 			       sequenceCount);
 			fflush(stdout);
 		}
-		inputSequenceIntoSplayTable(array[index], table, outfile, double_strand);
+		inputSequenceIntoSplayTable(array[index], table, outfile, double_strand, second_in_pair);
+
+		if (reads->categories[index] % 2) 
+			second_in_pair = (second_in_pair? false : true);
+		else 
+			second_in_pair = false;
 	}
 
 	fclose(outfile);

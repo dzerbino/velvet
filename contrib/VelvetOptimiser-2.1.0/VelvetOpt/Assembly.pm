@@ -325,7 +325,7 @@ sub getHashingDetails {
     my $self = shift;
     unless(!$self->timestamph || !$self->pstringh){
         my $programPath = cwd;
-        $self->pstringh =~ /^(\w+)\s+(\d+)\s+(.*)$/;
+        $self->pstringh =~ /^(\S+)\s+(\d+)\s+(.*)$/;
         $self->{ass_dir} = $programPath . "/" . $1;
         $self->{rmapfs} = -s $self->ass_dir . "/Roadmaps";
         $self->{hashval} = $2;

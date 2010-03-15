@@ -75,7 +75,7 @@ sub free_mem {
 		($tmp) = qx(vm_stat | grep free);
 		$tmp =~ /[^0-9]+(\d+).*/;
 		my $free_pages = $1;
-		my $totalGB = ($free_pages * $page_size) / 1024 / 1024;
+		my $totalGB = ($free_pages * $page_size) / 1024 / 1024 / 1024;
 		return $totalGB;
 	}
 }

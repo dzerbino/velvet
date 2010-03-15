@@ -44,6 +44,8 @@ static void printUsage()
 	puts("\t-fastq");
 	puts("\t-fasta.gz");
 	puts("\t-fastq.gz");
+	puts("\t-sam");
+	puts("\t-bam");
 	puts("\t-eland");
 	puts("\t-gerald");
 	puts("");
