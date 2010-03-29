@@ -249,3 +249,6 @@ V 0.7.61
 - Corrected bug which created extremely long poly-A stretches in scaffolding
 - Corrected the insert length estimateion for stability
 - Added a sanity check for FastA reader
+
+V 0.7.62
+- Corrected crashing bug when hitting exception in insert length estimation

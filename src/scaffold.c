@@ -518,7 +518,14 @@ static void estimateLibraryInsertLength(Coordinate * coOccurences, IDnum coOccur
 			counter++;
 		}
 	}
-	variance /= counter;
+	if (counter) 
+		variance /= counter;
+	else {
+		variance = 0;
+		for (index = 0; index < coOccurencesCount; index++)
+			variance += (coOccurences[index] - median) * (coOccurences[index] - median);
+		variance /= coOccurencesCount;
+	}
 	
 	// To avoid subsequent divisions by zero
 	if (variance == 0)
