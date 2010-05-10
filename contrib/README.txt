@@ -57,3 +57,9 @@ your choice: C, BioPython, Perl or Bash
 - show_repeats by Ken Doig (kdd@doig.org)
 
 Plots out the length of the larger repeated contigs in the assembly. 
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- AssemblyAssembler by Jacob Crawford (jc598@cornell.edu)
+
+Tries out different values of k, then merges all the different assemblies into
+one.

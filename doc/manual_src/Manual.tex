@@ -26,28 +26,35 @@
 
 > ./velveth sillyDirectory 21 -shortPaired data/test_reads.fa
 > ./velvetg sillyDirectory
-	(Final graph has 16 nodes and n50 of 24184, max 44966, total 100080, using 0/142858 reads)
+	(Final graph has 16 nodes and n50 of 24184, max 44966, total 100080, 
+	using 0/142858 reads)
 > less sillyDirectory/stats.txt
 
 > ./velvetg sillyDirectory -cov_cutoff 5 -read_trkg yes -amos_file yes
-	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, using 135862/142858 reads)
+	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, 
+	using 135862/142858 reads)
 > less sillyDirectory/velvet_asm.afg
 
 > ./velvetg sillyDirectory -cov_cutoff auto
-	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, using 0/142858 reads)
+	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, 
+	using 0/142858 reads)
 
 > ./velvetg sillyDirectory -exp_cov 19 -ins_length 100
-	(Final graph has 12 nodes and n50 of 99975, max 99975, total 100165, using 135855/142858 reads)
+	(Final graph has 12 nodes and n50 of 99975, max 99975, total 100165, 
+	using 135855/142858 reads)
 	
 > ./velvetg sillyDirectory -exp_cov auto
-	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, using 135862/142858 reads)
+	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, 
+	using 135862/142858 reads)
 
 > ./velveth sillyDirectory 21 -short data/test_reads.fa -long data/test_long.fa
 > ./velvetg sillyDirectory -exp_cov 19
-	(Final graph has 10 nodes and n50 of 80927, max 80927, total 100122, using 137863/144858 reads)
+	(Final graph has 10 nodes and n50 of 80927, max 80927, total 100122, 
+	using 137863/144858 reads)
 	
 > ./velvetg sillyDirectory -exp_cov auto
-	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, using 137862/144858 reads)
+	(Final graph has 1 nodes and n50 of 99975, max 99975, total 99975, 
+	using 137862/144858 reads)
 
 \end{verbatim}
 
@@ -145,6 +152,8 @@ The hash length, also known as $k$-mer length, corresponds to the length, in bas
 \item[fastq]
 \item[fasta.gz]
 \item[fastq.gz]
+\item[sam]
+\item[bam]
 \item[eland]
 \item[gerald]
 \end{description}
@@ -683,9 +692,14 @@ This scripts scans the Graph2 file produced by velvetg then computes and display
 
 Alternative ways to efficiently shuffle your reads produced in the language of your choice: C, BioPython, Perl or Bash.
 
-\item[show\_repeata] by Ken Doig (kdd@doig.org)
+\item[show\_repeats] by Ken Doig (kdd@doig.org)
 
 Plots out the length of the larger repeated contigs in the assembly.
+
+\item[AssemblyAssembler] by Jacob Crawford (jc598@cornell.edu)
+
+Tries out different values of k, then merges all the different assemblies into
+one.
 
 \end{description}
 

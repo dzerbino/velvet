@@ -252,3 +252,7 @@ V 0.7.61
 
 V 0.7.62
 - Corrected crashing bug when hitting exception in insert length estimation
+
+V 0.7.63
+- Added the AssemblyAssembler by Jacob Crawford
+- Increased the memory allocated to store gap sizes to avoid overflow errors with long insert libraries
