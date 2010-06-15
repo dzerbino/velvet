@@ -30,11 +30,15 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define false 0
 #endif
 
-#define VERSION_NUMBER 0
-#define RELEASE_NUMBER 7
-#define UPDATE_NUMBER 63 
+#define VERSION_NUMBER 1
+#define RELEASE_NUMBER 0
+#define UPDATE_NUMBER 01 
 
 #define MAXLINE 5000 
+
+#define LONG 2 * CATEGORIES
+#define LONG_PAIRED 2 * CATEGORIES + 1
+#define REFERENCE 2 * CATEGORIES + 2
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #define inline __inline
@@ -57,6 +61,8 @@ extern struct fibheap;
 extern struct fibheap_el;
 extern struct dfibheap;
 extern struct dfibheap_el;
+extern struct kmerOccurence_st;
+extern struct kmerOccurenceTable_st;
 #endif
 
 // Namespace sizes
@@ -84,6 +90,8 @@ typedef struct readSet_st ReadSet;
 typedef struct sequenceReader_st SequenceReader;
 
 // Hash table structures
+typedef struct kmerOccurence_st KmerOccurence;
+typedef struct kmerOccurenceTable_st KmerOccurenceTable;
 typedef struct splayTable_st SplayTable;
 
 // Graph construction structures
@@ -94,6 +102,7 @@ typedef struct roadMapArray_st RoadMapArray;
 typedef struct insertionMarker_st InsertionMarker;
 
 // Pre-Graph elements
+typedef struct preMarker_st PreMarker;
 typedef struct preArc_st PreArc;
 typedef struct preNode_st PreNode;
 typedef struct preGraph_st PreGraph;

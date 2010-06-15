@@ -42,8 +42,15 @@ static uint8_t charWordFilter = (uint8_t) ((int8_t) -1);
 #define LONGLONGS 4
 static int kmerFilterIndex = UNDEFINED;
 static int kmerFilterOffset = 0;
+static int kmerFilterLength = 0;
 static int longLongKmerFilterIndex = KMER_LONGLONGS;
 static uint64_t longLongKmerFilter = (uint64_t) ((int64_t) -1); 
+
+static uint64_t keyFilter = 0;
+static int keyFilterIndex = UNDEFINED;
+static int keyFilterOffset = 0;
+static int keyFilterLength = 0;
+static int longLongKeyFilterIndex = KMER_LONGLONGS;
 
 void resetWordFilter(int wordLength) {
 	int kmer_bit_size = wordLength * 2;
@@ -62,6 +69,7 @@ void resetWordFilter(int wordLength) {
 			longLongKmerFilter = longLongWordFilter; 
 			kmerFilterIndex = LONGLONGS;
 			kmerFilterOffset = kmer_bit_size - 2;
+			kmerFilterLength = kmer_bit_size;
 			longWordFilter = 0;
 			intWordFilter = 0;
 			charWordFilter = 0;
@@ -71,6 +79,7 @@ void resetWordFilter(int wordLength) {
 			longLongKmerFilter = (((uint64_t) 1) << kmer_bit_size) - 1;	
 			kmerFilterIndex = LONGLONGS;
 			kmerFilterOffset = kmer_bit_size - 2;
+			kmerFilterLength = kmer_bit_size;
 			longWordFilter = 0;
 			intWordFilter = 0;
 			charWordFilter = 0;
@@ -84,6 +93,7 @@ void resetWordFilter(int wordLength) {
 	else if (kmer_bit_size == 32) {
 		kmerFilterIndex = LONGS;
 		kmerFilterOffset = kmer_bit_size - 2;
+		kmerFilterLength = kmer_bit_size;
 		intWordFilter = 0;
 		charWordFilter = 0;
 		return;
@@ -91,6 +101,7 @@ void resetWordFilter(int wordLength) {
 		longWordFilter = (((uint32_t) 1) << kmer_bit_size) - 1;	
 		kmerFilterIndex = LONGS;
 		kmerFilterOffset = kmer_bit_size - 2;
+		kmerFilterLength = kmer_bit_size;
 		intWordFilter = 0;
 		charWordFilter = 0;
 		return;
@@ -102,12 +113,14 @@ void resetWordFilter(int wordLength) {
 	else if (kmer_bit_size == 16) {
 		kmerFilterIndex = INTS;
 		kmerFilterOffset = kmer_bit_size - 2;
+		kmerFilterLength = kmer_bit_size;
 		charWordFilter = 0;
 		return;
 	} else {
 		intWordFilter = (((uint16_t) 1) << kmer_bit_size) - 1;	
 		kmerFilterIndex = INTS;
 		kmerFilterOffset = kmer_bit_size - 2;
+		kmerFilterLength = kmer_bit_size;
 		charWordFilter = 0;
 		return;
 	}
@@ -119,6 +132,111 @@ void resetWordFilter(int wordLength) {
 
 	kmerFilterIndex = CHARS;
 	kmerFilterOffset = kmer_bit_size - 2;
+	kmerFilterLength = kmer_bit_size;
+#endif
+
+}
+
+void resetKeyFilter(int keyLength) {
+	int kmer_bit_size = keyLength;
+
+	if (keyLength > MAXKMERLENGTH) 
+		exitErrorf(EXIT_FAILURE, true, "Key length %i greater than max allowed value (%i).\nRecompile Velvet to deal with this word length.", keyLength, MAXKMERLENGTH);
+
+#if KMER_CHARS
+	if (kmerFilterIndex == CHARS) {
+		if (kmer_bit_size > kmerFilterLength) {
+			kmer_bit_size -= kmerFilterLength;
+		} else {
+			keyFilterIndex = CHARS;
+			keyFilterLength = kmer_bit_size;
+			keyFilterOffset = kmerFilterLength - keyFilterLength;
+			keyFilter = ((((uint64_t) 1) << keyFilterLength) - 1) << keyFilterOffset;	
+			return;
+		}
+	}
+#endif
+#if KMER_INTS
+	if (kmerFilterIndex == INTS) {
+		if (kmer_bit_size > kmerFilterLength) {
+			kmer_bit_size -= kmerFilterLength;
+		} else {
+			keyFilterIndex = INTS;
+			keyFilterLength = kmer_bit_size;
+			keyFilterOffset = kmerFilterLength - keyFilterLength;
+			keyFilter = ((((uint64_t) 1) << keyFilterLength) - 1) << keyFilterOffset;	
+			return;
+		}
+	} else if (intWordFilter) {
+		if (kmer_bit_size > 16)
+			kmer_bit_size -= 16;
+		else {
+			keyFilterIndex = INTS;
+			keyFilterLength = kmer_bit_size;
+			keyFilterOffset = 16 - keyFilterLength;
+			keyFilter = ((((uint64_t) 1) << keyFilterLength) - 1) << keyFilterOffset;	
+			return;
+		}
+	}
+#endif
+#if KMER_LONGS
+	if (kmerFilterIndex == LONGS) {
+		if (kmer_bit_size > kmerFilterLength) {
+			kmer_bit_size -= kmerFilterLength;
+		} else {
+			keyFilterIndex = LONGS;
+			keyFilterLength = kmer_bit_size;
+			keyFilterOffset = kmerFilterLength - keyFilterLength;
+			keyFilter = ((((uint64_t) 1) << keyFilterLength) - 1) << keyFilterOffset;	
+			return;
+		}
+	} else if (longWordFilter) {
+		if (kmer_bit_size > 32)
+			kmer_bit_size -= 32;
+		else {
+			keyFilterIndex = LONGS;
+			keyFilterLength = kmer_bit_size;
+			keyFilterOffset = 32 - keyFilterLength;
+			keyFilter = ((((uint64_t) 1) << keyFilterLength) - 1) << keyFilterOffset;	
+			return;
+		}
+	}
+#endif
+#if KMER_LONGLONGS
+	if (kmerFilterIndex == LONGLONGS) {
+		if (kmer_bit_size > kmerFilterLength) {
+			kmer_bit_size -= kmerFilterLength;
+		} else {
+			keyFilterIndex = LONGLONGS;
+			longLongKeyFilterIndex = longLongKmerFilterIndex;
+			keyFilterLength = kmer_bit_size;
+			keyFilterOffset = kmerFilterLength - keyFilterLength;
+			keyFilter = ((((uint64_t) 1) << keyFilterLength) - 1) << keyFilterOffset;	
+			return;
+		}
+	} else {
+		if (kmer_bit_size > 64)
+			abort();
+		else {
+			keyFilterIndex = LONGLONGS;
+			longLongKeyFilterIndex = longLongKmerFilterIndex;
+			keyFilterLength = kmer_bit_size;
+			keyFilterOffset = 64 - keyFilterLength;
+			keyFilter = ((((uint64_t) 1) << keyFilterLength) - 1) << keyFilterOffset;	
+			return;
+		}
+	} 
+
+	if (kmer_bit_size > 64)
+		abort();
+	else {
+		keyFilterIndex = LONGLONGS;
+		longLongKeyFilterIndex = longLongKmerFilterIndex - 1;
+		keyFilterLength = kmer_bit_size;
+		keyFilterOffset = 64 - keyFilterLength;
+		keyFilter = ((((uint64_t) 1) << keyFilterLength) - 1) << keyFilterOffset;	
+		return;
+	}
 #endif
 
 }
@@ -506,3 +624,67 @@ void reversePushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
 
 	exitErrorf(EXIT_FAILURE, true, "Anomaly in k-mer filering");
 }
+
+KmerKey getKmerKey(Kmer * kmer) {
+	KmerKey key = 0;	
+
+#if KMER_CHARS
+	if (keyFilterIndex == CHARS) {
+		key = kmers->chars & keyFilter;
+		key >>= keyFilterOffset;
+		return key;
+	}
+#endif
+
+#if KMER_INTS
+	if (keyFilterIndex == INTS) {
+#if KMER_CHARS
+		key += kmer->chars;
+#endif
+		key <<= keyFilterLength;
+		key = (kmer->ints & keyFilter) >> keyFilterOffset;
+		return key;
+	}
+#endif
+
+#if KMER_LONGS
+	if (keyFilterIndex == LONGS) {
+#if KMER_CHARS
+		key += kmer->chars;
+#endif
+#if KMER_INTS
+		key <<= 16;
+		key += kmer->ints;
+#endif
+		key <<= keyFilterLength;
+		key = (kmer->longs & keyFilter) >> keyFilterOffset;
+		return key;
+	}
+#endif
+
+#if KMER_LONGLONGS
+	if (keyFilterIndex == LONGLONGS) {
+#if KMER_CHARS
+		key += kmer->chars;
+#endif
+#if KMER_INTS
+		key <<= 16;
+		key += kmer->ints;
+#endif
+#if KMER_LONGS
+		key <<= 32;
+		key += kmer->longs;
+#endif
+		if (longLongKeyFilterIndex != longLongKmerFilterIndex) {
+			key <<= kmerFilterLength;
+			key += kmer->longlongs[longLongKmerFilterIndex];
+		}
+		key <<= keyFilterLength;
+		key = (kmer->longlongs[longLongKeyFilterIndex] & keyFilter) >> keyFilterOffset;
+
+		return key;
+	}
+#endif
+	abort();
+	return 0;
+} 

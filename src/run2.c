@@ -54,6 +54,7 @@ static void printUsage()
 	puts("\t-max_coverage <floating point>\t: removal of high coverage nodes AFTER tour bus (default: no removal)");
 	puts("\t-long_mult_cutoff <int>\t\t: minimum number of long reads required to merge contigs (default: 2)");
 	puts("\t-unused_reads <yes|no>\t\t: export unused reads in UnusedReads.fa file (default: no)");
+	puts("\t-alignments <yes|no>\t\t: export a summary of contig alignment to the reference sequences (default: no)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -87,6 +88,7 @@ int main(int argc, char **argv)
 	boolean unusedReads = false;
 	boolean estimateCoverage = false;
 	boolean estimateCutoff = false;
+	boolean exportAlignments = false;
 	FILE *file;
 	int arg_index, arg_int;
 	double arg_double;
@@ -217,6 +219,9 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-amos_file") == 0) {
 			exportAssembly =
 			    (strcmp(argv[arg_index], "yes") == 0);
+		} else if (strcmp(arg, "-alignments") == 0) {
+			exportAlignments =
+			    (strcmp(argv[arg_index], "yes") == 0);
 		} else if (strcmp(arg, "-min_contig_lgth") == 0) {
 			sscanf(argv[arg_index], "%lli", &longlong_var);
 			minContigLength = (Coordinate) longlong_var;
@@ -294,15 +299,17 @@ int main(int argc, char **argv)
 		convertSequences(sequences);
 		graph =
 		    importPreGraph(preGraphFilename, sequences,
-				   readTracking, accelerationBits);
+				   roadmapFilename, readTracking, accelerationBits);
 		sequenceLengths =
 		    getSequenceLengths(sequences, getWordLength(graph));
-		correctGraph(graph, sequenceLengths);
+		correctGraph(graph, sequenceLengths, sequences->categories);
 		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else if ((file = fopen(roadmapFilename, "r")) != NULL) {
 		fclose(file);
+
 		rdmaps = importRoadMapArray(roadmapFilename);
 		preGraph = newPreGraph_pg(rdmaps, seqFilename);
+		concatenatePreGraph_pg(preGraph);
 		clipTips_pg(preGraph);
 		exportPreGraph_pg(preGraphFilename, preGraph);
 		destroyPreGraph_pg(preGraph);
@@ -311,10 +318,10 @@ int main(int argc, char **argv)
 		convertSequences(sequences);
 		graph =
 		    importPreGraph(preGraphFilename, sequences,
-				   readTracking, accelerationBits);
+				   roadmapFilename, readTracking, accelerationBits);
 		sequenceLengths =
 		    getSequenceLengths(sequences, getWordLength(graph));
-		correctGraph(graph, sequenceLengths);
+		correctGraph(graph, sequenceLengths, sequences->categories);
 		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else {
 		puts("No Roadmap file to build upon! Please run velveth (see manual)");
@@ -355,17 +362,19 @@ int main(int argc, char **argv)
 		puts("See manual for instructions on how to set the coverage cutoff parameter");
 	}
 
+	if (sequences == NULL) {
+		sequences = importReadSet(seqFilename);
+		convertSequences(sequences);
+	}
+
 	dubious =
 	    removeLowCoverageNodesAndDenounceDubiousReads(graph,
-							  coverageCutoff);
+							  coverageCutoff,							
+							  sequences);
 	removeHighCoverageNodes(graph, maxCoverageCutoff);
 	clipTipsHard(graph);
 
 	if (expectedCoverage > 0) {
-		if (sequences == NULL) {
-			sequences = importReadSet(seqFilename);
-			convertSequences(sequences);
-		}
 
 		// Mixed length sequencing
 		readCoherentGraph(graph, isUniqueSolexa, expectedCoverage,
@@ -377,7 +386,7 @@ int main(int argc, char **argv)
 			if(pairUpReads(sequences, 2 * cat + 1))
 				pebbleRounds++;
 
-		if (pairUpReads(sequences, 2 * CATEGORIES + 1))
+		if (pairUpReads(sequences, LONG_PAIRED))
 			pebbleRounds++;
 
 		detachDubiousReads(sequences, dubious);
@@ -403,9 +412,11 @@ int main(int argc, char **argv)
 	strcat(graphFilename, "/contigs.fa");
 	exportLongNodeSequences(graphFilename, graph, minContigKmerLength); 
 
-	if (sequences == NULL) {
-		sequences = importReadSet(seqFilename);
-		convertSequences(sequences);
+	if (exportAlignments) {
+		strcpy(graphFilename, directory);
+		strcat(graphFilename, "/contig-alignments.psa");
+		exportLongNodeMappings(graphFilename, graph, sequences,
+					     minContigKmerLength, seqFilename);
 	}
 
 	strcpy(graphFilename, directory);

@@ -178,7 +178,7 @@ void concatenateStringOfNodes(Node * nodeA, Graph * graph)
 		// Passage marker management in node A:
 		for (marker = getMarker(nodeA); marker != NULL;
 		     marker = getNextInNode(marker))
-			if (isTerminal(marker))
+			if (getNode(getNextInSequence(marker)) != currentNode)
 				incrementFinishOffset(marker,
 						      getNodeLength(currentNode));
 

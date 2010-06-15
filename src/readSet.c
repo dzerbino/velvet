@@ -49,6 +49,128 @@ ReadSet *newReadSet()
 	return rs;
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Reference identifiers
+//////////////////////////////////////////////////////////////////////////
+
+typedef struct referenceCoordinate_st ReferenceCoordinate;
+static Coordinate reference_coordinate_double_strand = true;
+
+struct referenceCoordinate_st {
+	char * name;
+	Coordinate start;
+	Coordinate finish;
+	IDnum referenceID;
+	boolean positive_strand;
+};
+
+static int compareRefCoords(const void * ptrA, const void * ptrB) {
+	ReferenceCoordinate * A = (ReferenceCoordinate *) ptrA;
+	ReferenceCoordinate * B = (ReferenceCoordinate *) ptrB;
+	int comp = strcmp(A->name, B->name);
+
+	if (comp != 0)
+		return comp;
+	else if (!reference_coordinate_double_strand && A->positive_strand != B->positive_strand)
+		return A->positive_strand > B->positive_strand;
+	else {
+		if (A->finish > -1 && A->finish < B->start)
+			return -1;
+		else if (B->finish > -1 && A->start > B->finish) 
+			return 1;
+		else return 0;
+	}
+}
+
+typedef struct referenceCoordinateTable_st ReferenceCoordinateTable;
+
+struct referenceCoordinateTable_st {
+	ReferenceCoordinate * array;
+	IDnum arrayLength;
+};
+
+static ReferenceCoordinateTable * newReferenceCoordinateTable() {
+	ReferenceCoordinateTable * table = callocOrExit(1, ReferenceCoordinateTable);
+	table->array = NULL;
+	table->arrayLength = 0;
+	return table;
+}
+
+static void destroyReferenceCoordinateTable(ReferenceCoordinateTable * table) {
+	IDnum index;
+
+	if (table->array) {
+		for (index = 0; index < table->arrayLength; index++)
+			free(table->array[index].name);
+		free(table->array);
+	}
+	free(table);
+}
+
+static void resizeReferenceCoordinateTable(ReferenceCoordinateTable * table, IDnum extraLength) {
+	if (table->array == NULL)
+		table->array = callocOrExit(extraLength, ReferenceCoordinate);
+	else 
+		table->array = reallocOrExit(table->array, table->arrayLength + extraLength, ReferenceCoordinate);
+}
+
+static ReferenceCoordinate * findReferenceCoordinate(ReferenceCoordinateTable * table, char * name, Coordinate start, Coordinate finish, boolean positive_strand) {
+	ReferenceCoordinate * array = table->array;
+	ReferenceCoordinate refCoord;
+	Coordinate leftIndex = 0;
+	Coordinate rightIndex = table->arrayLength - 1;
+	Coordinate middleIndex;
+
+	refCoord.name = name;
+	refCoord.start = start;
+	refCoord.finish = finish;
+	refCoord.referenceID = 0;
+	refCoord.positive_strand = positive_strand;
+
+	while (true) {
+		middleIndex = (rightIndex + leftIndex) / 2;
+
+		if (leftIndex > rightIndex)
+			return NULL;
+		else if (compareRefCoords(&(array[middleIndex]), &refCoord) == 0)
+			return &(array[middleIndex]);
+		else if (leftIndex == middleIndex)
+			return NULL;
+		else if (compareRefCoords(&(array[middleIndex]), &refCoord) > 0)
+			rightIndex = middleIndex;
+		else
+			leftIndex = middleIndex;
+	}
+}
+
+static void addReferenceCoordinate(ReferenceCoordinateTable * table, char * name, Coordinate start, Coordinate finish, boolean positive_strand) {
+	ReferenceCoordinate * refCoord;
+
+	if ((refCoord = findReferenceCoordinate(table, name, start, finish, positive_strand))) {
+		printf("Overlapping reference coordinates:\n");
+		printf("%s:%lli-%lli\n", name, (long long) start, (long long) finish);
+		printf("%s:%lli-%lli\n", refCoord->name, (long long) refCoord->start, (long long) refCoord->finish);
+		printf("Exiting...");
+		exit(1);
+	}
+	
+	refCoord = &(table->array[table->arrayLength++]);
+
+	refCoord->name = name;
+	refCoord->start = start;
+	refCoord->finish = finish;
+	refCoord->referenceID = table->arrayLength;
+	refCoord->positive_strand = positive_strand;
+}
+
+static void sortReferenceCoordinateTable(ReferenceCoordinateTable * table) {
+	qsort(table->array, table->arrayLength, sizeof(ReferenceCoordinate), compareRefCoords);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// File reading 
+//////////////////////////////////////////////////////////////////////////
+
 static void velvetifySequence(char * str) {
 	int i = strlen(str) - 1;
 	char c;
@@ -81,45 +203,45 @@ static void velvetifySequence(char * str) {
 
 static void reverseComplementSequence(char * str)
 {
-       size_t length = strlen(str);
-       size_t i;
+	size_t length = strlen(str);
+	size_t i;
 
-       for (i = 0; i < length-1 - i; i++) {
-	       char c = str[i];
-	       str[i] = str[length-1 - i];
-	       str[length-1 - i] = c;
-       }
+	for (i = 0; i < length-1 - i; i++) {
+		char c = str[i];
+		str[i] = str[length-1 - i];
+		str[length-1 - i] = c;
+	}
 
-       for (i = 0; i < length; i++) {
-	       switch (str[i]) {
-	       case 'A':
-	       case 'a':
-		       str[i] = 'T';
-		       break;
-	       case 'C':
-	       case 'c':
-		       str[i] = 'G';
-		       break;
-	       case 'G':
-	       case 'g':
-		       str[i] = 'C';
-		       break;
-	       // As in velvetifySequence(), anything unusual ends up as 'A'
-	       default:
-		       str[i] = 'A';
-		       break;
-	       }
-       }
+	for (i = 0; i < length; i++) {
+		switch (str[i]) {
+		case 'A':
+		case 'a':
+			str[i] = 'T';
+			break;
+		case 'C':
+		case 'c':
+			str[i] = 'G';
+			break;
+		case 'G':
+		case 'g':
+			str[i] = 'C';
+			break;
+		// As in velvetifySequence(), anything unusual ends up as 'A'
+		default:
+			str[i] = 'A';
+			break;
+		}
+	}
 }
 
 static void writeFastaSequence(FILE * outfile, const char * str)
 {
-       size_t length = strlen(str);
-       size_t start;
-       for (start = 0; start < length; start += 60)
-	       fprintf(outfile, "%.60s\n", &str[start]);
+	size_t length = strlen(str);
+	size_t start;
+	for (start = 0; start < length; start += 60)
+		fprintf(outfile, "%.60s\n", &str[start]);
 }
- 
+
 ReadSet *newReadSetAroundTightStringArray(TightString ** array,
 					  IDnum length)
 {
@@ -665,9 +787,56 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 	puts("Done");
 }
 
+static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTable * refCoords, IDnum counter)
+{
+	FILE *file;
+	const int maxline = 5000;
+	char line[5000];
+	char * name;
+	long long start, finish;
+	Coordinate i;
+
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "r");
+	else
+		file = stdin;
+
+	if (counter == 0)
+		return;
+
+	resizeReferenceCoordinateTable(refCoords,counter);
+
+	while (fgets(line, maxline, file)) {
+		if (line[0] == '>') {
+			name = callocOrExit(strlen(line), char);
+
+			if (strchr(line, ':')) {
+				sscanf(strtok(line, ":-\r\n"), ">%s", name);
+				sscanf(strtok(NULL, ":-\r\n"), "%lli", &start);
+				sscanf(strtok(NULL, ":-\r\n"), "%lli", &finish);
+				if (start <= finish)
+					addReferenceCoordinate(refCoords, name, start, finish, true);
+				else
+					addReferenceCoordinate(refCoords, name, finish, start, false);
+			} else {
+				for (i = strlen(line) - 1;
+				     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
+					line[i] = '\0';
+				}
+
+				strcpy(name, line + 1);
+				addReferenceCoordinate(refCoords, name, 1, -1, true);
+			}
+		}
+	}
+
+	sortReferenceCoordinateTable(refCoords);
+}
+
+
 // Imports sequences from a fasta file 
 // Memory is allocated within the function 
-static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
+static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	FILE *file;
 	const int maxline = 5000;
@@ -697,13 +866,6 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	while (fgets(line, maxline, file)) {
 		if (line[0] == '>') {
-			if (strchr(line,'\t')) {
-				printf("FastA headers in %s contain tabs, please remove them.\n", filename);
-				printf("E.g.: %s", line);
-				puts("Exiting");
-				exit(1);
-			}
-
 			if (offset != 0) { 
 				fprintf(outfile, "\n");
 				offset = 0;
@@ -736,6 +898,9 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	if (offset != 0) 
 		fprintf(outfile, "\n");
 	fclose(file);
+
+	if (cat == REFERENCE) 
+		fillReferenceCoordinateTable(filename, refCoords, counter);
 
 	printf("%d sequences found\n", counter);
 	puts("Done");
@@ -859,14 +1024,24 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	puts("Done");
 }
 
-static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex)
+static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	char line[5000];
 	unsigned long lineno, readCount;
 	char previous_qname_pairing[10];
 	char previous_qname[5000];
 	char previous_seq[5000];
+	char previous_rname[5000];
+	long long previous_pos = -1;
+	int previous_orientation = 0;
 	boolean previous_paired = false;
+	ReferenceCoordinate * refCoord;
+
+	if (cat == REFERENCE) {
+		printf("SAM file %s cannot contain reference sequences.\n", filename);
+		puts("Please check the command line.");
+		exit(1);
+	}
 
 	FILE *file = (strcmp(filename, "-") != 0)? fopen(filename, "r") : stdin;
 	if (file)
@@ -877,12 +1052,18 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	readCount = 0;
 	for (lineno = 1; fgets(line, sizeof(line), file); lineno++)
 		if (line[0] != '@') {
-			char *qname, *flag, *seq;
+			char *qname, *flag, *seq, *rname;
+			long long pos;
+			int orientation;
 			int i;
 
 			qname = strtok(line, "\t");
 			flag  = strtok(NULL, "\t");
-			for (i = 3; i < 10; i++)
+			rname = strtok(NULL, "\t");
+			sscanf(strtok(NULL, "\t"), "%lli", &pos);
+			orientation = 1;
+
+			for (i = 5; i < 10; i++)
 				(void) strtok(NULL, "\t");
 			seq = strtok(NULL, "\t");
 
@@ -906,8 +1087,10 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 				else if (flagbits & 0x80)
 					qname_pairing = "/2";
 
-				if (flagbits & 0x10)
+				if (flagbits & 0x10) {
+					orientation = -1;
 					reverseComplementSequence(seq);
+				}
 
 				// Determine if paired to previous read
 				if (readCount > 0) {
@@ -918,7 +1101,10 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 								(long) ((*sequenceIndex)++), (int) cat);
 							writeFastaSequence(outfile, previous_seq);
 							previous_paired = false;
-						} else if (strcmp(qname, previous_qname) == 0) {
+						} else if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
+							// New multi-mapping issue
+							previous_paired = false;
+						}  else if (strcmp(qname, previous_qname) == 0) {
 							// Last read paired to current reads
 							fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 								(long) ((*sequenceIndex)++), (int) cat);
@@ -937,11 +1123,21 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 							(long) ((*sequenceIndex)++), (int) cat);
 						writeFastaSequence(outfile, previous_seq);
 					}
+
+					if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+						if (refCoord->positive_strand)
+							fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, previous_pos - refCoord->start);
+						else 
+							fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, refCoord->finish - previous_pos - strlen(previous_seq));
+					} 
 				}
 
 				strcpy(previous_qname, qname);
 				strcpy(previous_qname_pairing, qname_pairing);
 				strcpy(previous_seq, seq);
+				strcpy(previous_rname, rname);
+				previous_pos = pos;
+				previous_orientation = orientation;
 				velvetifySequence(previous_seq);
 
 				readCount++;
@@ -968,6 +1164,12 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 			writeFastaSequence(outfile, previous_seq);
 		}
 
+		if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+			if (refCoord->positive_strand)
+				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, previous_pos - refCoord->start);
+			else 
+				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, refCoord->finish - previous_pos - strlen(previous_seq));
+		}
 	}
 
 	fclose(file);
@@ -983,7 +1185,7 @@ static int readBAMint32(gzFile file)
 	return int32(buffer);
 }
 
-static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex)
+static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	size_t seqCapacity = 0;
 	char *seq = NULL;
@@ -995,7 +1197,18 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	char previous_qname_pairing[10];
 	char previous_qname[5000];
 	char previous_seq[5000];
+	int previous_rID = 0;
+	long long previous_pos = -1;
+	int previous_orientation = 0;
 	boolean previous_paired = false;
+	char ** refNames;
+	ReferenceCoordinate * refCoord;
+
+	if (cat == REFERENCE) {
+		printf("BAM file %s cannot contain reference sequences.\n", filename);
+		puts("Please check the command line.");
+		exit(1);
+	}
 
 	if (strcmp(filename, "-") != 0)
 		file = gzopen(filename, "rb");
@@ -1018,9 +1231,25 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 	// Skip header reference list
 	refCount = readBAMint32(file);
+	refNames = callocOrExit(refCount, char *);
 	for (i = 0; i < refCount; i++) {
-		if (gzseek(file, readBAMint32(file) + 4, SEEK_CUR) == -1)
-			exitErrorf(EXIT_FAILURE, false, "gzseek failed");
+		int strLength;
+
+		if (gzread(file, buffer, 4) != 4)
+			exitErrorf(EXIT_FAILURE, false, "BAM alignment record truncated");
+
+		strLength = int32(buffer);
+		refNames[i] = callocOrExit(strLength, char);
+		
+		if (bufferCapacity < 4 + strLength) {
+			bufferCapacity = 4 + strLength + 4096;
+			buffer = reallocOrExit(buffer, bufferCapacity, unsigned char);
+		}
+
+		if (gzread(file, buffer, 4 + strLength) != 4 + strLength)
+			exitErrorf(EXIT_FAILURE, false, "BAM alignment record truncated");
+
+		strcpy(refNames[i], (char *) buffer); 
 	}
 
 	readCount = 0;
@@ -1050,6 +1279,9 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 			char *qname = (char *)&buffer[36];
 			unsigned char *rawseq =
 					&buffer[36 + readNameLength + 4 * cigarLength];
+			int rID = int32(&buffer[4]);
+			long long pos = int32(&buffer[8]);
+			int orientation = 1;
 
 			const char *qname_pairing = "";
 			if (flagbits & 0x40)
@@ -1064,14 +1296,16 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 			for (i = 0; i < readLength; i += 2) {
 				static const char decode_bases[] = "=ACMGRSVTWYHKDBN";
-				unsigned int packed = *rawseq++;
+				unsigned int packed = *(rawseq++);
 				seq[i] = decode_bases[packed >> 4];
 				seq[i+1] = decode_bases[packed & 0xf];
 			}
 			seq[readLength] = '\0';
 
-			if (flagbits & 0x10)
+			if (flagbits & 0x10) {
+				orientation = -1;
 				reverseComplementSequence(seq);
+			}
 
 			// Determine if paired to previous read
 			if (readCount > 0) {
@@ -1081,6 +1315,9 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 						fprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 							(long) ((*sequenceIndex)++), (int) cat);
 						writeFastaSequence(outfile, previous_seq);
+						previous_paired = false;
+					} else if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
+						// New multi-mapping issue
 						previous_paired = false;
 					} else if (strcmp(qname, previous_qname) == 0) {
 						// Last read paired to current reads
@@ -1101,11 +1338,21 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 						(long) ((*sequenceIndex)++), (int) cat);
 					writeFastaSequence(outfile, previous_seq);
 				}
+
+				if ((refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+					if (refCoord->positive_strand)
+						fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, previous_pos - refCoord->start);
+					else 
+						fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, refCoord->finish - previous_pos - strlen(previous_seq));
+				}
 			}
 
 			strcpy(previous_qname, qname);
 			strcpy(previous_qname_pairing, qname_pairing);
 			strcpy(previous_seq, seq);
+			previous_rID = rID;
+			previous_pos = pos;
+			previous_orientation = orientation;
 			velvetifySequence(previous_seq);
 
 			readCount++;
@@ -1131,6 +1378,13 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 				(long) ((*sequenceIndex)++), (int) cat);
 			writeFastaSequence(outfile, previous_seq);
 		}
+
+		if ((refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+			if (refCoord->positive_strand)
+				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, previous_pos - refCoord->start);
+			else 
+				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, refCoord->finish - previous_pos - strlen(previous_seq));
+		}
 	}
 
 	free(seq);
@@ -1138,6 +1392,42 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 	gzclose(file);
 	printf("%lu reads found.\nDone\n", readCount);
+}
+
+static void printUsage()
+{
+	puts("Usage:");
+	puts("./velveth directory hash_length {[-file_format][-read_type] filename} [options]");
+	puts("");
+	puts("\tdirectory\t\t: directory name for output files");
+	printf("\thash_length\t\t: odd integer (if even, it will be decremented) <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
+	puts("\tfilename\t\t: path to sequence file or - for standard input");	
+	puts("");
+	puts("File format options:");
+	puts("\t-fasta");
+	puts("\t-fastq");
+	puts("\t-fasta.gz");
+	puts("\t-fastq.gz");
+	puts("\t-sam");
+	puts("\t-bam");
+	puts("\t-eland");
+	puts("\t-gerald");
+	puts("");
+	puts("Read type options:");
+	puts("\t-short");
+	puts("\t-shortPaired");
+	puts("\t-short2");
+	puts("\t-shortPaired2");
+	puts("\t-long");
+	puts("\t-longPaired");
+	puts("");
+	puts("Options:");
+	puts("\t-strand_specific\t: for strand specific transcriptome sequencing data (default: off)");
+	puts("");
+	puts("Output:");
+	puts("\tdirectory/Roadmaps");
+	puts("\tdirectory/Sequences");
+	puts("\t\t[Both files are picked up by graph, so please leave them there]");
 }
 
 #define FASTQ 1
@@ -1160,17 +1450,10 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 	Category cat = 0;
 	IDnum sequenceIndex = 1;
 	short short_var;
+	ReferenceCoordinateTable * refCoords = newReferenceCoordinateTable();
 
 	if (argc < 2) {
-		puts("Wrong number of arguments!");
-		puts("Correct usage:");
-		puts("run -<filetype> <list of files> [...] ");
-		puts("Allowed filetypes:");
-		puts("\t-fasta");
-		puts("\t-fastq");
-		puts("\t-solexa");
-		puts("\t-eland");
-		puts("If reading exclusively fasta file, the -fasta parameter is not necessary");
+		printUsage();
 		exit(1);
 	}
 
@@ -1229,10 +1512,19 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			else if (strcmp(argv[argIndex], "-longPaired") ==
 				 0)
 				cat = CATEGORIES * 2 + 1;
-			else if (strcmp(argv[argIndex], "-strand_specific") 
-				 == 0)
+			else if (strcmp(argv[argIndex], "-reference") ==
+				 0)
+				cat = CATEGORIES * 2 + 2;
+			else if (strcmp(argv[argIndex], "-strand_specific")
+				 == 0) {
+				if (argIndex != 1) {
+					puts("Error: if using the -strand_specific flag, it must be placed right after the hash length");
+					puts("Sorry for the inconvenience");
+					exit(1);
+				}
 				*double_strand = false;
-			else {
+				reference_coordinate_double_strand = false;
+			} else {
 				printf("Unknown option: %s\n",
 				       argv[argIndex]);
 				exit(1);
@@ -1246,7 +1538,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 
 		switch (filetype) {
 		case FASTA:
-			readFastAFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			readFastAFile(outfile, argv[argIndex], cat, &sequenceIndex, refCoords);
 			break;
 		case FASTQ:
 			readFastQFile(outfile, argv[argIndex], cat, &sequenceIndex);
@@ -1264,10 +1556,10 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			readFastQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case SAM:
-			readSAMFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			readSAMFile(outfile, argv[argIndex], cat, &sequenceIndex, refCoords);
 			break;
 		case BAM:
-			readBAMFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			readBAMFile(outfile, argv[argIndex], cat, &sequenceIndex, refCoords);
 			break;
 		case MAQ_GZ:
 			readMAQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
@@ -1278,6 +1570,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 		}
 	}
 
+	destroyReferenceCoordinateTable(refCoords);
 	fclose(outfile);
 }
 
@@ -1443,6 +1736,8 @@ ReadSet *importReadSet(char *filename)
 				    mallocOrExit(bpCount + 1, char);
 			sequenceIndex++;
 			bpCount = 0;
+		} if (line[0] == 'M') {;
+			// Map line
 		} else {
 			bpCount += (Coordinate) strlen(line) - 1;
 		}
@@ -1466,6 +1761,8 @@ ReadSet *importReadSet(char *filename)
 			//printf("Starting to read sequence %d\n",
 			//       sequenceIndex);
 			sequence = reads->sequences[sequenceIndex];
+		} else if (line[0] == 'M') {;
+			// Map line
 		} else {
 			for (index = 0; index < (Coordinate) strlen(line) - 1;
 			     index++)

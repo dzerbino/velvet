@@ -45,6 +45,17 @@ void setPreNodeDescriptor_pg(Descriptor * descr, Coordinate length, IDnum preNod
 void appendDescriptors_pg(Descriptor ** start, int * writeOffset, IDnum preNodeID, PreGraph* preGraph, boolean initial);
 
 ////////////////////////////////////////////////////////////
+// PreMarker functions
+////////////////////////////////////////////////////////////
+
+boolean referenceMarkersAreActivated_pg(PreGraph * preGraph);
+void allocatePreMarkerCountSpace_pg(PreGraph * preGraph);
+void incrementNodeReferenceMarkerCount_pg(PreGraph * preGraph, IDnum preNodeID);
+void allocatePreMarkerSpace_pg(PreGraph * preGraph);
+PreMarker * addPreMarker_pg(PreGraph * preGraph, IDnum nodeID, IDnum seqID, Coordinate * start, PreMarker * previous);
+void concatenateReferenceMarkers_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph * preGraph, Coordinate totalOffset);
+
+////////////////////////////////////////////////////////////
 // PreArc functions
 ////////////////////////////////////////////////////////////
 
@@ -77,7 +88,7 @@ boolean isLoop_pg(PreArc * preArc);
 ////////////////////////////////////////////////////////////
 
 // Memory allocation
-PreGraph *emptyPreGraph_pg(IDnum sequenceCount, int wordLength, boolean double_strand);
+PreGraph *emptyPreGraph_pg(IDnum sequenceCount, IDnum referenceCount, int wordLength, boolean double_strand);
 void allocatePreNodeSpace_pg(PreGraph * preGraph, IDnum preNodeCount);
 void addPreNodeToPreGraph_pg(PreGraph * preGraph, Coordinate start,
 			     Coordinate stop, FILE * file,

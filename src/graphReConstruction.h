@@ -21,7 +21,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _GRAPHRECONSTRUCTION_H_
 #define _GRAPHRECONSTRUCTION_H_
 
-Graph *importPreGraph(char *preGraphFilename, ReadSet * reads,
+Graph *importPreGraph(char *preGraphFilename, ReadSet * reads, char * roadmapFilename, 
 		      boolean readTracking, short int accelerationBits);
 
 #endif

@@ -63,3 +63,8 @@ Plots out the length of the larger repeated contigs in the assembly.
 
 Tries out different values of k, then merges all the different assemblies into
 one.
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- Columbus Scripts by Daniel Zerbino (dzerbino@soe.ucsc.edu)
+
+Utility scripts used to prepare Columbus reference sequences.
+

@@ -67,7 +67,7 @@ struct shortReadMarker_st {
 struct gapMarker_st {
 	GapMarker *next;
 	Coordinate position;
-	Coordinate length;
+	ShortLength length;
 };
 
 struct graph_st {
@@ -1693,7 +1693,6 @@ void incrementVirtualCoverage(Node * node, Category category,
 	node->virtualCoverage[category] += coverage;
 	node->twinNode->virtualCoverage[category] =
 	    node->virtualCoverage[category];
-
 }
 
 Coordinate getVirtualCoverage(Node * node, Category category)

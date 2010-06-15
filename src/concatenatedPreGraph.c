@@ -38,6 +38,7 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArc * oldPreArc,
 	Descriptor * descr, * ptr;
 	int writeOffset = 0;
 	int wordLength = getWordLength_pg(preGraph);
+	Coordinate totalOffset = 0;
 
 	//printf("Concatenating nodes %li and %li\n", preNodeAID, preNodeBID);
 
@@ -55,6 +56,18 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArc * oldPreArc,
 	}
 	totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
 	totalLength += wordLength - 1;
+
+	// Reference marker management
+	if (referenceMarkersAreActivated_pg(preGraph)) {
+		currentPreNodeID = preNodeAID;
+		preArc = getPreArc_pg(currentPreNodeID, preGraph);
+		for (currentPreNodeID = getDestination_pg(preArc, currentPreNodeID); currentPreNodeID != preNodeBID; currentPreNodeID = getDestination_pg(preArc, currentPreNodeID)) {
+			concatenateReferenceMarkers_pg(preNodeAID, currentPreNodeID, preGraph, totalOffset);
+			preArc = getPreArc_pg(currentPreNodeID, preGraph);
+			totalOffset += getPreNodeLength_pg(currentPreNodeID, preGraph);
+		}
+		concatenateReferenceMarkers_pg(preNodeAID, currentPreNodeID, preGraph, totalOffset);
+	}
 
 	// Descriptor management (preNode)
 	arrayLength = totalLength / 4;

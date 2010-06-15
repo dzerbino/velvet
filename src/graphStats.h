@@ -54,7 +54,8 @@ double estimated_cov(Graph * graph, char * directory);
 Coordinate maxLength(Graph * graph);
 
 boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
-						       double minCov);
+						       double minCov,
+						       ReadSet * reads);
 
 void exportAMOSContigs(char *filename, Graph * graph,
 		       Coordinate cutoff_length, ReadSet * reads);
@@ -67,6 +68,8 @@ void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *director
 
 void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLength, char* filename);
 
+void exportLongNodeMappings(char *filename, Graph * graph, ReadSet * reads,
+			     Coordinate minLength, char * sequencesFilename);
 ///////////////////////////////////////////////////////////////////
 // Dodgy functions
 ///////////////////////////////////////////////////////////////////

@@ -107,7 +107,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 	IDnum sequenceCount;
 	IDnum annotationCount = 0;
 	short short_var;
-	long long_var;
+	long long_var, long_var2;
 	long long longlong_var, longlong_var2, longlong_var3;
 
 	printf("Reading roadmap file %s\n", filename);
@@ -115,10 +115,11 @@ RoadMapArray *importRoadMapArray(char *filename)
 	file = fopen(filename, "r");
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
-	sscanf(line, "%ld\t%i\t%hi\n", &long_var, &(result->WORDLENGTH), &short_var);
+	sscanf(line, "%ld\t%ld\t%i\t%hi\n", &long_var, &long_var2, &(result->WORDLENGTH), &short_var);
 	sequenceCount = (IDnum) long_var;
 	resetWordFilter(result->WORDLENGTH);
 	result->length = sequenceCount;
+	result->referenceCount = long_var2;
 	array = mallocOrExit(sequenceCount, RoadMap);
 	result->array = array;
 	result->double_strand = (boolean) short_var;
@@ -169,6 +170,98 @@ RoadMapArray *importRoadMapArray(char *filename)
 	return result;
 }
 
+// Imports roadmap from the appropriate file format
+// Memory allocated within the function
+RoadMapArray *importReferenceRoadMapArray(char *filename, IDnum referenceCount)
+{
+	FILE *file;
+	const int maxline = 100;
+	char *line = mallocOrExit(maxline, char);
+	RoadMap *array;
+	RoadMap *rdmap = NULL;
+	IDnum rdmapIndex = 0;
+	IDnum seqID;
+	Coordinate position, start, finish, length;
+	Coordinate positionOffset = 0;
+	Annotation *nextAnnotation;
+	RoadMapArray *result = mallocOrExit(1, RoadMapArray);
+	IDnum sequenceCount;
+	IDnum annotationCount = 0;
+	short short_var;
+	long long_var, long_var2;
+	long long longlong_var, longlong_var2, longlong_var3;
+
+	printf("Reading roadmap file %s\n", filename);
+
+	file = fopen(filename, "r");
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
+	sscanf(line, "%ld\t%ld\t%i\t%hi\n", &long_var, &long_var2, &(result->WORDLENGTH), &short_var);
+	sequenceCount = (IDnum) long_var;
+	resetWordFilter(result->WORDLENGTH);
+	result->length = sequenceCount;
+	result->referenceCount = long_var2;
+	array = mallocOrExit(sequenceCount, RoadMap);
+	result->array = array;
+	result->double_strand = (boolean) short_var;
+
+	while (fgets(line, maxline, file) != NULL) {
+		if (line[0] != 'R') {
+			sscanf(line, "%ld\t%*d\t%*d\t%*d\n", &long_var);
+			seqID = long_var;
+			if (seqID < referenceCount && seqID > -referenceCount)
+				annotationCount++;
+		}
+	}
+
+	result->annotations = callocOrExit(annotationCount, Annotation);
+	nextAnnotation = result->annotations;
+	fclose(file);
+
+	file = fopen(filename, "r");
+
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
+	while (fgets(line, maxline, file) != NULL) {
+		if (line[0] == 'R') {
+			rdmap = getRoadMapInArray(result, rdmapIndex++);
+			rdmap->annotationCount = 0;
+			positionOffset = 0;
+		} else {
+			sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
+			       &longlong_var, &longlong_var2, &longlong_var3);
+			seqID = (IDnum) long_var;
+			position = (Coordinate) longlong_var;
+			start = (Coordinate) longlong_var2;
+			finish = (Coordinate) longlong_var3;
+			if (seqID > 0)
+				length = finish - start;
+			else
+				length = start - finish;
+
+
+			if (seqID < referenceCount && seqID > -referenceCount) {
+				nextAnnotation->sequenceID = seqID;
+				nextAnnotation->position = position + positionOffset;
+				nextAnnotation->start.coord = start;
+				nextAnnotation->finish.coord = finish;
+				nextAnnotation->length = length;			
+
+				rdmap->annotationCount++;
+				nextAnnotation++;
+			}
+
+			positionOffset += length;
+		}
+	}
+
+	printf("%d roadmaps reads\n", rdmapIndex);
+
+	fclose(file);
+	free(line);
+	return result;
+}
+
 RoadMap *getRoadMapInArray(RoadMapArray * array, IDnum index)
 {
 	return &(array->array[index]);
@@ -204,3 +297,9 @@ Annotation *getNextAnnotation(Annotation * annot)
 {
 	return annot + 1;
 }
+
+void destroyRoadMapArray(RoadMapArray * rdmaps) {
+	free(rdmaps->array);
+	free(rdmaps->annotations);
+	free(rdmaps);
+} 

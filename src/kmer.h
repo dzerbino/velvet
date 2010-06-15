@@ -23,6 +23,8 @@ Copyright 2007, 2008, 2009 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #include <stdint.h>
 
+#include "globals.h"
+
 void copyKmers(Kmer* k1, Kmer* k2);
 
 void pushNucleotide(Kmer * kmer, Nucleotide nucleotide);
@@ -32,11 +34,14 @@ int compareKmers(Kmer* k1, Kmer* k2);
 
 void reversePushNucleotide(Kmer * kmer, Nucleotide nucleotide);
 
+KmerKey getKmerKey(Kmer * kmer);
+
 void printKmer(Kmer * kmer);
 
 void clearKmer(Kmer * kmer);
 
 void resetWordFilter(int wordLength);
+void resetKeyFilter(int keyLength);
 
 #define KMER_QUOTIENT (MAXKMERLENGTH / 4)
 #define KMER_REMAINDER (MAXKMERLENGTH % 4)

@@ -2077,8 +2077,31 @@ void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
 	exportSequenceArray(filename, sequences, reads->readCount);
 }
 
+static boolean terminalReferenceMarker(Node * node, ReadSet * reads) {
+	PassageMarker * marker;
+
+	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
+		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] == REFERENCE
+		    && (!getNextInSequence(marker)
+		        || !getPreviousInSequence(marker)))
+			return true;
+
+	return false;
+}
+
+static boolean hasReferenceMarker(Node * node, ReadSet * reads) {
+	PassageMarker * marker;
+	
+	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
+		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] == REFERENCE)
+			return true;
+
+	return false;
+}
+
 boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
-						       double minCov)
+						       double minCov,
+						       ReadSet * reads)
 {
 	IDnum index;
 	Node *node;
@@ -2101,7 +2124,61 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 		if (getNodeLength(node) == 0)
 			continue;
 
-		if (getTotalCoverage(node) / getNodeLength(node) < minCov) {
+		if (getTotalCoverage(node) / getNodeLength(node) < minCov 
+		    && !hasReferenceMarker(node, reads)) {
+			if (denounceReads) {
+				nodeArray = getNodeReads(node, graph);
+				maxIndex = getNodeReadCount(node, graph);
+				for (index2 = 0; index2 < maxIndex; index2++) {
+					shortMarker =
+					    getShortReadMarkerAtIndex(nodeArray,
+								      index2);
+					readID = getShortReadMarkerID(shortMarker);
+					//printf("Dubious %d\n", readID);
+					if (readID > 0)
+						res[readID - 1] = true;
+					else
+						res[-readID - 1] = true;
+				}
+
+				nodeArray = getNodeReads(getTwinNode(node), graph);
+				maxIndex =
+				    getNodeReadCount(getTwinNode(node), graph);
+				for (index2 = 0; index2 < maxIndex; index2++) {
+					shortMarker =
+					    getShortReadMarkerAtIndex(nodeArray,
+								      index2);
+					readID = getShortReadMarkerID(shortMarker);
+					//printf("Dubious %d\n", readID);
+					if (readID > 0)
+						res[readID - 1] = true;
+					else
+						res[-readID - 1] = true;
+				}
+			}
+
+			while ((marker = getMarker(node))) {
+				if (!isInitial(marker)
+				    && !isTerminal(marker))
+					disconnectNextPassageMarker
+					    (getPreviousInSequence(marker),
+					     graph);
+				destroyPassageMarker(marker);
+			}
+			destroyNode(node, graph);
+		}
+	}
+
+	concatenateGraph(graph);
+
+	for (index = 1; index <= nodeCount(graph); index++) {
+		node = getNodeInGraph(graph, index);
+
+		if (getNodeLength(node) == 0)
+			continue;
+
+		if (getTotalCoverage(node) / getNodeLength(node) < minCov 
+		    && !terminalReferenceMarker(node, reads)) {
 			if (denounceReads) {
 				nodeArray = getNodeReads(node, graph);
 				maxIndex = getNodeReadCount(node, graph);
@@ -2847,5 +2924,211 @@ void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLe
 
 	free(outFilename);
 	free(used);	
+	fclose(outfile);
+}
+
+static IDnum getReferenceCount(ReadSet * reads) {
+	IDnum index;
+
+	for (index = 0; index < reads->readCount; index++) 
+		if (reads->categories[index] != REFERENCE)
+			break;
+
+	return index;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Reference identifiers
+//////////////////////////////////////////////////////////////////////////
+
+typedef struct referenceCoord_st ReferenceCoord;
+
+struct referenceCoord_st {
+	char * name;
+	Coordinate start;
+	Coordinate finish;
+	boolean positive_strand;
+};
+
+static ReferenceCoord * collectReferenceCoords(char * sequencesFilename, IDnum referenceCount) {
+	FILE * file = fopen(sequencesFilename, "r");
+	char line[MAXLINE];
+	char name[500];
+	Coordinate start, finish;
+	long long longlongvar;
+	IDnum refIndex = 0;
+	ReferenceCoord * refCoords = callocOrExit(referenceCount, ReferenceCoord);
+	int i;
+
+	while (fgets(line, MAXLINE, file)) {
+		if (line[0] == '>') {
+			if (strchr(line, ':')) {
+				sscanf(strtok(line, ":-\r\n"), ">%s", name);
+				sscanf(strtok(NULL, ":-\r\n"), "%lli", &longlongvar);
+				start = longlongvar;
+				sscanf(strtok(NULL, ":-\r\n"), "%lli", &longlongvar);
+				finish = longlongvar;
+				refCoords[refIndex].name = callocOrExit(strlen(name) + 1, char);  
+				if (start <= finish) {
+					strcpy(refCoords[refIndex].name, name);
+					refCoords[refIndex].start = start;
+					refCoords[refIndex].finish = finish;
+					refCoords[refIndex].positive_strand = true;
+				} else {
+					strcpy(refCoords[refIndex].name, name);
+					refCoords[refIndex].start = finish;
+					refCoords[refIndex].finish = start;
+					refCoords[refIndex].positive_strand = false;
+				}
+			} else {
+				for (i = strlen(line) - 1;
+				     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
+					line[i] = '\0';
+				}
+
+				refCoords[refIndex].name = callocOrExit(strlen(name) + 1, char);  
+				strcpy(name, line + 1);
+				strcpy(refCoords[refIndex].name, name);
+				refCoords[refIndex].start = 1;
+				refCoords[refIndex].finish = -1;
+				refCoords[refIndex].positive_strand = true;
+			}
+			if (++refIndex == referenceCount)
+				break;	
+		}
+	}
+	
+	fclose(file);
+	return refCoords;
+}
+
+typedef struct refMap_st {
+	Coordinate start;
+	Coordinate finish;
+	IDnum refID;
+	Coordinate refStart;
+	Coordinate refFinish;
+} ReferenceMapping; 
+
+static int compareReferenceMappings(const void * A, const void * B) {
+	ReferenceMapping * refMapA = (ReferenceMapping *) A;
+	ReferenceMapping * refMapB = (ReferenceMapping *) B;
+	
+	if (refMapA->start < refMapB->start)
+		return -1;
+	else if (refMapA->start == refMapB->start)
+		return 0;
+	else 
+		return 1;
+}
+
+static void initializeReferenceMapping(ReferenceMapping * refMap, PassageMarker * marker, Node * node) {
+	refMap->start = getStartOffset(marker);
+	refMap->finish = getNodeLength(node) - getFinishOffset(marker); 
+	refMap->refID = getPassageMarkerSequenceID(marker);
+	refMap->refStart = getPassageMarkerStart(marker);
+	refMap->refFinish = getPassageMarkerFinish(marker);
+}
+
+static void fprintfReferenceMapping(FILE * file, ReferenceMapping * mapping, ReferenceCoord * refCoords, int wordLength) {
+	ReferenceCoord * refCoord;
+	Coordinate start, finish;
+
+	if (mapping->refID > 0) 
+		refCoord = &refCoords[mapping->refID - 1];
+	else
+		refCoord = &refCoords[-mapping->refID - 1];
+
+	if (mapping->refID > 0) {
+		if (refCoord->positive_strand) {
+			start = refCoord->start + mapping->refStart;
+			finish = refCoord->start + mapping->refFinish + wordLength - 2;
+		} else {
+			start = refCoord->finish - mapping->refStart + wordLength - 1;
+			finish = refCoord->finish - mapping->refFinish + 1;
+		}
+	} else {
+		if (refCoord->positive_strand) {
+			start = refCoord->start + mapping->refStart + wordLength - 1;
+			finish = refCoord->start + mapping->refFinish + 1;
+		} else {
+			start = refCoord->finish - mapping->refStart; 
+			finish = refCoord->finish - mapping->refFinish + wordLength;  
+		}
+	}
+		
+	fprintf(file, "%lli\t%lli\t%s\t%lli\t%lli\n",
+		(long long) mapping->start + 1, (long long) mapping->finish + wordLength - 1, 
+		refCoord->name, (long long) start, (long long) finish);
+}
+
+static void exportLongNodeMapping(FILE * outfile, Node * node, ReadSet * reads, ReferenceCoord * refCoords, int wordLength) {
+	PassageMarker * marker;
+	ReferenceMapping * referenceMappings;
+	IDnum index;
+	IDnum referenceCount = 0;
+
+	// Count reference sequences
+	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
+		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] == REFERENCE)
+			referenceCount++;
+
+	// Header
+	fprintf(outfile, ">contig_%li\n", (long) getNodeID(node));
+
+	// Create table
+	referenceMappings = callocOrExit(referenceCount, ReferenceMapping);	
+
+	// Initialize table
+	referenceCount = 0;
+	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
+		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] == REFERENCE)
+			initializeReferenceMapping(&referenceMappings[referenceCount++], marker, node);
+
+	// Sort table
+	qsort(referenceMappings, referenceCount, sizeof(ReferenceMapping), compareReferenceMappings);
+
+	// Print table
+	for (index = 0; index < referenceCount; index++)
+		fprintfReferenceMapping(outfile, &referenceMappings[index], refCoords, wordLength);
+
+	// Clean table
+	free(referenceMappings);
+}
+
+void exportLongNodeMappings(char *filename, Graph * graph, ReadSet * reads,
+			     Coordinate minLength, char * sequencesFilename)
+{
+	FILE * outfile;
+	IDnum nodeIndex, refIndex;
+	Node *node;
+	ReferenceCoord * refCoords;
+	IDnum referenceCount = getReferenceCount(reads); 
+
+	if (referenceCount == 0)	
+		return;
+
+	refCoords = collectReferenceCoords(sequencesFilename, referenceCount);
+
+	outfile = fopen(filename, "w");
+	if (outfile == NULL) {
+		printf("Could not write into %s, sorry\n", filename);
+		return;
+	} else {
+		printf("Writing contigs into %s...\n", filename);
+	}
+
+	for (nodeIndex = 1; nodeIndex <= nodeCount(graph); nodeIndex++) {
+		node = getNodeInGraph(graph, nodeIndex);
+
+		if (node == NULL || getNodeLength(node) < minLength)
+			continue;
+		
+		exportLongNodeMapping(outfile, node, reads, refCoords, getWordLength(graph));
+	}
+
+	for (refIndex = 0; refIndex < referenceCount; refIndex++)
+		free(refCoords[refIndex].name);
+	free(refCoords);
 	fclose(outfile);
 }

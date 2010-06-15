@@ -35,6 +35,16 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define GUANINE 2
 #define THYMINE 3
 
+struct preMarker_st {
+	PreMarker * previous;
+	PreMarker * next;
+	Coordinate referenceStart;
+	Coordinate preNodeStart;
+	Coordinate length;
+	IDnum referenceID;
+	IDnum preNodeID;
+};
+
 struct preArc_st {
 	PreArc *nextLeft;
 	PreArc *nextRight;
@@ -53,9 +63,13 @@ struct preNode_st {
 struct preGraph_st {
 	PreNode *preNodes;
 	IDnum sequenceCount;
+	IDnum referenceCount;
 	IDnum preNodeCount;
 	int wordLength;
 	boolean double_strand;
+	IDnum * nodeReferenceMarkerCounts;
+	PreMarker ** nodeReferenceMarkers;
+	PreMarker ** referenceStarts;
 };
 
 static RecycleBin *preArcMemory = NULL;
@@ -291,6 +305,8 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 {
 	PreNode *preNode;
 	IDnum ID = preNodeID;
+	IDnum index;
+	PreMarker * preMarker;
 
 	//printf("Destroying %ld\n and twin %ld\n", getPreNodeID(preNode), getPreNodeID(twin));
 
@@ -304,6 +320,25 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 		destroyPreArc_pg(preNode->preArcLeft, preGraph);
 	while (preNode->preArcRight != NULL)
 		destroyPreArc_pg(preNode->preArcRight, preGraph);
+
+	// PreMarkers
+	if (preGraph->nodeReferenceMarkers) {
+		for (index = 0; index < preGraph->nodeReferenceMarkerCounts[ID]; index++) {
+			preMarker = &(preGraph->nodeReferenceMarkers[ID][index]);
+			if (preMarker->previous == NULL && preGraph->referenceStarts[preMarker->referenceID] == preMarker)
+				preGraph->referenceStarts[preMarker->referenceID] = preMarker->next;
+			if (preMarker->previous != NULL)
+				preMarker->previous->next = NULL;
+			if (preMarker->next != NULL)
+				preMarker->next->previous = NULL;
+			preMarker->preNodeID = 0;
+			preMarker->referenceID = 0;
+		}
+		if (preGraph->nodeReferenceMarkers[ID]) 
+			free(preGraph->nodeReferenceMarkers[ID]);
+		preGraph->nodeReferenceMarkers[ID] = NULL;
+		preGraph->nodeReferenceMarkerCounts[ID] = 0;
+	}
 
 	// Descriptors
 	free(preNode->descriptor);
@@ -835,6 +870,8 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 	IDnum counter = 0;
 	IDnum preNodes = preGraph->preNodeCount;
 	IDnum newIndex;
+	IDnum preMarkerIndex;
+	PreMarker * preMarker;
 	PreArc *preArc;
 
 	puts("Renumbering preNodes");
@@ -869,6 +906,21 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 			     preArc = getNextPreArc_pg(preArc, -newIndex))
 				updatePreArcData_pg(preArc, -preNodeIndex,
 						    -newIndex);
+			
+			if (preGraph->nodeReferenceMarkers) {
+				preGraph->nodeReferenceMarkerCounts[newIndex] = preGraph->nodeReferenceMarkerCounts[preNodeIndex];
+				preGraph->nodeReferenceMarkers[newIndex] = preGraph->nodeReferenceMarkers[preNodeIndex];
+
+				for (preMarkerIndex = 0; preMarkerIndex < preGraph->nodeReferenceMarkerCounts[newIndex]; preMarkerIndex++) {
+					preMarker = &(preGraph->nodeReferenceMarkers[newIndex][preMarkerIndex]);
+					if (preMarker->preNodeID == preNodeIndex)
+						preMarker->preNodeID = newIndex;
+					else if (preMarker->preNodeID == -preNodeIndex)
+						preMarker->preNodeID = -newIndex;
+					else 
+						abort();
+				}
+			}
 		}
 	}
 
@@ -881,13 +933,18 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 }
 
 // Allocate memory for an empty preGraph created with sequenceCount different sequences
-PreGraph *emptyPreGraph_pg(IDnum sequenceCount, int wordLength, boolean double_strand)
+PreGraph *emptyPreGraph_pg(IDnum sequenceCount, IDnum referenceCount, int wordLength, boolean double_strand)
 {
 	PreGraph *newPreGraph = mallocOrExit(1, PreGraph);
 	newPreGraph->sequenceCount = sequenceCount;
 	newPreGraph->wordLength = wordLength;
 	newPreGraph->preNodeCount = 0;
 	newPreGraph->double_strand = double_strand;
+	newPreGraph->referenceCount = referenceCount;
+	newPreGraph->preNodes = NULL;
+	newPreGraph->nodeReferenceMarkerCounts = NULL;
+	newPreGraph->nodeReferenceMarkers = NULL;
+	newPreGraph->referenceStarts = NULL;
 	return newPreGraph;
 }
 
@@ -951,6 +1008,63 @@ void allocatePreNodeSpace_pg(PreGraph * preGraph, IDnum preNodeCount)
 	preGraph->preNodeCount = preNodeCount;
 }
 
+void allocatePreMarkerCountSpace_pg(PreGraph * preGraph)
+{
+	preGraph->nodeReferenceMarkerCounts = callocOrExit(preGraph->preNodeCount + 1, IDnum);
+	preGraph->nodeReferenceMarkers = callocOrExit(preGraph->preNodeCount + 1, PreMarker *);
+	preGraph->referenceStarts = callocOrExit(preGraph->referenceCount + 1, PreMarker *);
+}
+
+void incrementNodeReferenceMarkerCount_pg(PreGraph * preGraph, IDnum preNodeID) {
+	if (preNodeID < 0)
+		preNodeID = -preNodeID;
+
+	preGraph->nodeReferenceMarkerCounts[preNodeID]++;
+}
+
+void allocatePreMarkerSpace_pg(PreGraph * preGraph) {
+	IDnum index;
+	
+	if (!preGraph->nodeReferenceMarkers)
+		return;
+
+	for (index = 1; index <= preGraph->preNodeCount; index++) {
+		if (preGraph->nodeReferenceMarkerCounts[index])
+			preGraph->nodeReferenceMarkers[index] = callocOrExit(preGraph->nodeReferenceMarkerCounts[index], PreMarker);
+		else 
+			preGraph->nodeReferenceMarkers[index] = NULL;
+		preGraph->nodeReferenceMarkerCounts[index] = 0;
+	}
+}
+
+PreMarker * addPreMarker_pg(PreGraph * preGraph, IDnum nodeID, IDnum seqID, Coordinate * start, PreMarker * previous) {
+	PreMarker * preMarker;
+	IDnum positive_nodeID;
+
+	if (nodeID < 0) 
+		abort();
+	else
+		positive_nodeID = nodeID;
+
+	preMarker = &(preGraph->nodeReferenceMarkers[positive_nodeID][(preGraph->nodeReferenceMarkerCounts[positive_nodeID])++]);
+	preMarker->previous = previous;
+	if (previous) 
+		previous->next = preMarker;
+	preMarker->next = NULL;
+	preMarker->referenceStart = *start;
+	preMarker->length = preGraph->preNodes[positive_nodeID].length;
+	preMarker->preNodeStart = 0;
+	preMarker->preNodeID = nodeID;
+	preMarker->referenceID = seqID;
+
+	*start += preMarker->length;
+
+	if (previous == NULL)
+		preGraph->referenceStarts[seqID] = preMarker;
+
+	return preMarker;
+}
+
 void addPreNodeToPreGraph_pg(PreGraph * preGraph, Coordinate start,
 			     Coordinate finish, FILE * file,
 			     Kmer * initialKmer, IDnum ID)
@@ -1006,6 +1120,19 @@ static void exportPreNode_pg(FILE * outfile, PreNode * preNode, IDnum ID,
 	fprintf(outfile, "\n");
 }
 
+static void exportPreMarker(FILE * outfile, PreMarker* preMarker) {
+	fprintf(outfile, "%li\t%lli\t%lli\t%lli\n", (long) preMarker->preNodeID, (long long) preMarker->preNodeStart, (long long) preMarker->referenceStart, (long long) preMarker->length);
+}
+
+static void exportPreReference_pg(FILE * outfile, IDnum index, PreGraph * preGraph) {
+	PreMarker * preMarker;
+
+	fprintf(outfile, "SEQ\t%li\n", (long) index);
+
+	for (preMarker = preGraph->referenceStarts[index]; preMarker; preMarker=preMarker->next) 
+		exportPreMarker(outfile, preMarker);
+}
+
 void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 {
 	IDnum index;
@@ -1033,6 +1160,11 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 		preNode = getPreNodeInPreGraph_pg(preGraph, index);
 		exportPreNode_pg(outfile, preNode, index, wordLength);
 	}
+
+	// Reference sequence info
+	for (index = 1; index <= preGraph->referenceCount; index++)
+		exportPreReference_pg(outfile, index, preGraph);
+
 
 	fclose(outfile);
 }
@@ -1201,4 +1333,350 @@ void appendDescriptors_pg(Descriptor ** start, int * writeOffset, IDnum preNodeI
 		appendPositiveDescriptor_pg(start, writeOffset, preNodeID, preGraph, initial);
 	else
 		appendNegativeDescriptor_pg(start, writeOffset, -preNodeID, preGraph, initial);
+}
+
+boolean referenceMarkersAreActivated_pg(PreGraph * preGraph) {
+	return preGraph->nodeReferenceMarkers != NULL;
+}
+
+static void copyPreMarker(PreMarker * dest, PreMarker * source, IDnum preNodeAID, PreGraph * preGraph) {
+	dest->previous = source->previous;
+	dest->next = source->next;
+
+	dest->preNodeStart = source->preNodeStart;
+	dest->length = source->length;
+	dest->referenceID = source->referenceID;
+	dest->referenceStart = source->referenceStart;
+
+	if (source->preNodeID > 0)
+		dest->preNodeID = preNodeAID;
+	else 
+		dest->preNodeID = -preNodeAID;
+
+	if (source->previous)
+		source->previous->next = dest;
+	if (source->next)
+		source->next->previous = dest;
+
+	if (source->previous == NULL && preGraph->referenceStarts[source->referenceID])
+		preGraph->referenceStarts[source->referenceID] = dest;
+	else if (source->previous == NULL && !preGraph->referenceStarts[source->referenceID])
+		abort();
+
+	source->referenceID = 0;
+	source->preNodeID = 0;
+	source->previous = NULL;
+	source->next = NULL;
+}
+
+static PreMarker * reallocOrExitReferenceMarkers(PreGraph * preGraph, IDnum preNodeID, IDnum length) {
+	PreMarker * array = callocOrExit(length, PreMarker);
+	PreMarker * writer = array;
+	PreMarker * reader = preGraph->nodeReferenceMarkers[preNodeID];
+	IDnum index;
+
+	for (index = 0; index < preGraph->nodeReferenceMarkerCounts[preNodeID]; index++) {
+		copyPreMarker(writer, reader, preNodeID, preGraph);	
+		writer++;
+		reader++;
+	} 
+
+	free(preGraph->nodeReferenceMarkers[preNodeID]);
+
+	return array;
+}
+
+static void concatenateReferenceMarkers_H2T_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph * preGraph, Coordinate totalOffset) {
+	IDnum index;
+	IDnum countA = preGraph->nodeReferenceMarkerCounts[preNodeAID];
+	IDnum countB = preGraph->nodeReferenceMarkerCounts[preNodeBID];
+	Coordinate lengthA = preGraph->preNodes[preNodeAID].length + totalOffset;
+	PreMarker * markerA, *next, *markerB;
+	IDnum counter = 0;
+	
+	for (index = 0 ; index < countA; index++) {
+		markerA = &(preGraph->nodeReferenceMarkers[preNodeAID][index]);
+
+		if (markerA->preNodeID > 0)
+			next = markerA->next;
+		else 
+			next = markerA->previous;
+
+		if (!next)
+			continue;
+
+		if (markerA->preNodeID == preNodeAID && next->preNodeID != preNodeBID)
+			abort();
+		if (markerA->preNodeID == -preNodeAID && next->preNodeID != -preNodeBID)
+			abort();
+
+		next->referenceID = 0;
+		next->preNodeID = 0;
+
+		markerA->length += next->length;
+		if (markerA->preNodeID > 0) {
+			markerA->next = next->next;
+			if (next->next) 
+				next->next->previous = markerA;
+		} else {
+			if (next->previous == NULL && preGraph->referenceStarts[markerA->referenceID] == next)
+				preGraph->referenceStarts[markerA->referenceID] = markerA;
+			markerA->previous = next->previous;
+			if (next->previous)
+				next->previous->next = markerA;
+			markerA->referenceStart = next->referenceStart;
+		}
+		next->next = NULL;
+		next->previous = NULL;
+	}
+
+	for (index = 0; index < countB; index++) 
+		if (preGraph->nodeReferenceMarkers[preNodeBID][index].referenceID)
+			counter++;
+
+	if (counter == 0)
+		return;
+
+	if (countA)
+		preGraph->nodeReferenceMarkers[preNodeAID] = reallocOrExitReferenceMarkers(preGraph, preNodeAID, countA + counter);
+	else 
+		preGraph->nodeReferenceMarkers[preNodeAID] = callocOrExit(counter, PreMarker);
+
+	for (index = 0; index < countB; index++) {
+		markerB = &(preGraph->nodeReferenceMarkers[preNodeBID][index]);
+		if (markerB->referenceID) {
+			markerA = &(preGraph->nodeReferenceMarkers[preNodeAID][countA++]);
+			copyPreMarker(markerA, markerB, preNodeAID, preGraph);
+			markerA->preNodeStart += lengthA;
+		}
+	}
+
+	preGraph->nodeReferenceMarkerCounts[preNodeAID] = countA;
+}
+
+static void concatenateReferenceMarkers_H2H_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph * preGraph, Coordinate totalOffset) {
+	IDnum index;
+	IDnum countA = preGraph->nodeReferenceMarkerCounts[preNodeAID];
+	IDnum countB = preGraph->nodeReferenceMarkerCounts[preNodeBID];
+	Coordinate lengthA = preGraph->preNodes[preNodeAID].length + totalOffset;
+	Coordinate lengthB = preGraph->preNodes[preNodeBID].length;
+	PreMarker * markerA, *next, *markerB;
+	IDnum counter = 0;
+
+	for (index = 0 ; index < countA; index++) {
+		markerA = &(preGraph->nodeReferenceMarkers[preNodeAID][index]);
+
+		if (markerA->preNodeID > 0)
+			next = markerA->next;
+		else 
+			next = markerA->previous;
+
+		
+		if (!next) 
+			continue;
+
+		if (markerA->preNodeID == preNodeAID && next->preNodeID != -preNodeBID)
+			abort();
+		if (markerA->preNodeID == -preNodeAID && next->preNodeID != preNodeBID)
+			abort();
+	
+		next->referenceID = 0;
+		next->preNodeID = 0;
+
+		markerA->length += next->length;
+		if (markerA->preNodeID > 0) {
+			markerA->next = next->next;
+			if (next->next)
+				next->next->previous = markerA;
+		} else {
+			if (next->previous == NULL && preGraph->referenceStarts[markerA->referenceID] == next)
+				preGraph->referenceStarts[markerA->referenceID] = markerA;
+			markerA->previous = next->previous;
+			if (next->previous)
+				next->previous->next = markerA;
+			markerA->referenceStart = next->referenceStart;
+		}
+		next->next = NULL;
+		next->previous = NULL;
+	}
+
+	for (index = 0; index < countB; index++) 
+		if (preGraph->nodeReferenceMarkers[preNodeBID][index].referenceID)
+			counter++;
+
+	if (counter == 0)
+		return;
+
+	if (countA)
+		preGraph->nodeReferenceMarkers[preNodeAID] = reallocOrExitReferenceMarkers(preGraph, preNodeAID, countA + counter);
+	else
+		preGraph->nodeReferenceMarkers[preNodeAID] = callocOrExit(counter, PreMarker);
+
+	for (index = 0; index < countB; index++) {
+		markerB = &(preGraph->nodeReferenceMarkers[preNodeBID][index]);
+		if (markerB->referenceID) {
+			markerA = &(preGraph->nodeReferenceMarkers[preNodeAID][countA++]);
+			copyPreMarker(markerA, markerB, preNodeAID, preGraph);
+			markerA->preNodeID *= -1;
+			markerA->preNodeStart = lengthA + lengthB - markerA->preNodeStart - markerA->length;
+		}
+	}
+
+	preGraph->nodeReferenceMarkerCounts[preNodeAID] = countA;
+}
+
+static void concatenateReferenceMarkers_T2T_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph * preGraph, Coordinate totalOffset) {
+	IDnum index;
+	IDnum countA = preGraph->nodeReferenceMarkerCounts[preNodeAID];
+	IDnum countB = preGraph->nodeReferenceMarkerCounts[preNodeBID];
+	Coordinate lengthB = preGraph->preNodes[preNodeBID].length;
+	PreMarker * markerA, *next, *markerB;
+	IDnum counter = 0;
+
+	for (index = 0 ; index < countA; index++) {
+		markerA = &(preGraph->nodeReferenceMarkers[preNodeAID][index]);
+
+		if (markerA->preNodeID < 0)
+			next = markerA->next;
+		else 
+			next = markerA->previous;
+
+		if (!next) { 
+			markerA->preNodeStart += lengthB;
+			continue;
+		}
+
+		if (markerA->preNodeID == preNodeAID && next->preNodeID != -preNodeBID)
+			abort();
+		if (markerA->preNodeID == -preNodeAID && next->preNodeID != preNodeBID)
+			abort();
+
+		next->referenceID = 0;
+		next->preNodeID = 0;
+
+		markerA->length += next->length;
+		markerA->preNodeStart = lengthB - next->preNodeStart - next->length;
+		if (markerA->preNodeID < 0) {
+			markerA->next = next->next;
+			if (next->next)
+				next->next->previous = markerA;
+		} else {
+			if (next->previous == NULL && preGraph->referenceStarts[markerA->referenceID] == next)
+				preGraph->referenceStarts[markerA->referenceID] = markerA;
+			markerA->previous = next->previous;
+			if (next->previous) 
+				next->previous->next = markerA;
+			markerA->referenceStart = next->referenceStart;
+		}
+		next->next = NULL;
+		next->previous = NULL;
+	}
+
+	for (index = 0; index < countB; index++) 
+		if (preGraph->nodeReferenceMarkers[preNodeBID][index].referenceID)
+			counter++;
+
+	if (counter == 0)
+		return;
+
+	if (countA)
+		preGraph->nodeReferenceMarkers[preNodeAID] = reallocOrExitReferenceMarkers(preGraph, preNodeAID, countA + counter);
+	else
+		preGraph->nodeReferenceMarkers[preNodeAID] = callocOrExit(counter, PreMarker);
+
+	for (index = 0; index < countB; index++) {
+		markerB = &(preGraph->nodeReferenceMarkers[preNodeBID][index]);
+		if (markerB->referenceID) {
+			markerA = &(preGraph->nodeReferenceMarkers[preNodeAID][countA++]);
+			copyPreMarker(markerA, markerB, preNodeAID, preGraph);
+			markerA->preNodeID *= -1;
+			markerA->preNodeStart = lengthB - markerA->preNodeStart - markerA->length;
+		}
+	}
+
+	preGraph->nodeReferenceMarkerCounts[preNodeAID] = countA;
+}
+
+static void concatenateReferenceMarkers_T2H_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph * preGraph, Coordinate totalOffset) {
+	IDnum index;
+	IDnum countA = preGraph->nodeReferenceMarkerCounts[preNodeAID];
+	IDnum countB = preGraph->nodeReferenceMarkerCounts[preNodeBID];
+	PreMarker * markerA, *next, *markerB;
+	Coordinate lengthB = preGraph->preNodes[preNodeBID].length;
+	IDnum counter = 0;
+	
+	for (index = 0 ; index < countA; index++) {
+		markerA = &(preGraph->nodeReferenceMarkers[preNodeAID][index]);
+
+		if (markerA->preNodeID < 0)
+			next = markerA->next;
+		else 
+			next = markerA->previous;
+
+		if (!next) {
+			markerA->preNodeStart += lengthB;
+			continue;
+		}
+
+		if (markerA->preNodeID == preNodeAID && next->preNodeID != preNodeBID)
+			abort();
+		if (markerA->preNodeID == -preNodeAID && next->preNodeID != -preNodeBID)
+			abort();
+
+		next->referenceID = 0;
+		next->preNodeID = 0;
+
+		markerA->length += next->length;
+		markerA->preNodeStart = next->preNodeStart;
+		if (markerA->preNodeID < 0) {
+			markerA->next = next->next;
+			if (next->next)
+				next->next->previous = markerA;
+		} else {
+			if (next->previous == NULL && preGraph->referenceStarts[markerA->referenceID] == next)
+				preGraph->referenceStarts[markerA->referenceID] = markerA;
+			markerA->previous = next->previous;
+			if (next->previous)
+				next->previous->next = markerA;
+			markerA->referenceStart = next->referenceStart;
+		}
+		next->next = NULL;
+		next->previous = NULL;
+	}
+
+	for (index = 0; index < countB; index++) 
+		if (preGraph->nodeReferenceMarkers[preNodeBID][index].referenceID)
+			counter++;
+
+	if (counter == 0)
+		return;
+
+	if (countA)
+		preGraph->nodeReferenceMarkers[preNodeAID] = reallocOrExitReferenceMarkers(preGraph, preNodeAID, countA + counter);
+	else
+		preGraph->nodeReferenceMarkers[preNodeAID] = callocOrExit(counter, PreMarker);
+
+	for (index = 0; index < countB; index++) {
+		markerB = &(preGraph->nodeReferenceMarkers[preNodeBID][index]);
+		if (markerB->referenceID) {
+			markerA = &(preGraph->nodeReferenceMarkers[preNodeAID][countA++]);
+			copyPreMarker(markerA, markerB, preNodeAID, preGraph);
+		}
+	}
+
+	preGraph->nodeReferenceMarkerCounts[preNodeAID] = countA;
+}
+
+void concatenateReferenceMarkers_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph * preGraph, Coordinate totalOffset) {
+	if (!referenceMarkersAreActivated_pg(preGraph))
+		return;
+
+	if (preNodeAID > 0 && preNodeBID > 0)
+		concatenateReferenceMarkers_H2T_pg(preNodeAID, preNodeBID, preGraph, totalOffset);
+	else if (preNodeAID > 0) 
+		concatenateReferenceMarkers_H2H_pg(preNodeAID, -preNodeBID, preGraph, totalOffset);
+	else if (preNodeBID > 0)
+		concatenateReferenceMarkers_T2T_pg(-preNodeAID, preNodeBID, preGraph, totalOffset);
+	else
+		concatenateReferenceMarkers_T2H_pg(-preNodeAID, -preNodeBID, preGraph, totalOffset);
 }

@@ -256,3 +256,6 @@ V 0.7.62
 V 0.7.63
 - Added the AssemblyAssembler by Jacob Crawford
 - Increased the memory allocated to store gap sizes to avoid overflow errors with long insert libraries
+
+V 1.0.01
+- Columbus hybrid assembly module

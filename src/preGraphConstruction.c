@@ -361,16 +361,17 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		//printf("Initial kmer: ");
 		for (readIndex = 0; readIndex < WORDLENGTH - 1;
 		     readIndex++) {
-			if (!isalpha((c = getc(file)))) {
-				if (c == '>') {
-					ungetc(c, file);
-					tooShort = true;
-					break;
-				} else {
-					continue;
-				}
+			c = getc(file);
+			while (c == '\n' || c == '\r') 
+				c = getc(file);
+	
+			if (c == '>' || c == 'M') {
+				ungetc(c, file);
+				tooShort = true;
+				break;
 			}
-			//printf("%c", c);      
+			//if (sequenceIndex == 481)
+			//	printf("%c", c);      
 			switch (c) {
 			case 'A':
 				pushNucleotide(&initialKmer, ADENINE);
@@ -391,12 +392,13 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				abort();
 			}
 		}
-		//puts("");
+		//if (sequenceIndex == 481)
+		//	puts("");
 
 		if (tooShort) {
 			//printf("Skipping short read.. %d\n", sequenceIndex);
 			chains[sequenceIndex] = preNodeCounter;
-			if (!fgets(line, lineLength, file))
+			if (!fgets(line, lineLength, file) && sequenceIndex < sequenceCount_pg(preGraph))
 				exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
 			continue;
 		}
@@ -415,6 +417,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			}
 
 			if (currentPosition != nextStop) {
+				//if (sequenceIndex == 481)
+				//	printf("Adding pre nodes from %lli to %lli\n", (long long) currentPosition, (long long) nextStop);
 				addPreNodeToPreGraph_pg(preGraph,
 							currentPosition,
 							nextStop,
@@ -448,7 +452,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 					while (!isalpha(c))
 						c = getc(file);
 
-					//printf("(%c)", c);
+					//if (sequenceIndex == 481)
+					//	printf("(%c)", c);
 					switch (c) {
 					case 'A':
 						pushNucleotide(&initialKmer, ADENINE);
@@ -487,6 +492,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				nextStop =
 				    getInsertionMarkerPosition
 				    (currentMarker);
+				//if (sequenceIndex == 481)
+				//	printf("Adding pre nodes from %lli to %lli\n", (long long) currentPosition, (long long) nextStop);
 				addPreNodeToPreGraph_pg(preGraph,
 							currentPosition,
 							nextStop, file,
@@ -519,12 +526,15 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 static void connectPreNodeToTheNext(IDnum * currentPreNodeID,
 				    IDnum nextPreNodeID,
 				    Coordinate * currentPosition,
-				    PassageMarker ** latestPassageMarker,
 				    IDnum sequenceIndex,
+				    boolean isReference,
 				    PreGraph * preGraph)
 {
 	if (nextPreNodeID == 0)
 		return;
+
+	if (isReference)
+		incrementNodeReferenceMarkerCount_pg(preGraph, nextPreNodeID);
 
 	if (*currentPreNodeID != 0)
 		createPreArc_pg(*currentPreNodeID, nextPreNodeID,
@@ -552,22 +562,114 @@ static IDnum chooseNextInternalPreNode(IDnum currentPreNodeID,
 
 static void connectAnnotation(IDnum * currentPreNodeID, Annotation * annot,
 			      Coordinate * currentPosition,
-			      PassageMarker ** latestPassageMarker,
-			      IDnum sequenceIndex, PreGraph * preGraph)
+			      IDnum sequenceIndex, boolean isReference,
+			      PreGraph * preGraph)
 {
 	IDnum nextPreNodeID = getStartID(annot);
 
 	connectPreNodeToTheNext(currentPreNodeID, nextPreNodeID,
-				currentPosition, latestPassageMarker,
-				sequenceIndex, preGraph);
+				currentPosition, 
+				sequenceIndex, isReference, preGraph);
 
 	while (*currentPreNodeID != getFinishID(annot)) {
 		nextPreNodeID = (*currentPreNodeID) + 1;
 
 		connectPreNodeToTheNext(currentPreNodeID, nextPreNodeID,
 					currentPosition,
-					latestPassageMarker, sequenceIndex,
+					sequenceIndex,
+					isReference,
 					preGraph);
+	}
+}
+
+static void reConnectAnnotation(IDnum * currentPreNodeID, Annotation * annot,
+			      Coordinate * currentPosition,
+			      IDnum sequenceIndex, 
+			      PreGraph * preGraph,
+			      PreMarker ** previous)
+{
+	IDnum nextPreNodeID = getStartID(annot);
+
+	*previous = addPreMarker_pg(preGraph, 
+			nextPreNodeID,
+			sequenceIndex,
+			currentPosition, 
+			*previous);
+
+	while (*currentPreNodeID != getFinishID(annot)) {
+		nextPreNodeID = (*currentPreNodeID) + 1;
+
+		*previous = addPreMarker_pg(preGraph, 
+				nextPreNodeID,
+				sequenceIndex,
+				currentPosition,
+				*previous);
+		*currentPreNodeID = nextPreNodeID;
+	}
+}
+
+static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
+			    IDnum * chains)
+{
+	Coordinate currentPosition, currentInternalPosition;
+	IDnum sequenceIndex;
+	Annotation *annot = rdmaps->annotations;
+	IDnum referenceCount = rdmaps->referenceCount;
+	IDnum currentPreNodeID, nextInternalPreNodeID;
+	RoadMap *rdmap;
+	IDnum annotIndex, lastAnnotIndex;
+	PreMarker * previous;
+
+	for (sequenceIndex = 1;
+	     sequenceIndex <= referenceCount;
+	     sequenceIndex++) {
+
+		if (sequenceIndex % 100000 == 0)
+			printf("Connecting %d / %d\n", sequenceIndex,
+			       sequenceCount_pg(preGraph));
+
+		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
+		annotIndex = 0;
+		lastAnnotIndex = getAnnotationCount(rdmap);
+		nextInternalPreNodeID = chooseNextInternalPreNode
+		    (chains[sequenceIndex] - 1, sequenceIndex,
+		     preGraph, chains);
+
+		previous = NULL;
+		currentPosition = 0;
+		currentInternalPosition = 0;
+		currentPreNodeID = 0;
+		// Recursion up to last annotation
+		while (annotIndex < lastAnnotIndex
+		       || nextInternalPreNodeID != 0) {
+			if (annotIndex == lastAnnotIndex
+			    || (nextInternalPreNodeID != 0
+				&& currentInternalPosition <
+				getPosition(annot))) {
+				previous = addPreMarker_pg(preGraph, 
+						nextInternalPreNodeID,
+						sequenceIndex,
+						&currentPosition,
+						previous);
+				currentPreNodeID = nextInternalPreNodeID;
+				nextInternalPreNodeID =
+				    chooseNextInternalPreNode
+				    (currentPreNodeID, sequenceIndex,
+				     preGraph, chains);
+				currentInternalPosition +=
+				    getPreNodeLength_pg(currentPreNodeID,
+							preGraph);
+
+			} else {
+				reConnectAnnotation(&currentPreNodeID, annot,
+						  &currentPosition,
+						  sequenceIndex, 
+						  preGraph,
+						  &previous);
+				annot = getNextAnnotation(annot);
+				annotIndex++;
+			}
+		}
 	}
 }
 
@@ -578,10 +680,14 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	Coordinate currentPosition, currentInternalPosition;
 	IDnum sequenceIndex;
 	Annotation *annot = rdmaps->annotations;
+	IDnum referenceCount = rdmaps->referenceCount;
 	IDnum currentPreNodeID, nextInternalPreNodeID;
-	PassageMarker *latestPassageMarker;
 	RoadMap *rdmap;
 	IDnum annotIndex, lastAnnotIndex;
+	boolean isReference;
+
+	if (rdmaps->referenceCount > 0) 
+		allocatePreMarkerCountSpace_pg(preGraph);
 
 	for (sequenceIndex = 1;
 	     sequenceIndex <= sequenceCount_pg(preGraph);
@@ -597,11 +703,11 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		nextInternalPreNodeID = chooseNextInternalPreNode
 		    (chains[sequenceIndex] - 1, sequenceIndex,
 		     preGraph, chains);
+		isReference = (sequenceIndex <= referenceCount);
 
 		currentPosition = 0;
 		currentInternalPosition = 0;
 		currentPreNodeID = 0;
-		latestPassageMarker = NULL;
 		// Recursion up to last annotation
 		while (annotIndex < lastAnnotIndex
 		       || nextInternalPreNodeID != 0) {
@@ -612,8 +718,8 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				connectPreNodeToTheNext(&currentPreNodeID,
 							nextInternalPreNodeID,
 							&currentPosition,
-							&latestPassageMarker,
 							sequenceIndex,
+							isReference,
 							preGraph);
 				nextInternalPreNodeID =
 				    chooseNextInternalPreNode
@@ -626,12 +732,17 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			} else {
 				connectAnnotation(&currentPreNodeID, annot,
 						  &currentPosition,
-						  &latestPassageMarker,
-						  sequenceIndex, preGraph);
+						  sequenceIndex, isReference,
+						  preGraph);
 				annot = getNextAnnotation(annot);
 				annotIndex++;
 			}
 		}
+	}
+
+	if (rdmaps->referenceCount > 0) {
+		allocatePreMarkerSpace_pg(preGraph);
+		createPreMarkers(rdmaps, preGraph, chains);	
 	}
 }
 
@@ -640,9 +751,7 @@ static void
 cleanUpMemory(PreGraph * preGraph, RoadMapArray * rdmaps, IDnum * chains)
 {
 	// Killing off roadmaps
-	free(rdmaps->annotations);
-	free(rdmaps->array);
-	free(rdmaps);
+	destroyRoadMapArray(rdmaps);
 
 	// Finishing off the chain markers
 	free(chains);
@@ -659,7 +768,7 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 	InsertionMarker *veryLastMarker;
 
 	PreGraph *preGraph =
-	    emptyPreGraph_pg(sequenceCount, rdmapArray->WORDLENGTH, rdmapArray->double_strand);
+	    emptyPreGraph_pg(sequenceCount, rdmapArray->referenceCount, rdmapArray->WORDLENGTH, rdmapArray->double_strand);
 
 	puts("Creating insertion markers");
 	setInsertionMarkers(rdmapArray, markerCounters, &veryLastMarker,
@@ -683,8 +792,6 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 
 	puts("Cleaning up memory");
 	cleanUpMemory(preGraph, rdmapArray, chains);
-	puts("Concatenating preGraph");
-	concatenatePreGraph_pg(preGraph);
 	puts("Done creating preGraph");
 
 	return preGraph;

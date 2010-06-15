@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 	ReadSet *allSequences;
 	SplayTable *splayTable;
 	int hashLength;
-	char *directory, *filename, *buf;
+	char *directory, *filename, *seqFilename, *buf;
 	boolean double_strand = true;
 	DIR *dir;
 
@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 
 	directory = argv[1];
 	filename = mallocOrExit(strlen(directory) + 100, char);
+	seqFilename = mallocOrExit(strlen(directory) + 100, char);
 	buf = mallocOrExit(strlen(directory) + 100, char);
 
 	hashLength = atoi(argv[2]);
@@ -138,25 +139,25 @@ int main(int argc, char **argv)
 
 	logInstructions(argc, argv, directory);
 
-	splayTable = newSplayTable(hashLength);
+	strcpy(seqFilename, directory);
+	strcat(seqFilename, "/Sequences");
+	parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand);
 
-	strcpy(filename, directory);
-	strcat(filename, "/Sequences");
-	parseDataAndReadFiles(filename, argc - 2, &(argv[2]), &double_strand);
+	splayTable = newSplayTable(hashLength, double_strand);
 
-	allSequences = importReadSet(filename);
+	allSequences = importReadSet(seqFilename);
 	printf("%i sequences in total.\n", allSequences->readCount);
 
 	strcpy(filename, directory);
 	strcat(filename, "/Roadmaps");
 	inputSequenceArrayIntoSplayTableAndArchive(allSequences,
-						   splayTable, filename, 
-						   double_strand);
+						   splayTable, filename, seqFilename);
 
 	destroySplayTable(splayTable);
 	if (dir)
 		closedir(dir);
 	free(filename);
+	free(seqFilename);
 	free(buf);
 
 	return 0;

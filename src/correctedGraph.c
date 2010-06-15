@@ -90,6 +90,7 @@ static Ticket *done;
 static boolean *progressStatus;
 
 static Coordinate *sequenceLengths;
+static Category *sequenceCategories;
 
 //End of global variables;
 
@@ -2208,6 +2209,19 @@ static void cleanUpRedundancy()
 	//fflush(stdout);
 }
 
+static boolean pathContainsReference(PassageMarker * path) {
+	PassageMarker *marker, *marker2;
+
+	for (marker = getNextInSequence(path); !isTerminal(marker);
+	     marker = getNextInSequence(marker))
+		for (marker2 = getMarker(getNode(marker)); marker2; marker2 = getNextInNode(marker2))
+			if (marker2 != marker && sequenceCategories[getAbsolutePassMarkerSeqID(marker)] == REFERENCE)
+				return true;
+
+	return false;
+
+}
+
 static void comparePaths(Node * destination, Node * origin)
 {
 	IDnum slowLength, fastLength;
@@ -2284,6 +2298,11 @@ static void comparePaths(Node * destination, Node * origin)
 		slowPath = marker;
 	}
 
+	// Avoid merging parallel Reference sequences
+	if (pathContainsReference(fastPath) && pathContainsReference(slowPath)) {
+		destroyPaths();
+		return;
+	}
 	//Extract sequences
 	if (!extractSequence(fastPath, fastSequence)
 	    || !extractSequence(slowPath, slowSequence)) {
@@ -2610,7 +2629,7 @@ static void tourBus(Node * startingPoint)
 	}
 }
 
-void correctGraph(Graph * argGraph, Coordinate * argSequenceLengths)
+void correctGraph(Graph * argGraph, Coordinate * argSequenceLengths, Category * argSequenceCategories)
 {
 	IDnum nodes;
 	IDnum index;
@@ -2619,6 +2638,7 @@ void correctGraph(Graph * argGraph, Coordinate * argSequenceLengths)
 	graph = argGraph;
 	WORDLENGTH = getWordLength(graph);
 	sequenceLengths = argSequenceLengths;
+	sequenceCategories = argSequenceCategories;
 	dbgCounter = 0;
 	// Done with global params
 

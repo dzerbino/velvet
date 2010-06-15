@@ -879,7 +879,6 @@ static NodeList *pathIsClear(Node * node, Node * oppositeNode,
 					    getNodeStatus(candidate) - 1);
 
 
-		// DEBUG 
 		if (abs_bool(getNodeStatus(candidate)) > 100
 		    || counter > nodeCount(graph)) {
 			while (path) {

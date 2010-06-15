@@ -21,12 +21,11 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _SPLAYTABLE_H_
 #define _SPLAYTABLE_H_
 
-SplayTable *newSplayTable(int WORDLENGTH);
+SplayTable *newSplayTable(int WORDLENGTH, boolean double_strand);
 
 void destroySplayTable(SplayTable * table);
 
 void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 						SplayTable * table,
-						char *filename,
-						boolean double_strand);
+						char *filename, char* seqFilename);
 #endif
