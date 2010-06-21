@@ -630,7 +630,7 @@ KmerKey getKmerKey(Kmer * kmer) {
 
 #if KMER_CHARS
 	if (keyFilterIndex == CHARS) {
-		key = kmers->chars & keyFilter;
+		key = kmer->chars & keyFilter;
 		key >>= keyFilterOffset;
 		return key;
 	}

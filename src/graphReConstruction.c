@@ -809,7 +809,11 @@ static void threadSequenceThroughGraph(TightString * tString,
 
 		// Search for reference mapping
 		if (category == REFERENCE) {
-			refMap = findReferenceMapping(seqID, index, referenceMappings, referenceMappingCount);
+			if (referenceMappings) 
+				refMap = findReferenceMapping(seqID, index, referenceMappings, referenceMappingCount);
+			else 
+				refMap = NULL;
+
 			if (refMap) {
 				node = getNodeInGraph(graph, refMap->nodeID);
 				if (refMap->nodeID > 0) {
@@ -843,8 +847,8 @@ static void threadSequenceThroughGraph(TightString * tString,
 					}
 				} else {
 					node = getNodeInGraph(graph, -refMap->nodeID);
-					if (-refMap->nodeID > 0) {
-						coord = getNodeLength(node) - refMap->nodeStart + (refCoord - refMap->referenceStart) - 1;
+					if (refMap->nodeID > 0) {
+						coord =  getNodeLength(node) - refMap->nodeStart - (refCoord - refMap->referenceStart) - 1;
 					} else {
 						coord = refMap->nodeStart + refMap->length - (refCoord - refMap->referenceStart) - 1;
 					}

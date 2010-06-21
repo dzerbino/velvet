@@ -2616,7 +2616,7 @@ static void tourBus(Node * startingPoint)
 	Node *currentNode = startingPoint;
 	IDnum nodeID = getNodeID(startingPoint) + nodeCount(graph);
 
-	//printf("Tour bus from node %ld...\n", getNodeID(startingPoint));
+	//printf("Tour bus from node %ld...\n", (long) getNodeID(startingPoint));
 
 	times[nodeID] = 0;
 	previous[nodeID] = currentNode;

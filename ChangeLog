@@ -259,3 +259,8 @@ V 0.7.63
 
 V 1.0.01
 - Columbus hybrid assembly module
+
+V 1.0.02
+- Crashing bug with empty graphs
+- Compilation bug in kmer.c
+- Bug in short mapped read offsets
