@@ -17,13 +17,19 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-#	Version 2.1.0
+#	Version 2.1.2
 #
 #	Changes for 2.0.1
 #	*Bug fix in CalcAssemblyScore.  Now returns 0 if there is no calculable score instead of crashing.
 #
 #	Changes for 2.1.0
 #	*Added 2 stage optimisation functions for optimising kmer size and cov_cutoff differently if required.
+#
+#	Changes for 2.1.1
+#	*Allowed for non-word characters in prefix names.  (. - etc.)  Still no spaces allowed in prefix name or any filenames.
+#
+#	Changes for 2.1.2
+#	*Now warns nicely of optimisation function returning undef or 0. Suggests you choose and alternative.
 
 package VelvetOpt::Assembly;
 
@@ -303,6 +309,7 @@ sub calcAssemblyScore {
 
 	foreach my $key (keys %f_opts){
 		print "\nkey: $key\tintname: ", $f_opts{$key}->{'intname'}, "\n" if $interested;
+		
 		$func =~ s/\b$key\b/$self->{$f_opts{$key}->{'intname'}}/g;
 	}
 		
@@ -315,7 +322,11 @@ sub calcAssemblyScore {
 		$self->{assmscore} = 0;
 	}
 	if($r == 0){
-		carp "Warning: Assembly score for assembly_id " . $self->{ass_id} .  " is 0\n";
+		print STDERR "**********\n";
+		print STDERR "Warning: Assembly score for assembly_id " . $self->{ass_id} .  " is 0\n";
+		print STDERR "You may want to consider choosing a different optimisation variable or function.\n";
+		print STDERR "Current optimisation functions are ", $self->{assmfunc}, " for k value and ", $self->{assmfunc2}, " for cov_cutoff\n";
+		print STDERR "**********\n";
 	}
 	return 1;
 }
@@ -351,12 +362,12 @@ sub getAssemblyDetails {
 		my $all = &contigStats($file,1);
 		my $large = &contigStats($file,1000);
 		
-		$self->{nconts} = $all->{numSeqs};
-		$self->{n50} = $all->{n50};
-		$self->{maxlength} = $all->{maxLen};
-		$self->{nconts1k} = $large->{numSeqs};
-		$self->{totalbp} = $all->{numBases};
-		$self->{totalbp1k} = $large->{numBases};
+		$self->{nconts} = defined $all->{numSeqs} ? $all->{numSeqs} : 0;
+		$self->{n50} = defined $all->{n50} ? $all->{n50} : 0;
+		$self->{maxlength} = defined $all->{maxLen} ? $all->{maxLen} : 0;
+		$self->{nconts1k} = defined $large->{numSeqs} ? $large->{numSeqs} : 0;
+		$self->{totalbp} = defined $all->{numBases} ? $all->{numBases} : 0;
+		$self->{totalbp1k} = defined $large->{numBases} ? $large->{numBases} : 0;
 		
 		if($self->pstringg =~ m/cov_cutoff/){
 			$self->calcAssemblyScore($self->{assmfunc2});

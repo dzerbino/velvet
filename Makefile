@@ -61,10 +61,16 @@ objdir:
 
 obj: zlib objdir $(OBJ)
 
+obj_de: override DEF := $(DEF) -D COLOR
+obj_de: zlib cleanobj objdir $(OBJ)
+
 obj/dbgdir: 
 	mkdir -p obj/dbg
 
 obj/dbg: zlib obj/dbgdir $(OBJDBG)
+
+obj/dbg_de: override DEF := $(DEF) -D COLOR
+obj/dbg_de: zlib cleanobj obj/dbgdir $(OBJDBG)
 
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS) $(OPT) $(DEF) -c $? -o $@ 

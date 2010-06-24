@@ -2,7 +2,7 @@
 #
 #       VelvetOptimiser.pl
 #
-#       Copyright 2008, 2009 Simon Gladman <simon.gladman@csiro.au>
+#       Copyright 2008, 2009, 2010 Simon Gladman <simon.gladman@csiro.au>
 #
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-#		Version 2.1.0
+#		Version 2.1.4
 
 #
 #   pragmas
@@ -73,7 +73,8 @@ our $num_threads;
 my $current_threads : shared = 0;
 my $opt_func;
 my $opt_func2;
-my $OptVersion = "2.1.0";
+my $OptVersion = "2.1.4";
+my $threadfailed : shared = 0;
 
 #
 #
@@ -140,6 +141,9 @@ print STDERR "Will run velvet optimiser with the following paramters:\n";
 print STDERR "\tVelveth parameter string:\n\t\t$readfile\n";
 print STDERR "\tVelveth start hash values:\t$hashs\n";
 print STDERR "\tVelveth end hash value:\t\t$hashe\n";
+if($vgoptions){
+	print $OUT "\tUser specified velvetg options: $vgoptions\n";
+}
 if($amos){
     print STDERR "\tRead tracking for final assembly on.\n";
 } else {
@@ -172,6 +176,9 @@ print $OUT "Will run velvet optimiser with the following paramters:\n";
 print $OUT "\tVelveth parameter string:\n\t\t$readfile\n";
 print $OUT "\tVelveth start hash values:\t$hashs\n";
 print $OUT "\tVelveth end hash value:\t\t$hashe\n\n";
+if($vgoptions){
+	print $OUT "\tUser specified velvetg options: $vgoptions\n";
+}
 if($amos){
     print $OUT "\tRead tracking for final assembly on.\n";
 } else {
@@ -187,6 +194,13 @@ foreach my $hashval (@hashvals){
 	while($current_threads >= $num_threads){
 		sleep(2);
 	}
+	if($threadfailed){
+		for my $thr (threads->list) {
+			#print STDERR "Waiting for thread ",$thr->tid," to complete.\n";
+			$thr->join;
+		}
+		die "Velveth failed to run! Must be a problem with file types, check by running velveth manually or by using -v option and reading the log file.\n";
+	}	
 	$threads[$ass_num] = threads->create(\&runVelveth, $readfile, $hashval, $vhversion, \$logSem, $ass_num);
 	$ass_num ++;
 	sleep(2);
@@ -470,8 +484,16 @@ sub runVelveth{
     my $vhresponse = VelvetOpt::hwrap::objectVelveth($assembly, $categories);
 
     unless($vhresponse){ die "Velveth didn't run on hash value of $hv.\n$!\n";}
-
-    #run the hashdetail generation routine.
+	
+	unless(-r ($prefix . "_data_$hv" . "/Roadmaps")){ 
+		print STDERR "Velveth failed!  Response:\n$vhresponse\n";
+		{
+			lock ($threadfailed);
+			$threadfailed = 1;
+		}
+	}
+    
+	#run the hashdetail generation routine.
     $vhresponse = $assembly->getHashingDetails();
     
 	#print the objects to the log file...
@@ -687,9 +709,10 @@ sub covCutoff{
 	printf $OUT "\t\tLooking for best cutoff score between %.3f and %.3f\n", $a, $b;
 	
 	while(abs($a -$b) > 1){
-		
 		if($fc > $fd){
 			printf STDERR "\t\tMax cutoff lies between %.3f & %.3f\n", $d, $b;
+			my $absdiff = abs($fc - $fd);
+			print STDERR "\t\tfc = $fc\tfd = $fd\tabs diff = $absdiff\n";
 			printf $OUT "\t\tMax cutoff lies between %.3f & %.3f\n", $d, $b;
 			$a = $d;
 			$d = $c;
@@ -699,6 +722,8 @@ sub covCutoff{
 		}
 		else {
 			printf STDERR "\t\tMax cutoff lies between %.3f & %.3f\n", $a, $c;
+			my $absdiff = abs($fc - $fd);
+			print STDERR "\t\tfc = $fc\tfd = $fd\tabs diff = $absdiff\n";
 			printf $OUT "\t\tMax cutoff lies between %.3f & %.3f\n", $a, $c;
 			$b = $c;
 			$c = $d;

@@ -1,7 +1,7 @@
 #
 #       VelvetOpt::Utils.pm
 #
-#       Copyright 2008,2009 Simon Gladman <simon.gladman@csiro.au>
+#       Copyright 2008,2009,2010 Simon Gladman <simon.gladman@csiro.au>
 #
 #       This program is free software; you can redistribute it and/or modify
 #       it under the terms of the GNU General Public License as published by
@@ -18,13 +18,21 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-#		Version 2.0.1
+#		Version 2.1.2
 
 #	Changes for Version 2.0.1
 #	Added Mikael Brandstrom Durling's numCpus and freeMem for the Mac.
 #
 #	Changes for Version 2.1.0
 #	Fixed bug in estExpCov so it now correctly uses all short read categories not just the first two.
+#
+#	Changes for Version 2.1.2
+#	Fixed bug in estExpCov so it now won't take columns with "N/A" or "Inf" into account
+#
+#	Changes for Version 2.1.3
+#	Changed the minimum contig size to use for estimating expected coverage to 3*kmer size -1 and set the minimum coverage to 2 instead of 0.
+#	This should get rid of exp_covs of 1 when it should be very high for assembling reads that weren't ampped to a reference using one of the standard read mapping programs
+
 
 package VelvetOpt::Utils;
 
@@ -93,8 +101,8 @@ sub estExpCov {
     use List::Util qw(max);
     my $file   = shift;
     my $kmer   = shift;
-    my $minlen = 2 * $kmer - 1;
-    my $mincov = 0;
+    my $minlen = 3 * $kmer - 1;
+    my $mincov = 2;
     my $fh;
     unless ( open IN, $file ) {
         croak "Unable to open $file for exp_cov determination.\n";
@@ -111,7 +119,9 @@ sub estExpCov {
 		#add all the short_cov columns..
 		my $cov = 0;
 		for(my $i = 5; $i < $len; $i += 2){
-        	$cov += $x[$i];
+			if($x[$i] =~ /\d/){
+				$cov += $x[$i];
+			}
 		}
         next unless $cov > $mincov;
         push @cov, ( ( int($cov) ) x $x[1] );
