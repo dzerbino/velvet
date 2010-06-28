@@ -214,6 +214,12 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 	currentIndex = table->lastIndex;
 	fprintf(file, "ROADMAP %d\n", currentIndex);
 
+	// Neglect any string shorter than WORDLENGTH :
+	if (getLength(tString) < table->WORDLENGTH) {
+		destroyTightString(tString);
+		return;
+	}
+
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
 	     readNucleotideIndex < table->WORDLENGTH - 1;
@@ -490,12 +496,6 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	Coordinate length = getLength(tString);
 	IDnum * sequenceIDs = NULL;
 	Coordinate * coords = NULL;
-
-	// Neglect any string shorter than WORDLENGTH :
-	if (length < table->WORDLENGTH) {
-		destroyTightString(tString);
-		return;
-	}
 
 	// If appropriate, get the HSPs on reference sequences
 	if (table->kmerOccurenceTable) {

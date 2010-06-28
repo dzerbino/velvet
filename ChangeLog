@@ -268,3 +268,6 @@ V 1.0.02
 V 1.0.03
 - Updated VelvetOptimiser code
 - Compilation error for colorspace Oases
+
+V 1.0.04
+- Crashing bug with reads shorter than hash length
