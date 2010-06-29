@@ -362,6 +362,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 			(long long) start, (long long) finish);
 	}
 
+	destroyTightString(tString);
 	return;
 }
 
@@ -513,7 +514,6 @@ void inputSequenceIntoSplayTable(TightString * tString,
 		free(sequenceIDs);
 		free(coords);
 	}
-	destroyTightString(tString);
 }
 
 void inputReferenceIntoSplayTable(TightString * tString,
