@@ -271,3 +271,4 @@ V 1.0.03
 
 V 1.0.04
 - Crashing bug with reads shorter than hash length
+- Colorspace SAM/BAM parser

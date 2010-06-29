@@ -212,6 +212,7 @@ static void reverseComplementSequence(char * str)
 		str[length-1 - i] = c;
 	}
 
+#ifndef COLOR
 	for (i = 0; i < length; i++) {
 		switch (str[i]) {
 		case 'A':
@@ -232,6 +233,7 @@ static void reverseComplementSequence(char * str)
 			break;
 		}
 	}
+#endif
 }
 
 static void writeFastaSequence(FILE * outfile, const char * str)
