@@ -365,7 +365,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			while (c == '\n' || c == '\r') 
 				c = getc(file);
 	
-			if (c == '>' || c == 'M') {
+			if (c == '>' || c == 'M' || c == '\0') {
 				ungetc(c, file);
 				tooShort = true;
 				break;
