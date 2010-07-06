@@ -1381,6 +1381,9 @@ void checkPassageMarkersStatus(Graph * graph)
 			if (getPassageMarkerStatus(marker)) {
 				printf("TRUE marker %s\n",
 				       readPassageMarker(marker));
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(-1);
 			}
 
@@ -1733,11 +1736,17 @@ void clipNodeLength(Node * node, Coordinate startClip,
 
 	if (finalLength < 0) {
 		puts("Can't clip node that much!!");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(-1);
 	}
 
 	if (getNodeLength(node) == 0) {
 		puts("Short enough as is");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(-1);
 	}
 	// One way
@@ -2234,8 +2243,12 @@ Graph *importGraph(char *filename)
 	graph = emptyGraph(sequenceCount, wordLength);
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
+
 	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
 	       (long) sequenceCount);
+
+	if (nodeCounter == 0)
+		return graph;
 
 	// Read nodes
 	if (!fgets(line, maxline, file))
@@ -2357,6 +2370,9 @@ Graph *importGraph(char *filename)
 				printf
 				    ("ERROR: reading in graph - only %d items read for line '%s'",
 				     sCount, line);
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(1);
 			}
 			newMarker =
@@ -2453,6 +2469,9 @@ Graph *importSimplifiedGraph(char *filename)
 	allocateNodeSpace(graph, nodeCounter);
 	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
 	       (long) sequenceCount);
+
+	if (nodeCounter == 0)
+		return graph;
 
 	// Read nodes
 	if (!fgets(line, maxline, file))
@@ -2575,7 +2594,9 @@ Graph *importSimplifiedGraph(char *filename)
 				printf
 				    ("ERROR: reading in graph - only %d items read for line '%s'",
 				     sCount, line);
+#ifdef DEBUG 
 				abort();
+#endif 
 				exit(1);
 			}
 			if (getNodeInGraph(graph, nodeID)) {
@@ -2676,6 +2697,9 @@ Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 	       (long) sequenceCount);
 
 	// Read nodes
+	if (nodeCounter == 0)
+		return graph;
+
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
 	while (line[0] == 'N') {

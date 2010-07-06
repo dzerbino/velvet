@@ -88,5 +88,8 @@ void exitErrorf(int exitStatus, boolean showErrno, const char *format, ...)
        fprintf(stderr, "\n");
        va_end(args);
 
+#ifdef DEBUG 
+	abort();
+#endif 
        exit(exitStatus);
 }

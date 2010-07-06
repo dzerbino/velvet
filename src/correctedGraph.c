@@ -2138,16 +2138,16 @@ static void cleanUpRedundancy()
 		if (slowNode == fastNode) {
 			if (fastLength > slowLength)
 				slowConstraint = fastLength;
-			else if (fastLength < slowLength);
-			fastConstraint = slowLength;
+			else if (fastLength < slowLength)
+				fastConstraint = slowLength;
 
 			slowMarker = getNextInSequence(slowMarker);
 			fastMarker = getNextInSequence(fastMarker);
 		} else if (slowNode == getTwinNode(fastNode)) {
 			if (fastLength > slowLength)
 				slowConstraint = fastLength;
-			else if (fastLength < slowLength);
-			fastConstraint = slowLength;
+			else if (fastLength < slowLength)
+				fastConstraint = slowLength;
 
 			slowMarker = getNextInSequence(slowMarker);
 			fastMarker = getNextInSequence(fastMarker);
@@ -2719,6 +2719,9 @@ void setMaxReadLength(int value)
 	if (value < 0) {
 		printf("Negative branch length %i!\n", value);
 		puts("Exiting...");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 	MAXREADLENGTH = value;
@@ -2730,6 +2733,9 @@ void setMaxGaps(int value)
 	if (value < 0) {
 		printf("Negative max gap count %i!\n", value);
 		puts("Exiting...");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 	MAXGAPS = value;
@@ -2741,6 +2747,9 @@ void setMaxDivergence(double value)
 		printf("Divergence rate %lf out of bounds [0,1]!\n",
 		       value);
 		puts("Exiting...");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 	MAXDIVERGENCE = value;

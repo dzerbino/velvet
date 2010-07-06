@@ -561,6 +561,9 @@ void setMultiplicityCutoff(int value)
 		printf("Negative long read multiplicity cutoff %i!\n",
 		       value);
 		puts("Exiting...");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 	MULTIPLICITY_CUTOFF = value;

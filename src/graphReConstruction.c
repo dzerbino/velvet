@@ -1080,6 +1080,9 @@ Graph *importPreGraph(char *preGraphFilename, ReadSet * reads, char * roadmapFil
 	Coordinate referenceMappingCount = 0;
 	IDnum referenceCount = 0;
 
+	if (nodeCount(graph) == 0)
+		return graph;
+
 	// If necessary compile reference -> node
 	ReferenceMapping * referenceMappings = computeReferenceMappings(preGraphFilename, reads, &referenceMappingCount, &referenceCount); 
 	// Node -> reference maps

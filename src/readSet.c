@@ -151,6 +151,9 @@ static void addReferenceCoordinate(ReferenceCoordinateTable * table, char * name
 		printf("%s:%lli-%lli\n", name, (long long) start, (long long) finish);
 		printf("%s:%lli-%lli\n", refCoord->name, (long long) refCoord->start, (long long) refCoord->finish);
 		printf("Exiting...");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 	
@@ -1042,6 +1045,9 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	if (cat == REFERENCE) {
 		printf("SAM file %s cannot contain reference sequences.\n", filename);
 		puts("Please check the command line.");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 
@@ -1209,6 +1215,9 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	if (cat == REFERENCE) {
 		printf("BAM file %s cannot contain reference sequences.\n", filename);
 		puts("Please check the command line.");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 
@@ -1456,6 +1465,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 
 	if (argc < 2) {
 		printUsage();
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 
@@ -1493,6 +1505,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				if (cat < 1 || cat > CATEGORIES) {
 					printf("Unknown option: %s\n",
 					       argv[argIndex]);
+#ifdef DEBUG 
+					abort();
+#endif 
 					exit(1);
 				}
 				cat--;
@@ -1505,6 +1520,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				if (cat < 1 || cat > CATEGORIES) {
 					printf("Unknown option: %s\n",
 					       argv[argIndex]);
+#ifdef DEBUG 
+					abort();
+#endif 
 					exit(1);
 				}
 				cat--;
@@ -1522,6 +1540,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				if (argIndex != 1) {
 					puts("Error: if using the -strand_specific flag, it must be placed right after the hash length");
 					puts("Sorry for the inconvenience");
+#ifdef DEBUG 
+					abort();
+#endif 
 					exit(1);
 				}
 				*double_strand = false;
@@ -1529,6 +1550,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			} else {
 				printf("Unknown option: %s\n",
 				       argv[argIndex]);
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(1);
 			}
 
@@ -1568,6 +1592,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			break;
 		default:
 			puts("Screw up in parser... exiting");
+#ifdef DEBUG 
+			abort();
+#endif 
 			exit(1);
 		}
 	}

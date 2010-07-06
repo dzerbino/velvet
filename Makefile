@@ -42,17 +42,18 @@ velveth : obj
 velvetg : obj
 	$(CC) $(CFLAGS) $(OPT) $(LDFLAGS) -o velvetg obj/tightString.o obj/graph.o obj/run2.o obj/fibHeap.o obj/fib.o obj/concatenatedGraph.o obj/passageMarker.o obj/graphStats.o obj/correctedGraph.o obj/dfib.o obj/dfibHeap.o obj/recycleBin.o obj/readSet.o obj/shortReadPairs.o obj/scaffold.o obj/locallyCorrectedGraph.o obj/graphReConstruction.o obj/roadMap.o obj/preGraph.o obj/preGraphConstruction.o obj/concatenatedPreGraph.o obj/readCoherentGraph.o obj/utility.o obj/kmer.o obj/kmerOccurenceTable.o $(Z_LIB_FILES)
 
+debug : override DEF := $(DEF) -D DEBUG 
 debug : cleanobj obj/dbg
 	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velveth obj/dbg/tightString.o obj/dbg/run.o obj/dbg/recycleBin.o obj/dbg/splay.o obj/dbg/splayTable.o obj/dbg/readSet.o obj/dbg/crc.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o  $(Z_LIB_FILES)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velvetg obj/dbg/tightString.o obj/dbg/graph.o obj/dbg/run2.o obj/dbg/fibHeap.o obj/dbg/fib.o obj/dbg/concatenatedGraph.o obj/dbg/passageMarker.o obj/dbg/graphStats.o obj/dbg/correctedGraph.o obj/dbg/dfib.o obj/dbg/dfibHeap.o obj/dbg/recycleBin.o obj/dbg/readSet.o obj/dbg/shortReadPairs.o obj/dbg/scaffold.o obj/dbg/locallyCorrectedGraph.o obj/dbg/graphReConstruction.o obj/dbg/roadMap.o obj/dbg/preGraph.o obj/dbg/preGraphConstruction.o obj/dbg/concatenatedPreGraph.o obj/dbg/readCoherentGraph.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o $(Z_LIB_FILES)
 
 color : override DEF := $(DEF) -D COLOR
-color : cleanobj obj
+color : cleanobj obj_de
 	$(CC) $(CFLAGS) $(OPT) $(LDFLAGS) -o velveth_de obj/tightString.o obj/run.o obj/recycleBin.o obj/splay.o obj/splayTable.o obj/readSet.o obj/crc.o obj/utility.o obj/kmer.o obj/kmerOccurenceTable.o $(Z_LIB_FILES)
 	$(CC) $(CFLAGS) $(OPT) $(LDFLAGS) -o velvetg_de obj/tightString.o obj/graph.o obj/run2.o obj/fibHeap.o obj/fib.o obj/concatenatedGraph.o obj/passageMarker.o obj/graphStats.o obj/correctedGraph.o obj/dfib.o obj/dfibHeap.o obj/recycleBin.o obj/readSet.o obj/shortReadPairs.o obj/scaffold.o obj/locallyCorrectedGraph.o obj/graphReConstruction.o obj/roadMap.o obj/preGraph.o obj/preGraphConstruction.o obj/concatenatedPreGraph.o obj/readCoherentGraph.o obj/utility.o obj/kmer.o obj/kmerOccurenceTable.o $(Z_LIB_FILES)
 
-colordebug : override DEF := $(DEF) -D COLOR
-colordebug : cleanobj obj/dbg
+colordebug : override DEF := $(DEF) -D COLOR -D DEBUG
+colordebug : cleanobj obj/dbg_de
 	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velveth_de obj/dbg/tightString.o obj/dbg/run.o obj/dbg/recycleBin.o obj/dbg/splay.o obj/dbg/splayTable.o obj/dbg/readSet.o obj/dbg/crc.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o $(Z_LIB_FILES)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velvetg_de obj/dbg/tightString.o obj/dbg/graph.o obj/dbg/run2.o obj/dbg/fibHeap.o obj/dbg/fib.o obj/dbg/concatenatedGraph.o obj/dbg/passageMarker.o obj/dbg/graphStats.o obj/dbg/correctedGraph.o obj/dbg/dfib.o obj/dbg/dfibHeap.o obj/dbg/recycleBin.o obj/dbg/readSet.o obj/dbg/shortReadPairs.o obj/dbg/scaffold.o obj/dbg/locallyCorrectedGraph.o obj/dbg/graphReConstruction.o obj/dbg/roadMap.o obj/dbg/preGraph.o obj/dbg/preGraphConstruction.o obj/dbg/concatenatedPreGraph.o obj/dbg/readCoherentGraph.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o $(Z_LIB_FILES)
 
@@ -67,9 +68,10 @@ obj_de: zlib cleanobj objdir $(OBJ)
 obj/dbgdir: 
 	mkdir -p obj/dbg
 
+obj/dbg: override DEF := $(DEF) -D DEBUG 
 obj/dbg: zlib obj/dbgdir $(OBJDBG)
 
-obj/dbg_de: override DEF := $(DEF) -D COLOR
+obj/dbg_de: override DEF := $(DEF) -D COLOR -D DEBUG
 obj/dbg_de: zlib cleanobj obj/dbgdir $(OBJDBG)
 
 obj/%.o: src/%.c

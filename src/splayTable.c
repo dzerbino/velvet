@@ -666,6 +666,9 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		    && reads->categories[index] == REFERENCE) {
 			puts("Reference sequence placed after a non-reference read!");
 			puts(">> Please re-order the filenames in your command line so as to have the reference sequence files before all the others");
+#ifdef DEBUG 
+			abort();
+#endif 
 			exit(0);
 		}
 

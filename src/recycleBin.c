@@ -60,11 +60,17 @@ RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)
 
 	if (recycle_bin == NULL) {
 		puts("Allocation failed!");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(-1);
 	}
 
 	if (node_size < sizeof(RecycleBin_Node)) {
 		puts("Too small elements to create a recycle bin!");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(-1);
 	}
 	recycle_bin->chunk_list = NULL;
@@ -98,6 +104,9 @@ void *allocatePointer(RecycleBin * recycle_bin)
 
 	if (recycle_bin == NULL) {
 		puts("Null recycle bin!");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(-1);
 	}
 
@@ -112,6 +121,9 @@ void *allocatePointer(RecycleBin * recycle_bin)
 			       * recycle_bin->node_size);
 		if (chunk == NULL) {
 			puts("No more memory for memory chunk!");
+#ifdef DEBUG 
+			abort();
+#endif 
 			exit(-1);
 		}
 		chunk->next = recycle_bin->chunk_list;

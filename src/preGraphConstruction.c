@@ -471,6 +471,9 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 						printf
 						    ("Irregular sequence file: are you sure your Sequence and Roadmap file come from the same source?\n");
 						fflush(stdout);
+#ifdef DEBUG 
+						abort();
+#endif 
 						exit(1);
 					}
 				}

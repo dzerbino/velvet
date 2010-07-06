@@ -141,6 +141,9 @@ int main(int argc, char **argv)
 		if (arg_index >= argc) {
 			puts("Unusual number of arguments!");
 			printUsage();
+#ifdef DEBUG 
+			abort();
+#endif 
 			exit(1);
 		}
 
@@ -165,6 +168,9 @@ int main(int argc, char **argv)
 			if (insertLength[0] < 0) {
 				printf("Invalid insert length: %lli\n",
 				       (long long) insertLength[0]);
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(1);
 			}
 		} else if (strcmp(arg, "-ins_length_sd") == 0) {
@@ -173,6 +179,9 @@ int main(int argc, char **argv)
 			if (std_dev[0] < 0) {
 				printf("Invalid std deviation: %lli\n",
 				       (long long) std_dev[0]);
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(1);
 			}
 		} else if (strcmp(arg, "-ins_length_long") == 0) {
@@ -187,6 +196,9 @@ int main(int argc, char **argv)
 			cat = (Category) short_var;
 			if (cat < 1 || cat > CATEGORIES) {
 				printf("Unknown option: %s\n", arg);
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(1);
 			}
 			sscanf(argv[arg_index], "%lli", &longlong_var);
@@ -194,6 +206,9 @@ int main(int argc, char **argv)
 			if (insertLength[cat - 1] < 0) {
 				printf("Invalid insert length: %lli\n",
 				       (long long) insertLength[cat - 1]);
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(1);
 			}
 		} else if (strncmp(arg, "-ins_length", 11) == 0) {
@@ -201,6 +216,9 @@ int main(int argc, char **argv)
 			cat = (Category) short_var;
 			if (cat < 1 || cat > CATEGORIES) {
 				printf("Unknown option: %s\n", arg);
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(1);
 			}
 			sscanf(argv[arg_index], "%lli", &longlong_var);
@@ -208,6 +226,9 @@ int main(int argc, char **argv)
 			if (std_dev[cat - 1] < 0) {
 				printf("Invalid std deviation: %lli\n",
 				       (long long) std_dev[cat - 1]);
+#ifdef DEBUG 
+				abort();
+#endif 
 				exit(1);
 			}
 		} else if (strcmp(arg, "-read_trkg") == 0) {
@@ -325,6 +346,9 @@ int main(int argc, char **argv)
 		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else {
 		puts("No Roadmap file to build upon! Please run velveth (see manual)");
+#ifdef DEBUG 
+		abort();
+#endif 
 		exit(1);
 	}
 

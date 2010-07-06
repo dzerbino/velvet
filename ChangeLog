@@ -272,3 +272,6 @@ V 1.0.03
 V 1.0.04
 - Crashing bug with reads shorter than hash length
 - Colorspace SAM/BAM parser
+- Crashing bug when uploading empty (Pre)Graphs
+- Bug in correctedGraph.c
+- Automatic abort in debug mode
