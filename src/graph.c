@@ -67,7 +67,7 @@ struct shortReadMarker_st {
 struct gapMarker_st {
 	GapMarker *next;
 	Coordinate position;
-	ShortLength length;
+	Coordinate length;
 };
 
 struct graph_st {

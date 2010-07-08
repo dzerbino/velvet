@@ -275,3 +275,6 @@ V 1.0.04
 - Crashing bug when uploading empty (Pre)Graphs
 - Bug in correctedGraph.c
 - Automatic abort in debug mode
+
+V 1.0.05
+- Re-set v0.7.63 change which had been accidently undone
