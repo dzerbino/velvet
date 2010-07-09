@@ -300,7 +300,8 @@ static ReadOccurence **allocateReadToNodeTables(IDnum * readNodeCounts)
 static void computePartialReadToNodeMapping(IDnum nodeID,
 					    ReadOccurence ** readNodes,
 					    IDnum * readNodeCounts,
-					    boolean * readMarker)
+					    boolean * readMarker,
+					    ReadSet * reads)
 {
 	ShortReadMarker *shortMarker;
 	IDnum index, readIndex;
@@ -326,7 +327,7 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 	for (marker = getMarker(node); marker != NULL;
 	     marker = getNextInNode(marker)) {
 		readIndex = getPassageMarkerSequenceID(marker);
-		if (readIndex < 0)
+		if (readIndex <= 0 || reads->categories[readIndex - 1] == REFERENCE)
 			continue;
 
 		if (!readMarker[readIndex]) {
@@ -356,7 +357,7 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 	}
 }
 
-static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts)
+static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts, ReadSet * reads)
 {
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
@@ -371,7 +372,8 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts)
 		if (nodeID != 0 && getNodeInGraph(graph, nodeID))
 			computePartialReadToNodeMapping(nodeID, readNodes,
 							readNodeCounts,
-							readMarker);
+							readMarker,
+							reads);
 
 	free(readMarker);
 	return readNodes;
@@ -1106,7 +1108,7 @@ void buildScaffold(Graph * argGraph, ReadSet * reads, boolean * dubious) {
 
 	// Prepare primary scaffold
 	readNodeCounts = computeReadToNodeCounts();
-	readNodes = computeReadToNodeMappings(readNodeCounts);
+	readNodes = computeReadToNodeMappings(readNodeCounts, reads);
 
 	estimateMissingInsertLengths(readNodes, readNodeCounts, readPairs, cats);
 

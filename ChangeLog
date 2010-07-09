@@ -278,3 +278,4 @@ V 1.0.04
 
 V 1.0.05
 - Re-set v0.7.63 change which had been accidently undone
+- Prevent reference sequences from being used in Pebble
