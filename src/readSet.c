@@ -732,6 +732,53 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	puts("Done");
 }
 
+// Imports sequences from a raw sequence file 
+// Memory space allocated within this function.
+static void readRawFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
+{
+	FILE *file;
+	const int maxline = 5000;
+	char line[5000];
+	char str[100];
+	IDnum counter = 0;
+	Coordinate start;
+
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "r");
+	else 
+		file = stdin;
+
+	if (file != NULL)
+		printf("Reading raw file %s\n", filename);
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	while(fgets(line, maxline, file)) { 
+		fprintf(outfile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
+		counter++;
+
+		if (strlen(line) >= maxline - 1) {
+			printf("Raw sequence files cannot contain reads longer than %i bp\n", maxline - 1);
+#ifdef DEBUG
+			abort();
+#endif
+			exit(1);
+		}
+		velvetifySequence(line);
+		start = 0;
+		while (start <= strlen(line)) {
+			strncpy(str, line + start, 60);
+			str[60] = '\0';
+			fprintf(outfile, "%s\n", str);
+			start += 60;
+		}
+	}
+
+	fclose(file);
+	printf("%d reads found.\n", counter);
+	puts("Done");
+}
+
 // Imports sequences from a zipped rfastq file 
 // Memory space allocated within this function.
 static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum *sequenceIndex)
@@ -785,6 +832,57 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 
 		gzgets(file, line, maxline);
 		gzgets(file, line, maxline);
+	}
+
+	gzclose(file);
+	printf("%d reads found.\n", counter);
+	puts("Done");
+}
+
+// Imports sequences from a zipped raw file 
+// Memory space allocated within this function.
+static void readRawGZFile(FILE * outfile, char *filename, Category cat, IDnum *sequenceIndex)
+{
+	gzFile file;
+	const int maxline = 5000;
+	char line[5000];
+	char str[100];
+	IDnum counter = 0;
+	Coordinate start;
+
+	if (strcmp(filename, "-"))
+		file = gzopen(filename, "rb");
+	else { 
+		file = gzdopen(fileno(stdin), "rb");
+		SET_BINARY_MODE(stdin);
+	}
+
+	if (file != NULL)
+		printf("Reading zipped raw sequence file %s\n", filename);
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	while (gzgets(file, line, maxline)) {
+		fprintf(outfile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
+		counter++;
+
+		if (strlen(line) >= maxline - 1) {
+			printf("Raw sequence files cannot contain reads longer than %i bp\n", maxline - 1);
+#ifdef DEBUG
+			abort();
+#endif
+			exit(1);
+		}
+
+		velvetifySequence(line);
+
+		start = 0;
+		while (start <= strlen(line)) {
+			strncpy(str, line + start, 60);
+			str[60] = '\0';
+			fprintf(outfile, "%s\n", str);
+			start += 60;
+		}
 	}
 
 	gzclose(file);
@@ -1134,9 +1232,9 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 					if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 						if (refCoord->positive_strand)
-							fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, previous_pos - refCoord->start);
+							fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) previous_pos - refCoord->start);
 						else 
-							fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, refCoord->finish - previous_pos - strlen(previous_seq));
+							fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) refCoord->finish - previous_pos - strlen(previous_seq));
 					} 
 				}
 
@@ -1174,9 +1272,9 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 		if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 			if (refCoord->positive_strand)
-				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, previous_pos - refCoord->start);
+				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) previous_pos - refCoord->start);
 			else 
-				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, refCoord->finish - previous_pos - strlen(previous_seq));
+				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) refCoord->finish - previous_pos - strlen(previous_seq));
 		}
 	}
 
@@ -1352,9 +1450,9 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 				if ((refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 					if (refCoord->positive_strand)
-						fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, previous_pos - refCoord->start);
+						fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) previous_pos - refCoord->start);
 					else 
-						fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, refCoord->finish - previous_pos - strlen(previous_seq));
+						fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) refCoord->finish - previous_pos - strlen(previous_seq));
 				}
 			}
 
@@ -1392,9 +1490,9 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 		if ((refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 			if (refCoord->positive_strand)
-				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, previous_pos - refCoord->start);
+				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) previous_pos - refCoord->start);
 			else 
-				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, refCoord->finish - previous_pos - strlen(previous_seq));
+				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) refCoord->finish - previous_pos - strlen(previous_seq));
 		}
 	}
 
@@ -1417,8 +1515,10 @@ static void printUsage()
 	puts("File format options:");
 	puts("\t-fasta");
 	puts("\t-fastq");
+	puts("\t-raw");
 	puts("\t-fasta.gz");
 	puts("\t-fastq.gz");
+	puts("\t-raw.gz");
 	puts("\t-sam");
 	puts("\t-bam");
 	puts("\t-eland");
@@ -1450,6 +1550,8 @@ static void printUsage()
 #define MAQ_GZ 7
 #define SAM 8
 #define BAM 9
+#define RAW 10
+#define RAW_GZ 11
 
 // General argument parser for most functions
 // Basically a reused portion of toplevel code dumped into here
@@ -1490,6 +1592,10 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				filetype = SAM;
 			else if (strcmp(argv[argIndex], "-bam") == 0)
 				filetype = BAM;
+			else if (strcmp(argv[argIndex], "-raw") == 0)
+				filetype = RAW;
+			else if (strcmp(argv[argIndex], "-raw.gz") == 0)
+				filetype = RAW_GZ;
 			else if (strcmp(argv[argIndex], "-maq.gz") == 0)
 				filetype = MAQ_GZ;
 			else if (strcmp(argv[argIndex], "-short") == 0)
@@ -1569,6 +1675,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 		case FASTQ:
 			readFastQFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
+		case RAW:
+			readRawFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			break;
 		case GERALD:
 			readSolexaFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
@@ -1580,6 +1689,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			break;
 		case FASTQ_GZ:
 			readFastQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			break;
+		case RAW_GZ:
+			readRawGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case SAM:
 			readSAMFile(outfile, argv[argIndex], cat, &sequenceIndex, refCoords);

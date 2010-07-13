@@ -43,14 +43,14 @@ static uint8_t charWordFilter = (uint8_t) ((int8_t) -1);
 static int kmerFilterIndex = UNDEFINED;
 static int kmerFilterOffset = 0;
 static int kmerFilterLength = 0;
-static int longLongKmerFilterIndex = KMER_LONGLONGS;
+static int longLongKmerFilterIndex = KMER_LONGLONGS - 1;
 static uint64_t longLongKmerFilter = (uint64_t) ((int64_t) -1); 
 
 static uint64_t keyFilter = 0;
 static int keyFilterIndex = UNDEFINED;
 static int keyFilterOffset = 0;
 static int keyFilterLength = 0;
-static int longLongKeyFilterIndex = KMER_LONGLONGS;
+static int longLongKeyFilterIndex = KMER_LONGLONGS - 1;
 
 void resetWordFilter(int wordLength) {
 	int kmer_bit_size = wordLength * 2;
@@ -642,7 +642,7 @@ KmerKey getKmerKey(Kmer * kmer) {
 		key += kmer->chars;
 #endif
 		key <<= keyFilterLength;
-		key = (kmer->ints & keyFilter) >> keyFilterOffset;
+		key += (kmer->ints & keyFilter) >> keyFilterOffset;
 		return key;
 	}
 #endif
@@ -657,7 +657,7 @@ KmerKey getKmerKey(Kmer * kmer) {
 		key += kmer->ints;
 #endif
 		key <<= keyFilterLength;
-		key = (kmer->longs & keyFilter) >> keyFilterOffset;
+		key += (kmer->longs & keyFilter) >> keyFilterOffset;
 		return key;
 	}
 #endif
@@ -680,7 +680,7 @@ KmerKey getKmerKey(Kmer * kmer) {
 			key += kmer->longlongs[longLongKmerFilterIndex];
 		}
 		key <<= keyFilterLength;
-		key = (kmer->longlongs[longLongKeyFilterIndex] & keyFilter) >> keyFilterOffset;
+		key += (kmer->longlongs[longLongKeyFilterIndex] & keyFilter) >> keyFilterOffset;
 
 		return key;
 	}
