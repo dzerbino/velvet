@@ -23,15 +23,15 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 
 #include "globals.h"
+#include "tightString.h"
 #include "utility.h"
 
 typedef unsigned char Codon;
 
 struct tString_st {
 	Codon *sequence;
-	Coordinate length;
-	Coordinate arrayLength;
-};
+	IDnum length;
+}  ATTRIBUTE_PACKED;
 
 static const Nucleotide Adenine = 0;
 static const Nucleotide Cytosine = 1;
@@ -68,6 +68,12 @@ writeNucleotideNumber(Nucleotide nucleotide, Codon * codonPtr,
 		*codonPtr &= FILTER0;
 		*codonPtr += nucleotide;
 	}
+}
+
+TightString *getTightStringInArray(TightString * tString,
+				   IDnum	 position)
+{
+	return tString + position;
 }
 
 //
@@ -156,7 +162,6 @@ TightString *newTightStringFromString(char *sequence)
 		arrayLength++;
 
 	newTString->length = size;
-	newTString->arrayLength = arrayLength;
 	newTString->sequence = callocOrExit(arrayLength, Codon);
 
 	for (index = 0; index < arrayLength; index++)
@@ -171,20 +176,53 @@ TightString *newTightStringFromString(char *sequence)
 	return newTString;
 }
 
+static void fillTightStringWithString(TightString * tString,
+				      char *sequence,
+				      Codon *newSequence)
+{
+	int index;
+
+	tString->sequence = newSequence;
+	for (index = 0; index < tString->length; index++)
+		writeNucleotide(sequence[index],
+				&(newSequence[index / 4]),
+				index % 4);
+	free(sequence);
+}
+
 //
 // Creates a tightString from an array of normal strings
 //
-TightString **newTightStringArrayFromStringArray(char **sequences,
-						 IDnum sequenceCount)
+TightString *newTightStringArrayFromStringArray(char **sequences,
+						IDnum sequenceCount,
+						char **tSeqMem)
 {
 	IDnum sequenceIndex;
-	TightString **tStringArray =
-	    mallocOrExit(sequenceCount, TightString *);
+	Codon *tmp;
+	TightString *tStringArray = mallocOrExit(sequenceCount, TightString);
+	Coordinate totalLength = 0;
+	int arrayLength;
 
-	for (sequenceIndex = 0; sequenceIndex < sequenceCount;
-	     sequenceIndex++)
-		tStringArray[sequenceIndex] =
-		    newTightStringFromString(sequences[sequenceIndex]);
+	for (sequenceIndex = 0; sequenceIndex < sequenceCount; sequenceIndex++)
+	{
+		tStringArray[sequenceIndex].length = strlen (sequences[sequenceIndex]);
+		arrayLength = tStringArray[sequenceIndex].length / 4;
+		if (tStringArray[sequenceIndex].length % 4 > 0)
+			arrayLength++;
+		totalLength += arrayLength;
+	}
+	*tSeqMem = callocOrExit (totalLength, char);
+	tmp = (Codon*)*tSeqMem;
+	for (sequenceIndex = 0; sequenceIndex < sequenceCount; sequenceIndex++)
+	{
+		fillTightStringWithString (&tStringArray[sequenceIndex],
+					   sequences[sequenceIndex],
+					   tmp);
+		arrayLength = tStringArray[sequenceIndex].length / 4;
+		if (tStringArray[sequenceIndex].length % 4 > 0)
+			arrayLength++;
+		tmp += arrayLength;
+	}
 
 	free(sequences);
 	return tStringArray;
@@ -347,7 +385,6 @@ TightString *newTightString(Coordinate length)
 		arrayLength++;
 
 	newTString->length = length;
-	newTString->arrayLength = arrayLength;
 	newTString->sequence = callocOrExit(arrayLength, Codon);
 
 	for (index = 0; index < arrayLength; index++)
@@ -375,12 +412,11 @@ void trimTightString(TightString * tString, Coordinate length)
 		newArrayLength++;
 
 	tString->length = length;
-	tString->arrayLength = newArrayLength;
 	tString->sequence = 
 	    reallocOrExit(tString->sequence, newArrayLength, Codon);
 }
 
-Coordinate getLength(TightString * tString)
+IDnum getLength(TightString * tString)
 {
 	return tString->length;
 }
@@ -425,15 +461,18 @@ void destroyTightStringArray(TightString ** array, IDnum sequenceCount)
 
 void setTightStringLength(TightString * tString, Coordinate length)
 {
+	Coordinate arrayLength = tString->length / 4;
 	Coordinate newArrayLength = length / 4;
+	if (tString->length % 4 > 0)
+		arrayLength++;
 	if (length % 4 > 0)
 		newArrayLength++;
 
-	if (newArrayLength > tString->arrayLength) {
+	if (newArrayLength > arrayLength) {
 		tString->sequence =
 		    reallocOrExit(tString->sequence,
 			    newArrayLength, Codon);
-		tString->arrayLength = newArrayLength;
+		arrayLength = newArrayLength;
 	}
 
 	tString->length = length;

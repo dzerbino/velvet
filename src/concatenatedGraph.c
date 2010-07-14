@@ -75,7 +75,7 @@ void concatenateReadStarts(Node * target, Node * source, Graph * graph)
 // The extra memory is freed
 void concatenateNodes(Node * nodeA, Node * nodeB, Graph * graph)
 {
-	PassageMarker *marker, *tmpMarker;
+	PassageMarkerI marker, tmpMarker;
 	Node *twinA = getTwinNode(nodeA);
 	Node *twinB = getTwinNode(nodeB);
 	Arc *arc;
@@ -96,14 +96,14 @@ void concatenateNodes(Node * nodeA, Node * nodeB, Graph * graph)
 	}
 
 	// Passage marker management in node A:
-	for (marker = getMarker(nodeA); marker != NULL;
+	for (marker = getMarker(nodeA); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (isTerminal(marker))
 			incrementFinishOffset(marker,
 					      getNodeLength(nodeB));
 
 	// Swapping new born passageMarkers from B to A
-	for (marker = getMarker(nodeB); marker != NULL; marker = tmpMarker) {
+	for (marker = getMarker(nodeB); marker != NULL_IDX; marker = tmpMarker) {
 		tmpMarker = getNextInNode(marker);
 
 		if (isInitial(marker)
@@ -153,7 +153,7 @@ void concatenateStringOfNodes(Node * nodeA, Graph * graph)
 	Node * twinB;
 	Node *currentNode, *nextNode;
 	Coordinate totalLength = 0;
-	PassageMarker *marker, *tmpMarker;
+	PassageMarkerI marker, tmpMarker;
 	Arc *arc;
 	Category cat;
 
@@ -176,14 +176,14 @@ void concatenateStringOfNodes(Node * nodeA, Graph * graph)
 		currentNode = getDestination(getArc(currentNode));
 
 		// Passage marker management in node A:
-		for (marker = getMarker(nodeA); marker != NULL;
+		for (marker = getMarker(nodeA); marker != NULL_IDX;
 		     marker = getNextInNode(marker))
 			if (getNode(getNextInSequence(marker)) != currentNode)
 				incrementFinishOffset(marker,
 						      getNodeLength(currentNode));
 
 		// Swapping new born passageMarkers from B to A
-		for (marker = getMarker(currentNode); marker != NULL; marker = tmpMarker) {
+		for (marker = getMarker(currentNode); marker != NULL_IDX; marker = tmpMarker) {
 			tmpMarker = getNextInNode(marker);
 
 			if (isInitial(marker)

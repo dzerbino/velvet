@@ -64,7 +64,7 @@ struct dfibheap_el {
 	Time dfhe_key;
 	int dfhe_degree;
 	boolean dfhe_mark;
-};
+}  ATTRIBUTE_PACKED;
 
 static DFibHeapNode *dfhe_newelem(DFibHeap *);
 static void dfhe_insertafter(DFibHeapNode * a, DFibHeapNode * b);
@@ -76,12 +76,12 @@ static DFibHeapNode *dfhe_remove(DFibHeapNode * a);
  */
 struct dfibheap {
 	RecycleBin *nodeMemory;
-	IDnum dfh_n;
-	IDnum dfh_Dl;
 	DFibHeapNode **dfh_cons;
 	DFibHeapNode *dfh_min;
 	DFibHeapNode *dfh_root;
-};
+	IDnum dfh_n;
+	IDnum dfh_Dl;
+}  ATTRIBUTE_PACKED;
 
 static void dfh_insertrootlist(DFibHeap *, DFibHeapNode *);
 static void dfh_removerootlist(DFibHeap *, DFibHeapNode *);

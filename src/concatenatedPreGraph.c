@@ -27,12 +27,12 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 // Replaces two consecutive preNodes into a single equivalent preNode
 // The extra memory is freed
-static void concatenatePreNodes(IDnum preNodeAID, PreArc * oldPreArc,
+static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 				PreGraph * preGraph)
 {
 	IDnum preNodeBID = preNodeAID;
 	IDnum currentPreNodeID, nextPreNodeID;
-	PreArc *preArc = oldPreArc;
+	PreArcI preArc = oldPreArc;
 	Coordinate totalLength = 0;
 	Coordinate arrayLength;
 	Descriptor * descr, * ptr;
@@ -106,7 +106,7 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArc * oldPreArc,
 	setPreNodeDescriptor_pg(descr, totalLength - wordLength + 1, preNodeAID, preGraph); 
 
 	// Correct preArcs
-	for (preArc = getPreArc_pg(preNodeBID, preGraph); preArc != NULL;
+	for (preArc = getPreArc_pg(preNodeBID, preGraph); preArc != NULL_IDX;
 	     preArc = getNextPreArc_pg(preArc, preNodeBID)) {
 		if (getDestination_pg(preArc, preNodeBID) != -preNodeBID)
 			createAnalogousPreArc_pg(preNodeAID,
@@ -134,7 +134,7 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArc * oldPreArc,
 void concatenatePreGraph_pg(PreGraph * preGraph)
 {
 	IDnum preNodeIndex;
-	PreArc *preArc;
+	PreArcI preArc;
 	PreNode *preNode;
 
 	puts("Concatenation...");
@@ -184,11 +184,11 @@ static boolean isEligibleTip(IDnum index, PreGraph * preGraph, Coordinate
 {
 	IDnum currentIndex = -index;
 	Coordinate totalLength = 0;
-	PreArc *activeArc = NULL;
-	PreArc *arc;
+	PreArcI activeArc = NULL_IDX;
+	PreArcI arc;
 	IDnum mult = 0;
 
-	if (getPreArc_pg(index, preGraph) != NULL)
+	if (getPreArc_pg(index, preGraph) != NULL_IDX)
 		return false;
 
 	// Finding first tangle
@@ -217,7 +217,7 @@ static boolean isEligibleTip(IDnum index, PreGraph * preGraph, Coordinate
 		return true;
 
 	// Computing max arc
-	for (arc = getPreArc_pg(-currentIndex, preGraph); arc != NULL;
+	for (arc = getPreArc_pg(-currentIndex, preGraph); arc != NULL_IDX;
 	     arc = getNextPreArc_pg(arc, -currentIndex))
 		if (getMultiplicity_pg(arc) > mult)
 			mult = getMultiplicity_pg(arc);

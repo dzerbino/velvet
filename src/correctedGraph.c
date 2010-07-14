@@ -49,7 +49,7 @@ struct tkt_st {
 	Ticket *next;
 	IDnum id_a;
 	IDnum id_b;
-};
+} ATTRIBUTE_PACKED;
 
 //Global variables used throughout this procedure(internal use only !)
 static int MAXREADLENGTH = 100;
@@ -72,8 +72,8 @@ static int WORDLENGTH;
 static Graph *graph;
 static IDnum dbgCounter;
 
-static PassageMarker *fastPath;
-static PassageMarker *slowPath;
+static PassageMarkerI fastPath;
+static PassageMarkerI slowPath;
 
 static IDnum *eligibleStartingPoints;
 
@@ -89,7 +89,7 @@ static Ticket **todo;
 static Ticket *done;
 static boolean *progressStatus;
 
-static Coordinate *sequenceLengths;
+static IDnum *sequenceLengths;
 static Category *sequenceCategories;
 
 //End of global variables;
@@ -530,9 +530,9 @@ static Node *nextStartingPoint()
 }
 
 static boolean
-extractSequence(PassageMarker * path, TightString * sequence)
+extractSequence(PassageMarkerI path, TightString * sequence)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Coordinate seqLength = 0;
 	Coordinate writeIndex = 0;
 
@@ -718,11 +718,11 @@ static void remapNodeArcsOntoNeighbour(Node * source, Node * target)
 }
 
 static void remapNodeMarkersOntoNeighbour(Node * source,
-					  PassageMarker * sourceMarker,
+					  PassageMarkerI sourceMarker,
 					  Node * target,
-					  PassageMarker * targetMarker)
+					  PassageMarkerI targetMarker)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Coordinate offset;
 	IDnum sourceLength, index;
 	ShortReadMarker *sourceArray, *shortMarker;
@@ -740,7 +740,7 @@ static void remapNodeMarkersOntoNeighbour(Node * source,
 	Coordinate realTargetLength = getNodeLength(target);
 	Coordinate realSourceLength = getNodeLength(source);
 
-	while (getMarker(source) != NULL) {
+	while (getMarker(source) != NULL_IDX) {
 		marker = getMarker(source);
 		extractPassageMarker(marker);
 		transposePassageMarker(marker, target);
@@ -883,12 +883,12 @@ static void remapBackOfNodeArcsOntoNeighbour(Node * source, Node * target)
 
 static Coordinate
 remapBackOfNodeMarkersOntoNeighbour(Node * source,
-				    PassageMarker * sourceMarker,
+				    PassageMarkerI sourceMarker,
 				    Node * target,
-				    PassageMarker * targetMarker,
+				    PassageMarkerI targetMarker,
 				    boolean slowToFast)
 {
-	PassageMarker *marker, *newMarker, *previousMarker, *nextMarker;
+	PassageMarkerI marker, newMarker, previousMarker, nextMarker;
 	Coordinate halfwayPoint, halfwayPointOffset, breakpoint,
 	    newStartOffset, newFinishOffset;
 	Category cat;
@@ -934,7 +934,7 @@ remapBackOfNodeMarkersOntoNeighbour(Node * source,
 	halfwayPointOffset = realSourceLength - halfwayPoint;
 
 	// Complete markers
-	for (marker = getMarker(source); marker != NULL;
+	for (marker = getMarker(source); marker != NULL_IDX;
 	     marker = nextMarker) {
 		nextMarker = getNextInNode(marker);
 
@@ -1251,8 +1251,8 @@ static void foldSymmetricalNode(Node * node)
 	Node *twinNode = getTwinNode(node);
 	Node *tmp, *destination;
 	Arc *arc;
-	PassageMarker *oldMarker = getMarker(node);
-	PassageMarker *currentMarker, *newMarker, *previousMarker;
+	PassageMarkerI oldMarker = getMarker(node);
+	PassageMarkerI currentMarker, newMarker, previousMarker;
 	Coordinate halfwayPoint;
 	IDnum totalMult;
 
@@ -1263,10 +1263,10 @@ static void foldSymmetricalNode(Node * node)
 		node = tmp;
 	}
 	// Destroy link to old markers 
-	setMarker(node, NULL);
+	setMarker(node, NULL_IDX);
 
 	// Reinsert markers properly
-	while (oldMarker != NULL) {
+	while (oldMarker != NULL_IDX) {
 		currentMarker = oldMarker;
 		oldMarker = getNextInNode(currentMarker);
 		previousMarker = getPreviousInSequence(currentMarker);
@@ -1379,9 +1379,9 @@ static void remapNodeTimesOntoNeighbour(Node * source, Node * target)
 }
 
 static void remapNodeTimesOntoForwardMiddlePath(Node * source,
-						PassageMarker * path)
+						PassageMarkerI path)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Node *target;
 	Time nodeTime = getNodeTime(source);
 	Node *previousNode = getNodePrevious(source);
@@ -1412,13 +1412,13 @@ static void remapNodeTimesOntoForwardMiddlePath(Node * source,
 }
 
 static void remapNodeTimesOntoTwinMiddlePath(Node * source,
-					     PassageMarker * path)
+					     PassageMarkerI path)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Node *target;
 	Node *previousNode = getTwinNode(source);
 	Time targetTime;
-	PassageMarker *limit = getTwinMarker(getPreviousInSequence(path));
+	PassageMarkerI limit = getTwinMarker(getPreviousInSequence(path));
 	Time nodeTime = getNodeTime(getNode(limit));
 
 	//printf("Remapping times from twins %ld to %ld\n", getNodeID(previousNode), getNodeID(getNode(limit)));
@@ -1473,9 +1473,9 @@ remapNodeFibHeapReferencesOntoNode(Node * source, Node * target)
 }
 
 static void remapNodeOntoNeighbour(Node * source,
-				   PassageMarker * sourceMarker,
+				   PassageMarkerI sourceMarker,
 				   Node * target,
-				   PassageMarker * targetMarker)
+				   PassageMarkerI targetMarker)
 {
 	//printf("Remapping node %ld onto middle path %ld\n", getNodeID(source), getNodeID(target));
 	remapNodeMarkersOntoNeighbour(source, sourceMarker, target,
@@ -1497,11 +1497,9 @@ static void remapNodeOntoNeighbour(Node * source,
 }
 
 static void remapBackOfNodeDescriptorOntoNeighbour(Node * source,
-						   PassageMarker *
-						   sourceMarker,
+						   PassageMarkerI sourceMarker,
 						   Node * target,
-						   PassageMarker *
-						   targetMarker,
+						   PassageMarkerI targetMarker,
 						   boolean slowToFast,
 						   Coordinate offset)
 {
@@ -1559,8 +1557,8 @@ static void remapBackOfNodeTimesOntoNeighbour(Node * source, Node * target)
 }
 
 static void
-remapBackOfNodeOntoNeighbour(Node * source, PassageMarker * sourceMarker,
-			     Node * target, PassageMarker * targetMarker,
+remapBackOfNodeOntoNeighbour(Node * source, PassageMarkerI sourceMarker,
+			     Node * target, PassageMarkerI targetMarker,
 			     boolean slowToFast)
 {
 	Coordinate offset;
@@ -1583,12 +1581,10 @@ remapBackOfNodeOntoNeighbour(Node * source, PassageMarker * sourceMarker,
 		startingNode = getTwinNode(target);
 }
 
-static void remapEmptyPathArcsOntoMiddlePathSimple(PassageMarker *
-						   emptyPath,
-						   PassageMarker *
-						   targetPath)
+static void remapEmptyPathArcsOntoMiddlePathSimple(PassageMarkerI emptyPath,
+						   PassageMarkerI targetPath)
 {
-	PassageMarker *pathMarker;
+	PassageMarkerI pathMarker;
 	Node *start = getNode(getPreviousInSequence(emptyPath));
 	Node *finish = getNode(emptyPath);
 	Node *previousNode = start;
@@ -1608,15 +1604,13 @@ static void remapEmptyPathArcsOntoMiddlePathSimple(PassageMarker *
 	destroyArc(originalArc, graph);
 }
 
-static void remapEmptyPathMarkersOntoMiddlePathSimple(PassageMarker *
-						      emptyPath,
-						      PassageMarker *
-						      targetPath)
+static void remapEmptyPathMarkersOntoMiddlePathSimple(PassageMarkerI emptyPath,
+						      PassageMarkerI targetPath)
 {
-	PassageMarker *marker, *newMarker, *previousMarker, *pathMarker;
+	PassageMarkerI marker, newMarker, previousMarker, pathMarker;
 	Node *start = getNode(getPreviousInSequence(emptyPath));
 	Node *finish = getNode(emptyPath);
-	PassageMarker *oldMarker = getMarker(finish);
+	PassageMarkerI oldMarker = getMarker(finish);
 	Coordinate markerStart;
 	IDnum intersectionLength, twinIntersectionLength;
 	ShortReadMarker *intersectionReads =
@@ -1630,9 +1624,9 @@ static void remapEmptyPathMarkersOntoMiddlePathSimple(PassageMarker *
 	//       arcCount(getTwinNode(finish)));
 
 	// Destroy link to old nodes
-	setMarker(finish, NULL);
+	setMarker(finish, NULL_IDX);
 
-	while (oldMarker != NULL) {
+	while (oldMarker != NULL_IDX) {
 		marker = oldMarker;
 		oldMarker = getNextInNode(marker);
 		newMarker = getPreviousInSequence(marker);
@@ -1690,17 +1684,17 @@ static void remapEmptyPathMarkersOntoMiddlePathSimple(PassageMarker *
 	free(twinIntersectionReads);
 }
 
-static boolean markerFollowsPath(PassageMarker * marker,
-				 PassageMarker * start,
-				 PassageMarker * finish, Node * stopNode)
+static boolean markerFollowsPath(PassageMarkerI marker,
+				 PassageMarkerI start,
+				 PassageMarkerI finish, Node * stopNode)
 {
-	PassageMarker *current, *path;
+	PassageMarkerI current, path;
 
 	path = start;
 	current = marker;
 
 	while (true) {
-		if (current == NULL || path == finish || path == NULL)
+		if (current == NULL_IDX || path == finish || path == NULL_IDX)
 			return true;
 
 		if (getNode(current) != getNode(path))
@@ -1711,16 +1705,16 @@ static boolean markerFollowsPath(PassageMarker * marker,
 	}
 }
 
-static PassageMarkerList *getAnchors(PassageMarker * marker, Node * nodeA,
+static PassageMarkerList *getAnchors(PassageMarkerI marker, Node * nodeA,
 				     Node * nodeB)
 {
-	PassageMarker *current, *next;
+	PassageMarkerI current, next;
 	Node *twinA = getTwinNode(nodeA);
 	Node *twinB = getTwinNode(nodeB);
 	PassageMarkerList *result = NULL;
 
 	current = marker;
-	while (current != NULL) {
+	while (current != NULL_IDX) {
 		next = getNextInSequence(current);
 		if (getNode(current) == nodeA && getNode(next) == nodeB) {
 			result = newPassageMarkerList(next, result);
@@ -1747,12 +1741,10 @@ static void destroyPassageMarkerList(PassageMarkerList ** list)
 	}
 }
 
-static void remapEmptyPathMarkersOntoMiddlePathDevious(PassageMarker *
-						       emptyPath,
-						       PassageMarker *
-						       targetPath)
+static void remapEmptyPathMarkersOntoMiddlePathDevious(PassageMarkerI emptyPath,
+						       PassageMarkerI targetPath)
 {
-	PassageMarker *marker, *newMarker, *previousMarker, *pathMarker;
+	PassageMarkerI marker, newMarker, previousMarker, pathMarker;
 	Node *start = getNode(getPreviousInSequence(emptyPath));
 	Node *finish = getNode(emptyPath);
 	PassageMarkerList *anchors = getAnchors(targetPath, start, finish);
@@ -1764,7 +1756,7 @@ static void remapEmptyPathMarkersOntoMiddlePathDevious(PassageMarker *
 	       getNodeID(finish), arcCount(finish),
 	       arcCount(getTwinNode(finish)));
 
-	for (marker = getMarker(finish); marker != NULL;
+	for (marker = getMarker(finish); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		newMarker = getPreviousInSequence(marker);
 
@@ -1813,15 +1805,15 @@ static void remapEmptyPathMarkersOntoMiddlePathDevious(PassageMarker *
 	destroyPassageMarkerList(&anchors);
 }
 
-static boolean markerLeadsToArc(PassageMarker * marker, Node * nodeA,
+static boolean markerLeadsToArc(PassageMarkerI marker, Node * nodeA,
 				Node * nodeB)
 {
-	PassageMarker *current, *next;
+	PassageMarkerI current, next;
 	Node *twinA = getTwinNode(nodeA);
 	Node *twinB = getTwinNode(nodeB);
 
 	current = marker;
-	while (current != NULL) {
+	while (current != NULL_IDX) {
 		next = getNextInSequence(current);
 		if (getNode(current) == nodeA && getNode(next) == nodeB)
 			return true;
@@ -1834,8 +1826,8 @@ static boolean markerLeadsToArc(PassageMarker * marker, Node * nodeA,
 }
 
 static void
-remapEmptyPathOntoMiddlePath(PassageMarker * emptyPath,
-			     PassageMarker * targetPath)
+remapEmptyPathOntoMiddlePath(PassageMarkerI emptyPath,
+			     PassageMarkerI targetPath)
 {
 	Node *start = getNode(getPreviousInSequence(emptyPath));
 	Node *finish = getNode(emptyPath);
@@ -1859,9 +1851,9 @@ remapEmptyPathOntoMiddlePath(PassageMarker * emptyPath,
 		remapNodeTimesOntoTwinMiddlePath(finish, targetPath);
 }
 
-static void reduceSlowNodes(PassageMarker * slowMarker, Node * finish)
+static void reduceSlowNodes(PassageMarkerI slowMarker, Node * finish)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	for (marker = slowMarker; getNode(marker) != finish;
 	     marker = getNextInSequence(marker)) {
@@ -1871,9 +1863,9 @@ static void reduceSlowNodes(PassageMarker * slowMarker, Node * finish)
 
 static void destroyPaths()
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
-	while (slowPath != NULL) {
+	while (slowPath != NULL_IDX) {
 		marker = slowPath;
 		getNodeTime(getNode(marker));
 		getNodeTime(getTwinNode(getNode(marker)));
@@ -1882,7 +1874,7 @@ static void destroyPaths()
 		destroyPassageMarker(marker);
 	}
 
-	while (fastPath != NULL) {
+	while (fastPath != NULL_IDX) {
 		marker = fastPath;
 		getNodeTime(getNode(marker));
 		getNodeTime(getTwinNode(getNode(marker)));
@@ -1893,7 +1885,7 @@ static void destroyPaths()
 
 static Coordinate mapDistancesOntoPaths()
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Coordinate totalDistance = 0;
 
 	marker = slowPath;
@@ -1916,11 +1908,11 @@ static Coordinate mapDistancesOntoPaths()
 	return totalDistance;
 }
 
-static boolean markerLeadsToNode(PassageMarker * marker, Node * node)
+static boolean markerLeadsToNode(PassageMarkerI marker, Node * node)
 {
-	PassageMarker *currentMarker;
+	PassageMarkerI currentMarker;
 
-	for (currentMarker = marker; currentMarker != NULL;
+	for (currentMarker = marker; currentMarker != NULL_IDX;
 	     currentMarker = getNextInSequence(currentMarker))
 		if (getNode(currentMarker) == node)
 			return true;
@@ -1998,7 +1990,7 @@ static void transferNodeData(Node * source, Node * target)
 static void concatenateNodesAndVaccinate(Node * nodeA, Node * nodeB,
 					 Graph * graph)
 {
-	PassageMarker *marker, *tmpMarker;
+	PassageMarkerI marker, tmpMarker;
 	Node *twinA = getTwinNode(nodeA);
 	Node *twinB = getTwinNode(nodeB);
 	Arc *arc;
@@ -2021,14 +2013,14 @@ static void concatenateNodesAndVaccinate(Node * nodeA, Node * nodeB,
 	}
 
 	// Passage marker management in node A:
-	for (marker = getMarker(nodeA); marker != NULL;
+	for (marker = getMarker(nodeA); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (isTerminal(marker))
 			incrementFinishOffset(marker,
 					      getNodeLength(nodeB));
 
 	// Swapping new born passageMarkers from B to A
-	for (marker = getMarker(nodeB); marker != NULL; marker = tmpMarker) {
+	for (marker = getMarker(nodeB); marker != NULL_IDX; marker = tmpMarker) {
 		tmpMarker = getNextInNode(marker);
 
 		if (isInitial(marker)) {
@@ -2089,12 +2081,12 @@ static void simplifyNode(Node * node)
 
 }
 
-static void concatenatePathNodes(PassageMarker * pathStart)
+static void concatenatePathNodes(PassageMarkerI pathStart)
 {
-	PassageMarker *pathMarker;
+	PassageMarkerI pathMarker;
 
 	//puts("Removing null loops");
-	for (pathMarker = pathStart; pathMarker != NULL;
+	for (pathMarker = pathStart; pathMarker != NULL_IDX;
 	     pathMarker = getNextInSequence(pathMarker)) {
 		simplifyNode(getNode(pathMarker));
 	}
@@ -2105,8 +2097,8 @@ static void concatenatePathNodes(PassageMarker * pathStart)
 
 static void cleanUpRedundancy()
 {
-	PassageMarker *slowMarker = getNextInSequence(slowPath);
-	PassageMarker *fastMarker = getNextInSequence(fastPath);
+	PassageMarkerI slowMarker = getNextInSequence(slowPath);
+	PassageMarkerI fastMarker = getNextInSequence(fastPath);
 	Coordinate slowLength, fastLength;
 	Coordinate fastConstraint = 0;
 	Coordinate slowConstraint = 0;
@@ -2117,7 +2109,7 @@ static void cleanUpRedundancy()
 	mapSlowOntoFast();
 	finalLength = mapDistancesOntoPaths();
 
-	while (slowMarker != NULL && fastMarker != NULL) {
+	while (slowMarker != NULL_IDX && fastMarker != NULL_IDX) {
 		if (isTerminal(slowMarker))
 			slowLength = finalLength;
 		else {
@@ -2193,7 +2185,7 @@ static void cleanUpRedundancy()
 	//puts("Concatenation");
 
 	// Freeing up memory  
-	if (slowMarker != NULL)
+	if (slowMarker != NULL_IDX)
 		concatenatePathNodes(slowPath);
 	else
 		concatenatePathNodes(fastPath);
@@ -2209,8 +2201,8 @@ static void cleanUpRedundancy()
 	//fflush(stdout);
 }
 
-static boolean pathContainsReference(PassageMarker * path) {
-	PassageMarker *marker, *marker2;
+static boolean pathContainsReference(PassageMarkerI path) {
+	PassageMarkerI marker, marker2;
 
 	for (marker = getNextInSequence(path); !isTerminal(marker);
 	     marker = getNextInSequence(marker))
@@ -2227,7 +2219,7 @@ static void comparePaths(Node * destination, Node * origin)
 	IDnum slowLength, fastLength;
 	Node *fastNode, *slowNode;
 	IDnum i;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	//Measure lengths
 	slowLength = fastLength = 0;
@@ -2510,7 +2502,7 @@ void clipTips(Graph * graph)
 	Node *current, *twin;
 	boolean modified = true;
 	int Wordlength = getWordLength(graph);
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	puts("Clipping short tips off graph");
 
@@ -2564,7 +2556,7 @@ void clipTipsHard(Graph * graph)
 	Node *current, *twin;
 	boolean modified = true;
 	int Wordlength = getWordLength(graph);
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	puts("Clipping short tips off graph, drastic");
 
@@ -2629,7 +2621,7 @@ static void tourBus(Node * startingPoint)
 	}
 }
 
-void correctGraph(Graph * argGraph, Coordinate * argSequenceLengths, Category * argSequenceCategories)
+void correctGraph(Graph * argGraph, IDnum * argSequenceLengths, Category * argSequenceCategories)
 {
 	IDnum nodes;
 	IDnum index;

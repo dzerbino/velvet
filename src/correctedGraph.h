@@ -25,7 +25,7 @@ void clipTips(Graph * graph);
 
 void clipTipsHard(Graph * graph);
 
-void correctGraph(Graph * graph, Coordinate * sequenceLengths, Category * sequenceCategories);
+void correctGraph(Graph * graph, IDnum * sequenceLengths, Category * sequenceCategories);
 
 // Black arts:
 void setMaxReadLength(int value);

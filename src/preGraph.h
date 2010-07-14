@@ -35,7 +35,7 @@ void destroyPreNode_pg(IDnum preNode, PreGraph * preGraph);
 PreNode *getPreNodeInPreGraph_pg(PreGraph * preGraph, IDnum preNodeID);
 
 // PreArc info 
-PreArc *getPreArc_pg(IDnum preNodeID, PreGraph * preGraph);
+PreArcI getPreArc_pg(IDnum preNodeID, PreGraph * preGraph);
 boolean hasSinglePreArc_pg(IDnum preNodeID, PreGraph * graph);
 char simplePreArcCount_pg(IDnum preNodeID, PreGraph * preGraph);
 
@@ -60,28 +60,28 @@ void concatenateReferenceMarkers_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph
 ////////////////////////////////////////////////////////////
 
 // Creators/destructor
-PreArc *createPreArc_pg(IDnum originID, IDnum destinationID,
+PreArcI createPreArc_pg(IDnum originID, IDnum destinationID,
 			PreGraph * preGraph);
 void createAnalogousPreArc_pg(IDnum originID, IDnum destinationID,
-			      PreArc * refPreArc, PreGraph * preGraph);
-void destroyPreArc_pg(PreArc * preArc, PreGraph * preGraph);
+			      PreArcI refPreArc, PreGraph * preGraph);
+void destroyPreArc_pg(PreArcI preArc, PreGraph * preGraph);
 
 // Multiplicity
-void setMultiplicity_pg(PreArc * preArc, IDnum mult);
-IDnum getMultiplicity_pg(PreArc * preArc);
-void changeMultiplicity_pg(PreArc * preArc, IDnum variation);
+void setMultiplicity_pg(PreArcI preArc, IDnum mult);
+IDnum getMultiplicity_pg(PreArcI preArc);
+void changeMultiplicity_pg(PreArcI preArc, IDnum variation);
 
 // Extremities
-IDnum getDestination_pg(PreArc * preArc, IDnum nodeID);
-IDnum getOtherEnd_pg(PreArc * preArc, IDnum preNodeID);
+IDnum getDestination_pg(PreArcI preArc, IDnum nodeID);
+IDnum getOtherEnd_pg(PreArcI preArc, IDnum preNodeID);
 
 // Finding preArcs
-PreArc *getPreArcBetweenPreNodes_pg(IDnum originID, IDnum destinationID,
+PreArcI getPreArcBetweenPreNodes_pg(IDnum originID, IDnum destinationID,
 				    PreGraph * preGraph);
-PreArc *getNextPreArc_pg(PreArc * preArc, IDnum originPreNodeID);
+PreArcI getNextPreArc_pg(PreArcI preArc, IDnum originPreNodeID);
 
 // Misc
-boolean isLoop_pg(PreArc * preArc);
+boolean isLoop_pg(PreArcI preArc);
 
 ////////////////////////////////////////////////////////////
 // PreGraph functions

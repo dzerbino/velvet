@@ -37,7 +37,7 @@ void destroyTightString(TightString * tString);
 // Reading
 //////////////////////////////////////////////////////////////
 
-Coordinate getLength(TightString * tString);
+IDnum getLength(TightString * tString);
 
 char *readTightString(TightString * tString);
 
@@ -57,6 +57,9 @@ void readTightStringFragment(TightString * tString, Coordinate start,
 
 Nucleotide charToNucleotide(char c);
 
+TightString *getTightStringInArray(TightString * tString,
+				   IDnum	 position);
+
 ///////////////////////////////////////////////////////////////
 // Writing
 ///////////////////////////////////////////////////////////////
@@ -70,8 +73,9 @@ void writeNucleotideAtPosition(Nucleotide nucleotide, Coordinate position,
 // Array wide operations
 ///////////////////////////////////////////////////////////////
 
-TightString **newTightStringArrayFromStringArray(char **sequences,
-						 IDnum sequenceCount);
+TightString *newTightStringArrayFromStringArray(char **sequences,
+						IDnum sequenceCount,
+						char **tSeqMem);
 
 TightString **concatenateTightStringArrays(TightString ** array1,
 					   TightString ** array2,

@@ -35,7 +35,7 @@ struct splayNode_st {
 	struct splayNode_st *left;
 	struct splayNode_st *right;
 	IDnum seqID;
-};
+}  ATTRIBUTE_PACKED;
 
 typedef struct splayNode_st SplayNode;
 typedef struct splayNode_st SplayTree;

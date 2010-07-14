@@ -57,6 +57,7 @@ struct recycleBin_st {
 RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)
 {
 	register RecycleBin *recycle_bin = malloc(sizeof(RecycleBin));
+	size_t chunckSize, allocSize;
 
 	if (recycle_bin == NULL) {
 		puts("Allocation failed!");
@@ -73,6 +74,12 @@ RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)
 #endif 
 		exit(-1);
 	}
+	chunckSize = sizeof(Chunk) + nodes_per_chunk * node_size;
+	allocSize = 1;
+	/* Get nearest power of 2 */
+	while (allocSize < chunckSize)
+		allocSize <<= 1;
+	nodes_per_chunk = (allocSize - sizeof(Chunk)) / node_size;
 	recycle_bin->chunk_list = NULL;
 	recycle_bin->chunk_pos = nodes_per_chunk;
 	recycle_bin->nodes_per_chunk = nodes_per_chunk;

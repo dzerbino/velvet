@@ -46,7 +46,7 @@ typedef struct smallNodeList_st SmallNodeList;
 struct smallNodeList_st {
 	Node *node;
 	SmallNodeList *next;
-};
+} ATTRIBUTE_PACKED;
 
 static RecycleBin *smallNodeListMemory = NULL;
 static SmallNodeList *nodePile = NULL;
@@ -93,12 +93,12 @@ static void unlockMemorizedNodes()
 typedef struct referenceMapping_st ReferenceMapping;
 
 struct referenceMapping_st {
-	Coordinate referenceStart;
-	Coordinate nodeStart;
-	Coordinate length;
+	IDnum referenceStart;
+	IDnum nodeStart;
+	IDnum length;
 	IDnum referenceID;
 	IDnum nodeID;
-};
+} ATTRIBUTE_PACKED;
 
 static IDnum countMappings(char * preGraphFilename) {
 	FILE *file = fopen(preGraphFilename, "r");
@@ -248,9 +248,9 @@ typedef struct nodeMask_st NodeMask;
 
 struct nodeMask_st {
 	IDnum nodeID;
-	Coordinate start;
-	Coordinate finish;
-};
+	IDnum start;
+	IDnum finish;
+} ATTRIBUTE_PACKED;
 
 static int compareNodeMasks(const void * ptrA, const void * ptrB) {
 	NodeMask * A = (NodeMask *) ptrA;
@@ -705,8 +705,8 @@ static void threadSequenceThroughGraph(TightString * tString,
 	KmerOccurence *kmerOccurence;
 	int wordLength = getWordLength(graph);
 
-	PassageMarker *marker = NULL;
-	PassageMarker *previousMarker = NULL;
+	PassageMarkerI marker = NULL_IDX;
+	PassageMarkerI previousMarker = NULL_IDX;
 	Node *node;
 	Node *previousNode = NULL;
 	Coordinate coord = 0;
@@ -1016,8 +1016,7 @@ static void fillUpGraph(ReadSet * reads,
 	for (readIndex = 0; readIndex < reads->readCount; readIndex++) {
 		category = reads->categories[readIndex];
 	
-		ghostThreadSequenceThroughGraph(reads->
-						tSequences[readIndex],
+		ghostThreadSequenceThroughGraph(getTightStringInArray(reads->tSequences, readIndex),
 						kmerTable,
 						graph, readIndex + 1,
 						category, 
@@ -1049,7 +1048,7 @@ static void fillUpGraph(ReadSet * reads,
 			printf("Threading through reads %d / %d\n",
 			       readIndex, reads->readCount);
 
-		threadSequenceThroughGraph(reads->tSequences[readIndex],
+		threadSequenceThroughGraph(getTightStringInArray(reads->tSequences, readIndex),
 					   kmerTable,
 					   graph, readIndex + 1, category,
 					   readTracking, double_strand,

@@ -35,21 +35,21 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #endif
 
 union positionPtr {
-	Coordinate coord;
+	IDnum coord;
 	IDnum nodeID;
-};
+}  ATTRIBUTE_PACKED;
 
 struct annotation_st {
-	Coordinate position;	// 32
+	ShortLength position;	// 32
 	union positionPtr start;	// 32
 	union positionPtr finish;	// 32
-	Coordinate length;	// 32
+	ShortLength length;	// 32
 	IDnum sequenceID;	// 32
-};
+}  ATTRIBUTE_PACKED;
 
 struct roadmap_st {
-	IDnum annotationCount;
-};
+	ShortLength annotationCount;
+}  ATTRIBUTE_PACKED;
 
 // Creates empty RoadMap
 RoadMap *newRoadMap()

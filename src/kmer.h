@@ -68,6 +68,6 @@ struct kmer_st {
 #if KMER_CHARS
 	uint8_t chars;
 #endif
-};
+}  ATTRIBUTE_PACKED;
 
 #endif 

@@ -59,8 +59,8 @@ static int SELF_LOOP_CUTOFF;
 static Graph *graph;
 static Node *start;
 
-static PassageMarker *fastPath;
-static PassageMarker *slowPath;
+static PassageMarkerI fastPath;
+static PassageMarkerI slowPath;
 
 static double **Fmatrix;
 //End of global variables;
@@ -113,9 +113,9 @@ static boolean isPreviousToNode(Node * previous, Node * target)
 }
 
 static boolean
-extractSequence(PassageMarker * path, TightString * sequence)
+extractSequence(PassageMarkerI path, TightString * sequence)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Coordinate seqLength = 0;
 	Coordinate writeIndex = 0;
 
@@ -201,9 +201,9 @@ compareSequences(TightString * sequence1, TightString * sequence2)
 
 static void destroyPaths()
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
-	while (slowPath != NULL) {
+	while (slowPath != NULL_IDX) {
 		marker = slowPath;
 		getNodeTime(getNode(marker));
 		getNodeTime(getTwinNode(getNode(marker)));
@@ -212,7 +212,7 @@ static void destroyPaths()
 		destroyPassageMarker(marker);
 	}
 
-	while (fastPath != NULL) {
+	while (fastPath != NULL_IDX) {
 		marker = fastPath;
 		getNodeTime(getNode(marker));
 		getNodeTime(getTwinNode(getNode(marker)));
@@ -223,7 +223,7 @@ static void destroyPaths()
 
 static void cleanUpRedundancy_local()
 {
-	PassageMarker *current;
+	PassageMarkerI current;
 
 	for (current = getNextInSequence(slowPath); !isTerminal(current);
 	     current = getNextInSequence(current))
@@ -237,7 +237,7 @@ static void comparePaths_local(Node * destination, Node * origin)
 	IDnum slowLength, fastLength;
 	Node *fastNode, *slowNode;
 	IDnum i;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	//Measure lengths
 	slowLength = fastLength = 0;

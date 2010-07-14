@@ -47,13 +47,13 @@ struct connection_st {
 	double variance;
 	IDnum direct_count;
 	IDnum paired_count;
-};
+}  ATTRIBUTE_PACKED;
 
 struct readOccurence_st {
-	Coordinate position;
-	Coordinate offset;
+	IDnum position;
+	IDnum offset;
 	IDnum nodeID;
-};
+}  ATTRIBUTE_PACKED;
 
 // Global params
 static IDnum UNRELIABLE_CONNECTION_CUTOFF = 5;
@@ -227,9 +227,9 @@ static IDnum *computeReadToNodeCounts()
 	IDnum maxNodeIndex = 2 * nodeCount(graph) + 1;
 	IDnum maxReadIndex = sequenceCount(graph) + 1;
 	IDnum *readNodeCounts = callocOrExit(maxReadIndex, IDnum);
-	boolean *readMarker = callocOrExit(maxReadIndex, boolean);
+	boolean *readMarker = callocOrExit(maxReadIndex, boolean); /* SF TODO this could be a bit field */
 	ShortReadMarker *nodeArray, *shortMarker;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Node *node;
 	IDnum nodeReadCount;
 
@@ -252,7 +252,7 @@ static IDnum *computeReadToNodeCounts()
 		}
 
 		// Long reads
-		for (marker = getMarker(node); marker != NULL;
+		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
 			readIndex = getPassageMarkerSequenceID(marker);
 			if (readIndex < 0)
@@ -266,7 +266,7 @@ static IDnum *computeReadToNodeCounts()
 		}
 
 		// Clean up marker array
-		for (marker = getMarker(node); marker != NULL;
+		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
 			readIndex = getPassageMarkerSequenceID(marker);
 			if (readIndex > 0)
@@ -309,7 +309,7 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 	Node *node = getNodeInGraph(graph, nodeID);
 	ShortReadMarker *nodeArray = getNodeReads(node, graph);
 	IDnum nodeReadCount = getNodeReadCount(node, graph);
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	for (index = 0; index < nodeReadCount; index++) {
 		shortMarker = getShortReadMarkerAtIndex(nodeArray, index);
@@ -324,7 +324,7 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 		readNodeCounts[readIndex]++;
 	}
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		readIndex = getPassageMarkerSequenceID(marker);
 		if (readIndex <= 0 || reads->categories[readIndex - 1] == REFERENCE)
@@ -349,7 +349,7 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 		}
 	}
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		readIndex = getPassageMarkerSequenceID(marker);
 		if (readIndex > 0)
@@ -364,7 +364,7 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts, ReadSet
 	ReadOccurence **readNodes =
 	    allocateReadToNodeTables(readNodeCounts);
 	boolean *readMarker =
-	    callocOrExit(sequenceCount(graph) + 1, boolean);
+	    callocOrExit(sequenceCount(graph) + 1, boolean); /* SF TODO This could be a bit field */
 
 	puts("Computing read to node mappings");
 
@@ -384,7 +384,7 @@ static boolean * countCoOccurences(IDnum * coOccurencesCount, ReadOccurence ** r
 	IDnum readNodeCount;
 	IDnum readOccurenceIndex, readPairOccurenceIndex;
 	ReadOccurence * readOccurence, *readPairOccurence;
-	boolean * interestingReads = callocOrExit(sequenceCount(graph), boolean);
+	boolean * interestingReads = callocOrExit(sequenceCount(graph), boolean); /* SF TODO This could be a bit field */
 	Category libID;
 
 	for (libID = 0; libID < CATEGORIES + 1; libID++)
@@ -550,7 +550,7 @@ static void estimateLibraryInsertLengths(Coordinate ** coOccurences, IDnum * coO
 }
 
 static void estimateMissingInsertLengths(ReadOccurence ** readNodes, IDnum * readNodeCounts, IDnum * readPairs, Category * cats) {
-	Coordinate * coOccurences[CATEGORIES + 1];
+	Coordinate * coOccurences[CATEGORIES + 1]; /* SF TODO This could probably be done with IDnum */
 	IDnum coOccurencesCounts[CATEGORIES + 1]; 
 	Category libID;
 
@@ -559,7 +559,7 @@ static void estimateMissingInsertLengths(ReadOccurence ** readNodes, IDnum * rea
 	boolean * interestingReads = countCoOccurences(coOccurencesCounts, readNodes, readNodeCounts, readPairs, cats);
 
 	for (libID = 0; libID < CATEGORIES + 1; libID++)
-		coOccurences[libID] = callocOrExit(coOccurencesCounts[libID], Coordinate);
+		coOccurences[libID] = callocOrExit(coOccurencesCounts[libID], Coordinate); /* SF TODO This could probably be done with IDnum */
 
 	measureCoOccurences(coOccurences, interestingReads, readNodes, readNodeCounts, readPairs, cats);
 	estimateLibraryInsertLengths(coOccurences, coOccurencesCounts);
@@ -825,7 +825,7 @@ static void projectFromShortRead(Node * node,
 				 IDnum * readPairs, Category * cats,
 				 ReadOccurence ** readNodes,
 				 IDnum * readNodeCounts,
-				 Coordinate * lengths)
+				 IDnum * lengths)
 {
 	IDnum index;
 	IDnum readIndex = getShortReadMarkerID(shortMarker);
@@ -865,11 +865,11 @@ static void projectFromShortRead(Node * node,
 
 }
 
-static void projectFromLongRead(Node * node, PassageMarker * marker,
+static void projectFromLongRead(Node * node, PassageMarkerI marker,
 				IDnum * readPairs, Category * cats,
 				ReadOccurence ** readNodes,
 				IDnum * readNodeCounts,
-				Coordinate * lengths)
+				IDnum * lengths)
 {
 	IDnum index;
 	IDnum readIndex = getPassageMarkerSequenceID(marker);
@@ -914,11 +914,11 @@ static void projectFromNode(IDnum nodeID,
 			    ReadOccurence ** readNodes,
 			    IDnum * readNodeCounts,
 			    IDnum * readPairs, Category * cats,
-			    boolean * dubious, Coordinate * lengths)
+			    boolean * dubious, IDnum * lengths)
 {
 	IDnum index;
 	ShortReadMarker *nodeArray, *shortMarker;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Node *node;
 	IDnum nodeReadCount;
 
@@ -937,7 +937,7 @@ static void projectFromNode(IDnum nodeID,
 				     readNodes, readNodeCounts, lengths);
 	}
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		if (getPassageMarkerSequenceID(marker) > 0)
 			projectFromLongRead(node, marker, readPairs, cats,
@@ -951,7 +951,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 					      IDnum * readPairs,
 					      Category * cats,
 					      boolean * dubious,
-					      Coordinate * lengths)
+					      IDnum * lengths)
 {
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
@@ -1098,7 +1098,7 @@ void buildScaffold(Graph * argGraph, ReadSet * reads, boolean * dubious) {
 	Category *cats;
 	IDnum *readNodeCounts;
 	ReadOccurence **readNodes;
-	Coordinate *lengths =
+	IDnum *lengths =
 	    getSequenceLengths(reads, getWordLength(argGraph));
 	IDnum index;
 
