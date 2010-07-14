@@ -1232,9 +1232,9 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 					if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 						if (refCoord->positive_strand)
-							fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) previous_pos - refCoord->start);
+							fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 						else 
-							fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) refCoord->finish - previous_pos - strlen(previous_seq));
+							fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 					} 
 				}
 
@@ -1272,9 +1272,9 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 		if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 			if (refCoord->positive_strand)
-				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) previous_pos - refCoord->start);
+				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 			else 
-				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) refCoord->finish - previous_pos - strlen(previous_seq));
+				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 		}
 	}
 
@@ -1450,9 +1450,9 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 				if ((refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 					if (refCoord->positive_strand)
-						fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) previous_pos - refCoord->start);
+						fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 					else 
-						fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) refCoord->finish - previous_pos - strlen(previous_seq));
+						fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 				}
 			}
 
@@ -1490,9 +1490,9 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 		if ((refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 			if (refCoord->positive_strand)
-				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) previous_pos - refCoord->start);
+				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 			else 
-				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) refCoord->finish - previous_pos - strlen(previous_seq));
+				fprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 		}
 	}
 
