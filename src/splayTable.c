@@ -216,7 +216,6 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
-		destroyTightString(tString);
 		return;
 	}
 
@@ -362,7 +361,6 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 			(long long) start, (long long) finish);
 	}
 
-	destroyTightString(tString);
 	return;
 }
 
@@ -536,7 +534,6 @@ void inputReferenceIntoSplayTable(TightString * tString,
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
-		destroyTightString(tString);
 		return;
 	}
 
@@ -585,7 +582,6 @@ void inputReferenceIntoSplayTable(TightString * tString,
 		kmerIndex++;
 	}
 
-	destroyTightString(tString);
 	return;
 }
 
@@ -595,8 +591,11 @@ static Coordinate countReferenceKmers(ReadSet * reads, int wordLength) {
 	
 
 	for (readIndex = 0; readIndex < reads->readCount && reads->categories[readIndex] == REFERENCE; readIndex++)	
-		if (getLength(reads->tSequences[readIndex]) >= wordLength)
-			length += getLength(reads->tSequences[readIndex]) - wordLength + 1;	
+	{
+		Coordinate tmpLength = getLength(getTightStringInArray(reads->tSequences, readIndex));
+		if (tmpLength >= wordLength)
+			length += tmpLength - wordLength + 1;
+	}
 
 	return length;
 }
@@ -607,7 +606,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 {
 	IDnum index;
 	IDnum sequenceCount = reads->readCount;
-	TightString **array;
+	TightString *array;
 	FILE *outfile = fopen(filename, "w");
 	FILE *seqFile = NULL;
 	IDnum kmerCount;
@@ -675,10 +674,10 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		// Hashing the reads
 		if (reads->categories[index] == REFERENCE)
 			// Reference reads
-			inputReferenceIntoSplayTable(array[index], table, outfile);
+			inputReferenceIntoSplayTable(getTightStringInArray(array, index), table, outfile);
 		else
 			// Normal reads
-			inputSequenceIntoSplayTable(array[index], table, outfile, seqFile, second_in_pair);
+			inputSequenceIntoSplayTable(getTightStringInArray(array, index), table, outfile, seqFile, second_in_pair);
 
 		if (reads->categories[index] % 2) 
 			second_in_pair = (second_in_pair? false : true);

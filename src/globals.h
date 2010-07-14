@@ -30,6 +30,12 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define false 0
 #endif
 
+#ifdef __GNUC__
+#define ATTRIBUTE_PACKED  __attribute__ ((packed))
+#else
+#define ATTRIBUTE_PACKED
+#endif
+
 #define VERSION_NUMBER 1
 #define RELEASE_NUMBER 0
 #define UPDATE_NUMBER 06 
@@ -39,6 +45,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define LONG 2 * CATEGORIES
 #define LONG_PAIRED 2 * CATEGORIES + 1
 #define REFERENCE 2 * CATEGORIES + 2
+
+/* NULL value for ArrayIdx */
+#define NULL_IDX 0
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #define inline __inline
@@ -77,6 +86,7 @@ typedef double Time;
 typedef uint8_t Quality;
 typedef double Probability;
 typedef int8_t Category;
+typedef uint32_t ArrayIdx;
 
 // Atomic word
 typedef struct kmer_st Kmer;
@@ -103,7 +113,7 @@ typedef struct insertionMarker_st InsertionMarker;
 
 // Pre-Graph elements
 typedef struct preMarker_st PreMarker;
-typedef struct preArc_st PreArc;
+typedef ArrayIdx PreArcI;
 typedef struct preNode_st PreNode;
 typedef struct preGraph_st PreGraph;
 
@@ -112,7 +122,7 @@ typedef struct arc_st Arc;
 typedef struct node_st Node;
 typedef struct graph_st Graph;
 typedef struct shortReadMarker_st ShortReadMarker;
-typedef struct passage_st PassageMarker;
+typedef ArrayIdx PassageMarkerI;
 typedef struct passageList_st PassageMarkerList;
 typedef struct readStart_st ReadStart;
 typedef struct gapMarker_st GapMarker;

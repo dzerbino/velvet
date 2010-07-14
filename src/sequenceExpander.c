@@ -25,7 +25,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "tightString.h"
 #include "passageMarker.h"
 
-static TightString *readPositivePassageMarker(PassageMarker * marker,
+static TightString *readPositivePassageMarker(PassageMarkerI marker,
 					      TightString ** seqs,
 					      int WORDLENGTH)
 {
@@ -45,7 +45,7 @@ static TightString *readPositivePassageMarker(PassageMarker * marker,
 	return res;
 }
 
-static TightString *readNegativePassageMarker(PassageMarker * marker,
+static TightString *readNegativePassageMarker(PassageMarkerI marker,
 					      TightString ** seqs)
 {
 	Coordinate index;
@@ -68,7 +68,7 @@ static TightString *readNegativePassageMarker(PassageMarker * marker,
 	return res;
 }
 
-TightString *expandPassageMarker(PassageMarker * marker,
+TightString *expandPassageMarker(PassageMarkerI marker,
 				 TightString ** sequences, int WORDLENGTH)
 {
 	if (getPassageMarkerSequenceID(marker) > 0)

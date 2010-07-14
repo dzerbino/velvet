@@ -34,10 +34,10 @@ Copyright 2010 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 // Internal structure used to mark the ends of an Annotation
 struct kmerOccurence_st {
-	Kmer kmer;
-	Coordinate position;
+	IDnum position;
 	IDnum nodeID;
-};
+	Kmer kmer;
+} ATTRIBUTE_PACKED;
 
 struct kmerOccurenceTable_st {
 	KmerOccurence *kmerTable;

@@ -42,45 +42,45 @@ struct arc_st {
 	Arc *nextInLookupTable;	// 64
 	Node *destination;	// 64
 	IDnum multiplicity;	// 32
-};				// 352 Total
+}  ATTRIBUTE_PACKED;	// 352 Total
 
 struct node_st {
 	Node *twinNode;		// 64
 	Arc *arc;		// 64
 	Descriptor *descriptor;	// 64
-	PassageMarker *marker;	// 64
-	Coordinate length;	// 32
-	Coordinate virtualCoverage[CATEGORIES];	// 32 * 2
-	Coordinate originalVirtualCoverage[CATEGORIES];	// 32 * 2
+	PassageMarkerI marker;	// 32
+	IDnum length;	// 32
+	IDnum virtualCoverage[CATEGORIES];	// 32 * 2
+	IDnum originalVirtualCoverage[CATEGORIES];	// 32 * 2
 	IDnum ID;		// 32
 	IDnum arcCount;		// 32
 	boolean status;		// 1
 	boolean uniqueness;	// 1
-};				// 418 Total
+} ATTRIBUTE_PACKED;	// 418 Total
 
 struct shortReadMarker_st {
-	Coordinate position;
+	IDnum position;
 	IDnum readID;
 	ShortLength offset;
-};
+} ATTRIBUTE_PACKED;
 
 struct gapMarker_st {
 	GapMarker *next;
-	Coordinate position;
-	Coordinate length;
-};
+	IDnum position;
+	IDnum length;
+} ATTRIBUTE_PACKED;
 
 struct graph_st {
-	IDnum sequenceCount;
-	IDnum nodeCount;
 	Node **nodes;
 	Arc **arcLookupTable;
 	ShortReadMarker **nodeReads;
 	IDnum *nodeReadCounts;
+	GapMarker **gapMarkers;
 	Coordinate insertLengths[CATEGORIES + 1];
 	double insertLengths_var[CATEGORIES + 1];
+	IDnum sequenceCount;
+	IDnum nodeCount;
 	int wordLength;
-	GapMarker **gapMarkers;
 };
 
 static RecycleBin *arcMemory = NULL;
@@ -123,7 +123,7 @@ Node *getTwinNode(Node * node)
 }
 
 // Inserts new passage marker in the marker list of destination node
-void insertPassageMarker(PassageMarker * marker, Node * destination)
+void insertPassageMarker(PassageMarkerI marker, Node * destination)
 {
 	setTopOfTheNode(marker);
 	setNextInNode(marker, destination->marker);
@@ -481,7 +481,7 @@ void destroyNode(Node * node, Graph * graph)
 	free(twin->descriptor);
 
 	// Passage markers
-	while (node->marker != NULL)
+	while (node->marker != NULL_IDX)
 		destroyPassageMarker(node->marker);
 
 	// Reads starts
@@ -622,19 +622,19 @@ void displayGraph(Graph * graph)
 	}
 }
 
-PassageMarker *getMarker(Node * node)
+PassageMarkerI getMarker(Node * node)
 {
 	return node->marker;
 }
 
-void setMarker(Node * node, PassageMarker * marker)
+void setMarker(Node * node, PassageMarkerI marker)
 {
 	if (node == NULL)
 		return;
 
-	if (marker == NULL) {
-		node->marker = NULL;
-		node->twinNode->marker = NULL;
+	if (marker == NULL_IDX) {
+		node->marker = NULL_IDX;
+		node->twinNode->marker = NULL_IDX;
 		return;
 	}
 
@@ -689,14 +689,14 @@ void resetPassageMarkersStatus(Graph * graph)
 {
 	IDnum nodeIndex;
 	Node *node;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
 		node = graph->nodes[nodeIndex];
 		if (node == NULL)
 			continue;
 
-		for (marker = node->marker; marker != NULL;
+		for (marker = node->marker; marker != NULL_IDX;
 		     marker = getNextInNode(marker))
 			setPassageMarkerStatus(marker, false);
 	}
@@ -751,9 +751,9 @@ Node *getDestination(Arc * arc)
 IDnum markerCount(Node * node)
 {
 	IDnum count = 0;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		count++;
 
@@ -1106,8 +1106,8 @@ static void copyDownSequence(Descriptor ** writePtr, int *writeOffset,
 
 static Descriptor *appendSequenceToDescriptor(Descriptor * descr,
 					      Coordinate nodeLength,
-					      PassageMarker * marker,
-					      TightString ** sequences,
+					      PassageMarkerI marker,
+					      TightString *sequences,
 					      int WORDLENGTH,
 					      size_t arrayLength,
 					      boolean downStream)
@@ -1121,9 +1121,9 @@ static Descriptor *appendSequenceToDescriptor(Descriptor * descr,
 	Coordinate finish = getPassageMarkerFinish(marker);
 
 	if (sequenceID > 0)
-		sequence = sequences[sequenceID - 1];
+		sequence = getTightStringInArray(sequences, sequenceID - 1);
 	else
-		sequence = sequences[-sequenceID - 1];
+		sequence = getTightStringInArray(sequences, -sequenceID - 1);
 
 	if (downStream)
 		copyDownDescriptor(&writePtr, &writeOffset, descr,
@@ -1146,8 +1146,8 @@ static Descriptor *appendSequenceToDescriptor(Descriptor * descr,
 	return new;
 }
 
-void appendSequence(Node * node, TightString ** reads,
-		    PassageMarker * guide, Graph * graph)
+void appendSequence(Node * node, TightString * reads,
+		    PassageMarkerI guide, Graph * graph)
 {
 	Descriptor *descr;
 	Descriptor *twinDescr;
@@ -1369,14 +1369,14 @@ void checkPassageMarkersStatus(Graph * graph)
 {
 	IDnum nodeIndex;
 	Node *node;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
 		node = graph->nodes[nodeIndex];
 		if (node == NULL)
 			continue;
 
-		for (marker = node->marker; marker != NULL;
+		for (marker = node->marker; marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
 			if (getPassageMarkerStatus(marker)) {
 				printf("TRUE marker %s\n",
@@ -1387,7 +1387,7 @@ void checkPassageMarkersStatus(Graph * graph)
 				exit(-1);
 			}
 
-			if (getNextInSequence(marker) != NULL
+			if (getNextInSequence(marker) != NULL_IDX
 			    && getArcBetweenNodes(node,
 						  getNode(getNextInSequence
 							  (marker)),
@@ -1401,7 +1401,7 @@ void checkPassageMarkersStatus(Graph * graph)
 				     getPassageMarkerSequenceID(marker));
 				abort();
 			}
-			if (getPreviousInSequence(marker) != NULL
+			if (getPreviousInSequence(marker) != NULL_IDX
 			    &&
 			    getArcBetweenNodes(getNode
 					       (getPreviousInSequence
@@ -1425,7 +1425,7 @@ void reassessArcMultiplicities(Graph * graph)
 	IDnum index;
 	Node *node, *twin;
 	Arc *arc;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	for (index = 1; index <= graph->nodeCount; index++) {
 		node = getNodeInGraph(graph, index);
@@ -1449,7 +1449,7 @@ void reassessArcMultiplicities(Graph * graph)
 
 		twin = getTwinNode(node);
 
-		for (marker = getMarker(node); marker != NULL;
+		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
 			if (getPassageMarkerSequenceID(marker) > 0
 			    && !isTerminal(marker)) {
@@ -1492,12 +1492,12 @@ Graph *emptyGraph(IDnum sequenceCount, int wordLength)
 static Descriptor *newPositiveDescriptor(IDnum sequenceID,
 					 Coordinate start,
 					 Coordinate finish,
-					 TightString ** sequences,
+					 TightString *sequences,
 					 int WORDLENGTH)
 {
 	Coordinate index;
 	Nucleotide nucleotide;
-	TightString *tString = sequences[sequenceID - 1];
+	TightString *tString = getTightStringInArray (sequences, sequenceID - 1);
 	Coordinate length = finish - start;
 	Descriptor *res;
 	size_t arrayLength = length / 4;
@@ -1520,12 +1520,12 @@ static Descriptor *newPositiveDescriptor(IDnum sequenceID,
 static Descriptor *newNegativeDescriptor(IDnum sequenceID,
 					 Coordinate start,
 					 Coordinate finish,
-					 TightString ** sequences,
+					 TightString *sequences,
 					 int WORDLENGTH)
 {
 	Coordinate index;
 	Nucleotide nucleotide;
-	TightString *tString = sequences[-sequenceID - 1];
+	TightString *tString = getTightStringInArray (sequences, -sequenceID - 1);
 	Coordinate length = start - finish;
 	Descriptor *res;
 	size_t arrayLength = length / 4;
@@ -1550,7 +1550,7 @@ static Descriptor *newNegativeDescriptor(IDnum sequenceID,
 
 static Descriptor *newDescriptor(IDnum sequenceID, Coordinate start,
 				 Coordinate finish,
-				 TightString ** sequences, int WORDLENGTH)
+				 TightString * sequences, int WORDLENGTH)
 {
 	if (sequenceID > 0)
 		return newPositiveDescriptor(sequenceID, start, finish,
@@ -1563,7 +1563,7 @@ static Descriptor *newDescriptor(IDnum sequenceID, Coordinate start,
 // Constructor
 // Memory allocated
 Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
-	      Coordinate offset, IDnum ID, TightString ** sequences,
+	      Coordinate offset, IDnum ID, TightString * sequences,
 	      int WORDLENGTH)
 {
 	Node *newnd = allocateNode();
@@ -1576,7 +1576,7 @@ Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
 			  sequences, WORDLENGTH);
 	newnd->arc = NULL;
 	newnd->arcCount = 0;
-	newnd->marker = NULL;
+	newnd->marker = NULL_IDX;
 	newnd->status = false;
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		newnd->virtualCoverage[cat] = 0;
@@ -1589,7 +1589,7 @@ Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
 			  start + offset - 1, sequences, WORDLENGTH);
 	antiNode->arc = NULL;
 	antiNode->arcCount = 0;
-	antiNode->marker = NULL;
+	antiNode->marker = NULL_IDX;
 	antiNode->status = false;
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		antiNode->virtualCoverage[cat] = 0;
@@ -1642,7 +1642,7 @@ Node *emptyNode()
 	newnd->descriptor = NULL;
 	newnd->arc = NULL;
 	newnd->arcCount = 0;
-	newnd->marker = NULL;
+	newnd->marker = NULL_IDX;
 	newnd->length = 0;
 	newnd->uniqueness = false;
 	for (cat = 0; cat < CATEGORIES; cat++) {
@@ -1654,7 +1654,7 @@ Node *emptyNode()
 	antiNode->descriptor = NULL;
 	antiNode->arc = NULL;
 	antiNode->arcCount = 0;
-	antiNode->marker = NULL;
+	antiNode->marker = NULL_IDX;
 	antiNode->length = 0;
 	antiNode->uniqueness = false;
 	for (cat = 0; cat < CATEGORIES; cat++) {
@@ -2119,13 +2119,13 @@ void sortGapMarkers(Graph * graph)
 	}
 }
 
-void exportGraph(char *filename, Graph * graph, TightString ** sequences)
+void exportGraph(char *filename, Graph * graph, TightString * sequences)
 {
 	IDnum index;
 	FILE *outfile;
 	Node *node;
 	Arc *arc;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	ShortReadMarker *reads;
 	IDnum readCount, readIndex;
 
@@ -2171,7 +2171,7 @@ void exportGraph(char *filename, Graph * graph, TightString ** sequences)
 		node = getNodeInGraph(graph, index);
 		if (node == NULL)
 			continue;
-		for (marker = node->marker; marker != NULL;
+		for (marker = node->marker; marker != NULL_IDX;
 		     marker = getNextInNode(marker))
 			exportMarker(outfile, marker, sequences,
 				     graph->wordLength);
@@ -2211,7 +2211,7 @@ Graph *importGraph(char *filename)
 	Node *node, *twin;
 	Arc *arc;
 	IDnum originID, destinationID, multiplicity;
-	PassageMarker *newMarker, *marker;
+	PassageMarkerI newMarker, marker;
 	IDnum nodeID, seqID;
 	Coordinate index;
 	Coordinate start, finish;
@@ -2352,7 +2352,7 @@ Graph *importGraph(char *filename)
 	while (!finished && line[0] != 'N') {
 		sscanf(line, "SEQ\t%ld\n", &long_var);
 		seqID = (IDnum) long_var;
-		marker = NULL;
+		marker = NULL_IDX;
 		if (!fgets(line, maxline, file))
 			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 
@@ -2435,7 +2435,7 @@ Graph *importSimplifiedGraph(char *filename)
 	Coordinate coverage, originalCoverage;
 	IDnum nodeCounter, sequenceCount;
 	Node *node, *twin;
-	PassageMarker *newMarker, *marker;
+	PassageMarkerI newMarker, marker;
 	IDnum nodeID, seqID;
 	Coordinate index;
 	Coordinate start, finish;
@@ -2576,7 +2576,7 @@ Graph *importSimplifiedGraph(char *filename)
 	while (!finished && line[0] != 'N') {
 		sscanf(line, "SEQ\t%ld\n", &long_var);
 		seqID = (IDnum) long_var;
-		marker = NULL;
+		marker = NULL_IDX;
 		if (!fgets(line, maxline, file))
 			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
 
@@ -3247,8 +3247,8 @@ ShortReadMarker *commonNodeReads(Node * nodeA, Node * nodeB, Graph * graph,
 ShortReadMarker *extractFrontOfNodeReads(Node * node,
 					 Coordinate breakpoint,
 					 Graph * graph, IDnum * length,
-					 PassageMarker * sourceMarker,
-					 Coordinate * lengths)
+					 PassageMarkerI sourceMarker,
+					 IDnum * lengths)
 {
 	IDnum sourceID;
 	IDnum mergeLength, newLength, sourceLength;
@@ -3382,8 +3382,8 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 
 ShortReadMarker *extractBackOfNodeReads(Node * node, Coordinate breakpoint,
 					Graph * graph, IDnum * length,
-					PassageMarker * sourceMarker,
-					Coordinate * lengths)
+					PassageMarkerI sourceMarker,
+					IDnum * lengths)
 {
 	IDnum sourceID;
 	IDnum mergeLength, newLength, sourceLength;

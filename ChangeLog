@@ -284,3 +284,4 @@ V 1.0.06
 - gnu99 compilation warnings
 - Raw(.gz) read parsers
 - Crashing bug at specific MAXKMERLENGTH/kmer combinations
+- Memory optimisation by Sylvain Foret

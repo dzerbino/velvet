@@ -21,6 +21,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _SEQUENCEEXPANDER_H_
 #define _SEQUENCEEXPANDER_H_
 
-TightString *expandPassageMarker(PassageMarker * marker,
+TightString *expandPassageMarker(PassageMarkerI marker,
 				 TightString ** sequences, int WORDLENGTH);
 #endif

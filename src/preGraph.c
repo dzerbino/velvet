@@ -24,6 +24,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <ctype.h>
 
 #include "globals.h"
+#include "allocArray.h"
 #include "preGraph.h"
 #include "recycleBin.h"
 #include "tightString.h"
@@ -38,55 +39,56 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 struct preMarker_st {
 	PreMarker * previous;
 	PreMarker * next;
-	Coordinate referenceStart;
-	Coordinate preNodeStart;
-	Coordinate length;
+	IDnum referenceStart;
+	IDnum preNodeStart;
+	IDnum length;
 	IDnum referenceID;
-	IDnum preNodeID;
-};
+	IDnum preNodeID; /* SF TODO only the sign seems to matter. Could replace with char or bit field */
+} ATTRIBUTE_PACKED;
+
+typedef struct preArc_st PreArc;
 
 struct preArc_st {
-	PreArc *nextLeft;
-	PreArc *nextRight;
+	PreArcI nextLeft; /* Index of the previous PreArc */
+	PreArcI nextRight; /* Index of the next PreArc */
 	IDnum multiplicity;
 	IDnum preNodeIDLeft;
 	IDnum preNodeIDRight;
-};
+} ATTRIBUTE_PACKED;
 
 struct preNode_st {
-	PreArc *preArcLeft;
-	PreArc *preArcRight;
+	PreArcI preArcLeft;
+	PreArcI preArcRight;
 	Descriptor *descriptor;
-	Coordinate length;
-};
+	IDnum length;
+}  ATTRIBUTE_PACKED;
 
 struct preGraph_st {
 	PreNode *preNodes;
+	IDnum * nodeReferenceMarkerCounts;
+	PreMarker ** nodeReferenceMarkers;
+	PreMarker ** referenceStarts;
 	IDnum sequenceCount;
 	IDnum referenceCount;
 	IDnum preNodeCount;
 	int wordLength;
 	boolean double_strand;
-	IDnum * nodeReferenceMarkerCounts;
-	PreMarker ** nodeReferenceMarkers;
-	PreMarker ** referenceStarts;
 };
 
-static RecycleBin *preArcMemory = NULL;
+static AllocArray *preArcMemory = NULL;
+DECLARE_FAST_ACCESSORS (PREARC, PreArc, preArcMemory)
 
-#define BLOCKSIZE 10000
-
-PreArc *allocatePreArc_pg()
+PreArcI allocatePreArc_pg()
 {
 	if (preArcMemory == NULL)
-		preArcMemory = newRecycleBin(sizeof(PreArc), BLOCKSIZE);
+		preArcMemory = newAllocArray(sizeof(PreArc), "PreArc");
 
-	return allocatePointer(preArcMemory);
+	return allocArrayAllocate (preArcMemory);
 }
 
-void deallocatePreArc_pg(PreArc * preArc)
+void deallocatePreArc_pg(PreArcI preArc)
 {
-	deallocatePointer(preArcMemory, preArc);
+	allocArrayFree (preArcMemory, preArc);
 }
 
 // Returns the length of the preNode's descriptor list
@@ -112,18 +114,18 @@ IDnum sequenceCount_pg(PreGraph * preGraph)
 	return preGraph->sequenceCount;
 }
 
-PreArc *getPreArcBetweenPreNodes_pg(IDnum originPreNodeID,
+PreArcI getPreArcBetweenPreNodes_pg(IDnum originPreNodeID,
 				    IDnum destinationPreNodeID,
 				    PreGraph * preGraph)
 {
-	PreArc *preArc;
+	PreArcI preArc;
 
 	if (originPreNodeID == 0 || destinationPreNodeID == 0) {
-		return NULL;
+		return NULL_IDX;
 	}
 
 	for (preArc = getPreArc_pg(originPreNodeID, preGraph);
-	     preArc != NULL;
+	     preArc != NULL_IDX;
 	     preArc = getNextPreArc_pg(preArc, originPreNodeID)) {
 		if (getDestination_pg(preArc, originPreNodeID) ==
 		    destinationPreNodeID) {
@@ -131,15 +133,16 @@ PreArc *getPreArcBetweenPreNodes_pg(IDnum originPreNodeID,
 		}
 	}
 
-	return NULL;
+	return NULL_IDX;
 }
 
-static void addPreArcToPreNode_pg(PreArc * preArc, IDnum preNodeID,
+static void addPreArcToPreNode_pg(PreArcI preArc, IDnum preNodeID,
 				  PreGraph * preGraph)
 {
 	IDnum ID = preNodeID;
 	PreNode *preNode;
-	PreArc **preArcPtr;
+	PreArcI *preArcPtr;
+	PreArc *preArcVal;
 
 	if (ID < 0)
 		ID = -ID;
@@ -151,47 +154,50 @@ static void addPreArcToPreNode_pg(PreArc * preArc, IDnum preNodeID,
 	else
 		preArcPtr = &(preNode->preArcLeft);
 
-	if (preNodeID == preArc->preNodeIDLeft) {
-		preArc->nextLeft = *preArcPtr;
+	preArcVal = PREARC_I2P (preArc);
+	if (preNodeID == preArcVal->preNodeIDLeft) {
+		preArcVal->nextLeft = *preArcPtr;
 		*preArcPtr = preArc;
 	}
 
-	if (preNodeID == preArc->preNodeIDRight) {
-		preArc->nextRight = *preArcPtr;
+	if (preNodeID == preArcVal->preNodeIDRight) {
+		preArcVal->nextRight = *preArcPtr;
 		*preArcPtr = preArc;
 	}
 }
 
 // Creates an preArc from preNode origin to preNode destination.
 // If this preArc already exists, increments its multiplicity by 1.
-PreArc *createPreArc_pg(IDnum originPreNodeID, IDnum destinationPreNodeID,
+PreArcI createPreArc_pg(IDnum originPreNodeID, IDnum destinationPreNodeID,
 			PreGraph * preGraph)
 {
-	PreArc *preArc;
+	PreArcI preArc;
+	PreArc *preArcVal;
 
 
 	if (originPreNodeID == 0 || destinationPreNodeID == 0)
-		return NULL;
+		return NULL_IDX;
 
 	preArc =
 	    getPreArcBetweenPreNodes_pg(originPreNodeID,
 					destinationPreNodeID, preGraph);
 
-	if (preArc != NULL) {
-		preArc->multiplicity++;
+	if (preArc != NULL_IDX) {
+		PREARC_FI2P (preArc)->multiplicity++;
 		return preArc;
 	}
 	// If not found
 	preArc = allocatePreArc_pg();
-	preArc->preNodeIDLeft = originPreNodeID;
-	preArc->preNodeIDRight = -destinationPreNodeID;
-	preArc->multiplicity = 1;
+	preArcVal = PREARC_FI2P (preArc);
+	preArcVal->preNodeIDLeft = originPreNodeID;
+	preArcVal->preNodeIDRight = -destinationPreNodeID;
+	preArcVal->multiplicity = 1;
 
 	addPreArcToPreNode_pg(preArc, originPreNodeID, preGraph);
 
 	// Hairpin case
 	if (destinationPreNodeID == -originPreNodeID) {
-		preArc->multiplicity++;
+		preArcVal->multiplicity++;
 		return preArc;
 	}
 
@@ -202,9 +208,10 @@ PreArc *createPreArc_pg(IDnum originPreNodeID, IDnum destinationPreNodeID,
 
 void createAnalogousPreArc_pg(IDnum originPreNodeID,
 			      IDnum destinationPreNodeID,
-			      PreArc * refPreArc, PreGraph * preGraph)
+			      PreArcI refPreArc, PreGraph * preGraph)
 {
-	PreArc *preArc;
+	PreArcI preArc;
+	PreArc *preArcVal;
 
 	if (originPreNodeID == 0 || destinationPreNodeID == 0)
 		return;
@@ -213,50 +220,54 @@ void createAnalogousPreArc_pg(IDnum originPreNodeID,
 	    getPreArcBetweenPreNodes_pg(originPreNodeID,
 					destinationPreNodeID, preGraph);
 
-	if (preArc != NULL) {
-		preArc->multiplicity += refPreArc->multiplicity;
+	if (preArc != NULL_IDX) {
+		PREARC_FI2P (preArc)->multiplicity += PREARC_FI2P (refPreArc)->multiplicity;
 		return;
 	}
 	// If not found
 	preArc = allocatePreArc_pg();
-	preArc->preNodeIDLeft = originPreNodeID;
-	preArc->preNodeIDRight = -destinationPreNodeID;
-	preArc->multiplicity = refPreArc->multiplicity;
+	preArcVal = PREARC_FI2P (preArc);
+	preArcVal->preNodeIDLeft = originPreNodeID;
+	preArcVal->preNodeIDRight = -destinationPreNodeID;
+	preArcVal->multiplicity = PREARC_FI2P (refPreArc)->multiplicity;
 
 	addPreArcToPreNode_pg(preArc, originPreNodeID, preGraph);
 
 	// Hairpin case
 	if (destinationPreNodeID == -originPreNodeID) {
-		preArc->multiplicity++;
+		preArcVal->multiplicity++;
 		return;
 	}
 
 	addPreArcToPreNode_pg(preArc, -destinationPreNodeID, preGraph);
 }
 
-void changeMultiplicity_pg(PreArc * preArc, IDnum variation)
+void changeMultiplicity_pg(PreArcI preArc, IDnum variation)
 {
-	if (preArc == NULL)
+	if (preArc == NULL_IDX)
 		return;
-	preArc->multiplicity += variation;
+	PREARC_FI2P (preArc)->multiplicity += variation;
 }
 
-static void setNextPreArc_pg(PreArc * preArc, IDnum preNodeID,
-			     PreArc * nextPreArc)
+static void setNextPreArc_pg(PreArcI preArc, IDnum preNodeID,
+			     PreArcI nextPreArc)
 {
-	if (preNodeID == preArc->preNodeIDLeft)
-		preArc->nextLeft = nextPreArc;
-	if (preNodeID == preArc->preNodeIDRight)
-		preArc->nextRight = nextPreArc;
+	PreArc *preArcVal;
+
+	preArcVal = PREARC_FI2P (preArc);
+	if (preNodeID == preArcVal->preNodeIDLeft)
+		preArcVal->nextLeft = nextPreArc;
+	if (preNodeID == preArcVal->preNodeIDRight)
+		preArcVal->nextRight = nextPreArc;
 }
 
-void removePreArcFromList_pg(PreArc * preArc, IDnum preNodeID,
+void removePreArcFromList_pg(PreArcI preArc, IDnum preNodeID,
 			     PreGraph * preGraph)
 {
 	IDnum ID = preNodeID;
 	PreNode *preNode;
-	PreArc **preArcPtr;
-	PreArc *tempPreArc;
+	PreArcI *preArcPtr;
+	PreArcI tempPreArc;
 
 	if (ID < 0)
 		ID = -ID;
@@ -273,7 +284,7 @@ void removePreArcFromList_pg(PreArc * preArc, IDnum preNodeID,
 		return;
 	}
 
-	for (tempPreArc = *preArcPtr; tempPreArc != NULL;
+	for (tempPreArc = *preArcPtr; tempPreArc != NULL_IDX;
 	     tempPreArc = getNextPreArc_pg(tempPreArc, preNodeID))
 		if (getNextPreArc_pg(tempPreArc, preNodeID) == preArc)
 			setNextPreArc_pg(tempPreArc, preNodeID,
@@ -281,15 +292,17 @@ void removePreArcFromList_pg(PreArc * preArc, IDnum preNodeID,
 							  preNodeID));
 }
 
-void destroyPreArc_pg(PreArc * preArc, PreGraph * preGraph)
+void destroyPreArc_pg(PreArcI preArc, PreGraph * preGraph)
 {
 	IDnum leftID, rightID;
+	PreArc *preArcVal;
 
-	if (preArc == NULL)
+	if (preArc == NULL_IDX)
 		return;
 
-	leftID = preArc->preNodeIDLeft;
-	rightID = preArc->preNodeIDRight;
+	preArcVal = PREARC_FI2P (preArc);
+	leftID = preArcVal->preNodeIDLeft;
+	rightID = preArcVal->preNodeIDRight;
 
 	// Removing preArc from list
 	removePreArcFromList_pg(preArc, leftID, preGraph);
@@ -316,9 +329,9 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 	preNode = &(preGraph->preNodes[ID]);
 
 	// PreNode preArcs:
-	while (preNode->preArcLeft != NULL)
+	while (preNode->preArcLeft != NULL_IDX)
 		destroyPreArc_pg(preNode->preArcLeft, preGraph);
-	while (preNode->preArcRight != NULL)
+	while (preNode->preArcRight != NULL_IDX)
 		destroyPreArc_pg(preNode->preArcRight, preGraph);
 
 	// PreMarkers
@@ -359,7 +372,7 @@ void destroyPreGraph_pg(PreGraph * preGraph)
 	}
 
 	// Arcs
-	destroyRecycleBin(preArcMemory);
+	destroyAllocArray(preArcMemory);
 
 	// Nodes
 	free(preGraph->preNodes);
@@ -402,7 +415,7 @@ PreNode *getPreNodeInPreGraph_pg(PreGraph * preGraph, IDnum preNodeID)
 	return NULL;
 }
 
-PreArc *getPreArc_pg(IDnum preNodeID, PreGraph * preGraph)
+PreArcI getPreArc_pg(IDnum preNodeID, PreGraph * preGraph)
 {
 	IDnum ID = preNodeID;
 	PreNode *preNode;
@@ -418,39 +431,48 @@ PreArc *getPreArc_pg(IDnum preNodeID, PreGraph * preGraph)
 		return preNode->preArcLeft;
 }
 
-PreArc *getNextPreArc_pg(PreArc * preArc, IDnum preNodeID)
+PreArcI getNextPreArc_pg(PreArcI preArc, IDnum preNodeID)
 {
-	if (preNodeID == preArc->preNodeIDLeft)
-		return preArc->nextLeft;
+	PreArc *preArcVal;
+
+	preArcVal = PREARC_FI2P (preArc);
+	if (preNodeID == preArcVal->preNodeIDLeft)
+		return preArcVal->nextLeft;
 	else
-		return preArc->nextRight;
+		return preArcVal->nextRight;
 }
 
-IDnum getMultiplicity_pg(PreArc * preArc)
+IDnum getMultiplicity_pg(PreArcI preArc)
 {
-	if (preArc == NULL)
+	if (preArc == NULL_IDX)
 		return 0;
 
-	return preArc->multiplicity;
+	return PREARC_FI2P (preArc)->multiplicity;
 }
 
-IDnum getOtherEnd_pg(PreArc * preArc, IDnum preNodeID)
+IDnum getOtherEnd_pg(PreArcI preArc, IDnum preNodeID)
 {
-	if (preNodeID == preArc->preNodeIDLeft)
-		return preArc->preNodeIDRight;
+	PreArc *preArcVal;
+
+	preArcVal = PREARC_FI2P (preArc);
+	if (preNodeID == preArcVal->preNodeIDLeft)
+		return preArcVal->preNodeIDRight;
 	else
-		return preArc->preNodeIDLeft;
+		return preArcVal->preNodeIDLeft;
 }
 
-IDnum getDestination_pg(PreArc * preArc, IDnum preNodeID)
+IDnum getDestination_pg(PreArcI preArc, IDnum preNodeID)
 {
-	if (preArc == NULL)
+	PreArc *preArcVal;
+
+	if (preArc == NULL_IDX)
 		return 0;
 
-	if (preNodeID == preArc->preNodeIDLeft)
-		return -preArc->preNodeIDRight;
+	preArcVal = PREARC_FI2P (preArc);
+	if (preNodeID == preArcVal->preNodeIDLeft)
+		return -preArcVal->preNodeIDRight;
 	else
-		return -preArc->preNodeIDLeft;
+		return -preArcVal->preNodeIDLeft;
 }
 
 static void writeNucleotideInDescriptor_pg(Nucleotide nucleotide,
@@ -847,18 +869,21 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 	return new;
 }
 
-void setMultiplicity_pg(PreArc * preArc, IDnum mult)
+void setMultiplicity_pg(PreArcI preArc, IDnum mult)
 {
-	preArc->multiplicity = mult;
+	PREARC_FI2P (preArc)->multiplicity = mult;
 }
 
-static void updatePreArcData_pg(PreArc * preArc, IDnum oldPreNodeID,
+static void updatePreArcData_pg(PreArcI preArc, IDnum oldPreNodeID,
 				IDnum newPreNodeID)
 {
-	if (preArc->preNodeIDLeft == oldPreNodeID)
-		preArc->preNodeIDLeft = newPreNodeID;
-	if (preArc->preNodeIDRight == oldPreNodeID)
-		preArc->preNodeIDRight = newPreNodeID;
+	PreArc *preArcVal;
+
+	preArcVal = PREARC_FI2P (preArc);
+	if (preArcVal->preNodeIDLeft == oldPreNodeID)
+		preArcVal->preNodeIDLeft = newPreNodeID;
+	if (preArcVal->preNodeIDRight == oldPreNodeID)
+		preArcVal->preNodeIDRight = newPreNodeID;
 }
 
 // Reshuffles the preGraph->preNodes array to remove NULL pointers
@@ -872,7 +897,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 	IDnum newIndex;
 	IDnum preMarkerIndex;
 	PreMarker * preMarker;
-	PreArc *preArc;
+	PreArcI preArc;
 
 	puts("Renumbering preNodes");
 	printf("Initial preNode count %d\n", preGraph->preNodeCount);
@@ -897,12 +922,12 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 			    currentPreNode->length;
 
 			for (preArc = getPreArc_pg(newIndex, preGraph);
-			     preArc != NULL;
+			     preArc != NULL_IDX;
 			     preArc = getNextPreArc_pg(preArc, newIndex))
 				updatePreArcData_pg(preArc, preNodeIndex,
 						    newIndex);
 			for (preArc = getPreArc_pg(-newIndex, preGraph);
-			     preArc != NULL;
+			     preArc != NULL_IDX;
 			     preArc = getNextPreArc_pg(preArc, -newIndex))
 				updatePreArcData_pg(preArc, -preNodeIndex,
 						    -newIndex);
@@ -1071,8 +1096,8 @@ void addPreNodeToPreGraph_pg(PreGraph * preGraph, Coordinate start,
 {
 	PreNode *newnd = &(preGraph->preNodes[ID]);
 
-	newnd->preArcLeft = NULL;
-	newnd->preArcRight = NULL;
+	newnd->preArcLeft = NULL_IDX;
+	newnd->preArcRight = NULL_IDX;
 
 	newnd->length = finish - start;
 
@@ -1176,18 +1201,13 @@ int getWordLength_pg(PreGraph * preGraph)
 
 void displayPreArcMemory_pg()
 {
-	if (preArcMemory == NULL)
-		return;
-	printf("ARC MEMORY %lld allocated %lld free\n",
-	       (long long) RecycleBin_memory_usage(preArcMemory),
-	       (long long) recycleBinFreeSpace(preArcMemory));
 }
 
 boolean hasSinglePreArc_pg(IDnum preNodeID, PreGraph * preGraph)
 {
 	IDnum ID = preNodeID;
 	PreNode *preNode;
-	PreArc *preArc;
+	PreArcI preArc;
 
 	if (ID < 0)
 		ID = -ID;
@@ -1199,14 +1219,14 @@ boolean hasSinglePreArc_pg(IDnum preNodeID, PreGraph * preGraph)
 	else
 		preArc = preNode->preArcLeft;
 
-	return (preArc != NULL
-		&& getNextPreArc_pg(preArc, preNodeID) == NULL);
+	return (preArc != NULL_IDX
+		&& getNextPreArc_pg(preArc, preNodeID) == NULL_IDX);
 }
 
 char simplePreArcCount_pg(IDnum preNodeID, PreGraph * preGraph)
 {
 	PreNode *preNode;
-	PreArc *preArc;
+	PreArcI preArc;
 	char count = 0;
 	IDnum ID = preNodeID;
 
@@ -1220,17 +1240,20 @@ char simplePreArcCount_pg(IDnum preNodeID, PreGraph * preGraph)
 	else
 		preArc = preNode->preArcLeft;
 
-	for (; preArc != NULL;
+	for (; preArc != NULL_IDX;
 	     preArc = getNextPreArc_pg(preArc, preNodeID))
 		count++;
 
 	return count;
 }
 
-boolean isLoop_pg(PreArc * preArc)
+boolean isLoop_pg(PreArcI preArc)
 {
-	return (preArc->preNodeIDLeft == preArc->preNodeIDRight
-		|| preArc->preNodeIDLeft == -preArc->preNodeIDRight);
+	PreArc *preArcVal;
+
+	preArcVal = PREARC_FI2P (preArc);
+	return (preArcVal->preNodeIDLeft == preArcVal->preNodeIDRight
+		|| preArcVal->preNodeIDLeft == -preArcVal->preNodeIDRight);
 }
 
 void setPreNodeDescriptor_pg(Descriptor * descr, Coordinate length, IDnum preNodeID, PreGraph * preGraph) {

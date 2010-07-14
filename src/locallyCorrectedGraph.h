@@ -25,7 +25,7 @@ struct nodeList_st {
 	Node *node;
 	NodeList *previous;
 	NodeList *next;
-};
+}  ATTRIBUTE_PACKED;
 
 void prepareGraphForLocalCorrections(Graph * graph);
 

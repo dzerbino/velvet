@@ -62,7 +62,7 @@ struct referenceCoordinate_st {
 	Coordinate finish;
 	IDnum referenceID;
 	boolean positive_strand;
-};
+}  ATTRIBUTE_PACKED;
 
 static int compareRefCoords(const void * ptrA, const void * ptrB) {
 	ReferenceCoordinate * A = (ReferenceCoordinate *) ptrA;
@@ -87,7 +87,7 @@ typedef struct referenceCoordinateTable_st ReferenceCoordinateTable;
 struct referenceCoordinateTable_st {
 	ReferenceCoordinate * array;
 	IDnum arrayLength;
-};
+}  ATTRIBUTE_PACKED;
 
 static ReferenceCoordinateTable * newReferenceCoordinateTable() {
 	ReferenceCoordinateTable * table = callocOrExit(1, ReferenceCoordinateTable);
@@ -251,13 +251,16 @@ ReadSet *newReadSetAroundTightStringArray(TightString ** array,
 					  IDnum length)
 {
 	ReadSet *rs = newReadSet();
+	/*
 	rs->tSequences = array;
 	rs->readCount = length;
+	*/
 	return rs;
 }
 
 void concatenateReadSets(ReadSet * A, ReadSet * B)
 {
+/*
 	ReadSet tmp;
 	IDnum index;
 
@@ -450,13 +453,14 @@ void concatenateReadSets(ReadSet * A, ReadSet * B)
 
 	// Deallocate
 	free(B);
+*/
 }
 
 void convertSequences(ReadSet * rs)
 {
-	rs->tSequences =
-	    newTightStringArrayFromStringArray(rs->sequences,
-					       rs->readCount);
+	rs->tSequences = newTightStringArrayFromStringArray(rs->sequences,
+							    rs->readCount,
+							    &rs->tSeqMem);
 	rs->sequences = NULL;
 }
 
@@ -478,14 +482,14 @@ void convertConfidenceScores(ReadSet * rs, int WORDLENGTH)
 
 	for (index = 0; index < rs->readCount; index++) {
 		rs->kmerProbabilities[index] =
-		    mallocOrExit(getLength(rs->tSequences[index]) - WORDLENGTH +
+		    mallocOrExit(getLength(getTightStringInArray(rs->tSequences, index)) - WORDLENGTH +
 			    1, Probability);
 		kmerProbabilities = rs->kmerProbabilities[index];
 		baseCallerScores = rs->confidenceScores[index];
 
 		proba = 1;
 		for (position = 0;
-		     position < getLength(rs->tSequences[index]);
+		     position < getLength(getTightStringInArray(rs->tSequences, index));
 		     position++) {
 			proba *=
 			    convertQualityScore(baseCallerScores
@@ -1780,7 +1784,7 @@ static void exportRead(FILE * outfile, ReadSet * reads, IDnum index)
 {
 	Coordinate start, finish;
 	char str[100];
-	TightString *sequence = reads->tSequences[index];
+	TightString *sequence = getTightStringInArray(reads->tSequences, index);
 
 	if (sequence == NULL)
 		return;
@@ -1958,12 +1962,17 @@ void destroyReadSet(ReadSet * reads)
 		return;
 
 	if (reads->sequences != NULL)
+	{
 		for (index = 0; index < reads->readCount; index++)
 			free(reads->sequences[index]);
+		free(reads->sequences);
+	}
 
 	if (reads->tSequences != NULL)
-		for (index = 0; index < reads->readCount; index++)
-			destroyTightString(reads->tSequences[index]);
+		free (reads->tSequences);
+
+	if (reads->tSeqMem != NULL)
+		free (reads->tSeqMem);
 
 	if (reads->labels != NULL)
 		for (index = 0; index < reads->readCount; index++)
@@ -1977,7 +1986,6 @@ void destroyReadSet(ReadSet * reads)
 		for (index = 0; index < reads->readCount; index++)
 			free(reads->kmerProbabilities[index]);
 
-	free(reads->sequences);
 	free(reads->tSequences);
 	free(reads->labels);
 	free(reads->confidenceScores);
@@ -1987,22 +1995,22 @@ void destroyReadSet(ReadSet * reads)
 	free(reads);
 }
 
-Coordinate *getSequenceLengths(ReadSet * reads, int wordLength)
+IDnum *getSequenceLengths(ReadSet * reads, int wordLength)
 {
-	Coordinate *lengths = callocOrExit(reads->readCount, Coordinate);
+	IDnum *lengths = callocOrExit(reads->readCount, IDnum);
 	IDnum index;
 	int lengthOffset = wordLength - 1;
 
 	for (index = 0; index < reads->readCount; index++)
 		lengths[index] =
-		    getLength(reads->tSequences[index]) - lengthOffset;
+		    getLength(getTightStringInArray(reads->tSequences, index)) - lengthOffset;
 
 	return lengths;
 }
 
-Coordinate *getSequenceLengthsFromFile(char *filename, int wordLength)
+IDnum *getSequenceLengthsFromFile(char *filename, int wordLength) /* SF TODO This could also be chopped down to IDnum */
 {
-	Coordinate *lengths;
+	IDnum *lengths;
 	FILE *file = fopen(filename, "r");
 	Coordinate bpCount = 0;
 	const int maxline = 100;
@@ -2022,7 +2030,7 @@ Coordinate *getSequenceLengthsFromFile(char *filename, int wordLength)
 			sequenceCount++;
 	fclose(file);
 
-	lengths = callocOrExit(sequenceCount, Coordinate);
+	lengths = callocOrExit(sequenceCount, IDnum);
 	// Counting base pair length of each sequence:
 	file = fopen(filename, "r");
 	sequenceIndex = -1;

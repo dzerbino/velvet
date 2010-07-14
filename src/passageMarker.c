@@ -22,41 +22,45 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 
 #include "globals.h"
+#include "allocArray.h"
 #include "graph.h"
 #include "recycleBin.h"
 #include "passageMarker.h"
 #include "tightString.h"
 #include "utility.h"
 
+typedef struct passage_st PassageMarker;
+
 struct passage_st {
 	struct node_st *node;
-	PassageMarker *nextInNode;
-	PassageMarker *previousInNode;
-	PassageMarker *twinMarker;
-	PassageMarker *nextInSequence;
-	Coordinate start;
-	Coordinate finishOffset;
+	PassageMarkerI nextInNode;
+	PassageMarkerI previousInNode;
+	PassageMarkerI twinMarker;
+	PassageMarkerI nextInSequence;
+	IDnum start;
+	IDnum finishOffset;
 	IDnum sequenceID;
 	boolean status;
-};
+} ATTRIBUTE_PACKED;
 
-static RecycleBin *markerMemory = NULL;
+static AllocArray *markerMemory = NULL;
+DECLARE_FAST_ACCESSORS (PM, PassageMarker, markerMemory)
+
 static RecycleBin *listMemory = NULL;
-static const int MARKERBLOCKSIZE = 1000000;
 static const int LISTBLOCKSIZE = 10000;
 
-PassageMarker *allocatePassageMarker()
+PassageMarkerI allocatePassageMarker()
 {
 	if (markerMemory == NULL)
 		markerMemory =
-		    newRecycleBin(sizeof(PassageMarker), MARKERBLOCKSIZE);
+		    newAllocArray (sizeof(PassageMarker), "PassageMarker");
 
-	return (PassageMarker *) allocatePointer(markerMemory);
+	return allocArrayAllocate (markerMemory);
 }
 
-static void deallocatePassageMarker(PassageMarker * marker)
+static void deallocatePassageMarker(PassageMarkerI marker)
 {
-	deallocatePointer(markerMemory, marker);
+	allocArrayFree(markerMemory, marker);
 }
 
 PassageMarkerList *allocatePassageMarkerList()
@@ -74,55 +78,62 @@ void deallocatePassageMarkerList(PassageMarkerList * marker)
 	deallocatePointer(listMemory, marker);
 }
 
-void setNextInSequence(PassageMarker * previous, PassageMarker * next)
+void setNextInSequence(PassageMarkerI previous, PassageMarkerI next)
 {
-	if (previous == NULL)
+	if (previous == NULL_IDX)
 		return;
 
-	previous->nextInSequence = next;
+	PM_FI2P (previous)->nextInSequence = next;
 }
 
-void extractPassageMarker(PassageMarker * marker)
+void extractPassageMarker(PassageMarkerI marker)
 {
 	PassageMarker *twin;
+	PassageMarker *markerVal;
 
-	if (marker == NULL)
+	if (marker == NULL_IDX)
 		return;
 
-	if (marker->node == NULL)
+	markerVal = PM_FI2P (marker);
+	if (markerVal->node == NULL_IDX)
 		return;
 
-	if (marker->previousInNode == marker)
-		setMarker(marker->node, marker->nextInNode);
+	if (markerVal->previousInNode == marker)
+		setMarker(markerVal->node, markerVal->nextInNode);
 	else
-		setNextInNode(marker->previousInNode, marker->nextInNode);
+		setNextInNode(markerVal->previousInNode, markerVal->nextInNode);
 
-	marker->previousInNode = NULL;
-	marker->nextInNode = NULL;
-	marker->node = NULL;
+	markerVal->previousInNode = NULL_IDX;
+	markerVal->nextInNode = NULL_IDX;
+	markerVal->node = NULL_IDX;
 
-	twin = marker->twinMarker;
-	twin->nextInNode = NULL;
-	twin->previousInNode = NULL;
-	twin->node = NULL;
+	twin = PM_FI2P (markerVal->twinMarker);
+	twin->nextInNode = NULL_IDX;
+	twin->previousInNode = NULL_IDX;
+	twin->node = NULL_IDX;
 }
 
-void destroyPassageMarker(PassageMarker * marker)
+void destroyPassageMarker(PassageMarkerI marker)
 {
-	PassageMarker *twin = marker->twinMarker;
+	PassageMarker *markerVal;
+	PassageMarker *twinVal;
+	PassageMarkerI twin;
 
-	if (marker == NULL)
+	if (marker == NULL_IDX)
 		return;
 
+	markerVal = PM_FI2P (marker);
+	twin = markerVal->twinMarker;
 	extractPassageMarker(marker);
 
-	if (marker->nextInSequence != NULL
-	    && marker->nextInSequence->twinMarker->nextInSequence == twin)
-		marker->nextInSequence->twinMarker->nextInSequence = NULL;
+	if (markerVal->nextInSequence != NULL_IDX
+	    && PM_FI2P (PM_FI2P (markerVal->nextInSequence)->twinMarker)->nextInSequence == twin)
+		PM_FI2P (PM_FI2P (markerVal->nextInSequence)->twinMarker)->nextInSequence = NULL_IDX;
 
-	if (twin->nextInSequence != NULL
-	    && twin->nextInSequence->twinMarker->nextInSequence == marker)
-		twin->nextInSequence->twinMarker->nextInSequence = NULL;
+	twinVal = PM_FI2P (twin);
+	if (twinVal->nextInSequence != NULL_IDX
+	    && PM_FI2P (PM_FI2P (twinVal->nextInSequence)->twinMarker)->nextInSequence == marker)
+		PM_FI2P (PM_FI2P (twinVal->nextInSequence)->twinMarker)->nextInSequence = NULL_IDX;
 
 	deallocatePassageMarker(twin);
 	deallocatePassageMarker(marker);
@@ -133,112 +144,129 @@ void destroyPassageMarker(PassageMarker * marker)
 void destroyAllPassageMarkers()
 {
 	if (markerMemory != NULL)
-		destroyRecycleBin(markerMemory);
+		destroyAllocArray(markerMemory);
 	if (listMemory != NULL)
 		destroyRecycleBin(listMemory);
 }
 
 
-void setPreviousInSequence(PassageMarker * previous, PassageMarker * next)
+void setPreviousInSequence(PassageMarkerI previous, PassageMarkerI next)
 {
-	if (next == NULL)
+	if (next == NULL_IDX)
 		return;
-	else if (previous == NULL)
-		next->twinMarker->nextInSequence = NULL;
+	else if (previous == NULL_IDX)
+		PM_FI2P (PM_FI2P (next)->twinMarker)->nextInSequence = NULL_IDX;
 	else
-		next->twinMarker->nextInSequence = previous->twinMarker;
+		PM_FI2P (PM_FI2P (next)->twinMarker)->nextInSequence = PM_FI2P (previous)->twinMarker;
 }
 
-void disconnectNextPassageMarker(PassageMarker * marker, Graph * graph)
+void disconnectNextPassageMarker(PassageMarkerI marker, Graph * graph)
 {
-	PassageMarker *middle = getNextInSequence(marker);
-	PassageMarker *next = getNextInSequence(middle);
+	PassageMarkerI middle = getNextInSequence(marker);
+	PassageMarkerI next = getNextInSequence(middle);
 
 	setPreviousInSequence(marker, next);
 	concatenatePassageMarkers(marker, middle);
-	setNextInSequence(middle, NULL);
-	setPreviousInSequence(NULL, middle);
+	setNextInSequence(middle, NULL_IDX);
+	setPreviousInSequence(NULL_IDX, middle);
 }
 
-PassageMarker *getNextInNode(PassageMarker * marker)
+PassageMarkerI getNextInNode(PassageMarkerI marker)
 {
-	if (marker == NULL)
-		return NULL;
+	if (marker == NULL_IDX)
+		return NULL_IDX;
 
-	return marker->nextInNode;
+	return PM_FI2P (marker)->nextInNode;
 }
 
-void setNextInNode(PassageMarker * marker, PassageMarker * next)
+void setNextInNode(PassageMarkerI marker, PassageMarkerI next)
 {
-	if (marker == NULL)
+	PassageMarker *markerVal;
+
+	if (marker == NULL_IDX)
 		return;
 
-	if (next == NULL) {
-		marker->nextInNode = NULL;
-		marker->twinMarker->nextInNode = NULL;
+	markerVal = PM_FI2P (marker);
+	if (next == NULL_IDX) {
+		markerVal->nextInNode = NULL_IDX;
+		PM_FI2P (markerVal->twinMarker)->nextInNode = NULL_IDX;
 	} else {
-		if (marker->twinMarker == NULL) {
+		PassageMarker *nextVal;
+
+		if (markerVal->twinMarker == NULL_IDX) {
 			printf("Dead marker in node %d %d\n",
 			       getNodeID(getNode(marker)),
 			       getPassageMarkerSequenceID(marker));
 			abort();
 		}
-		marker->nextInNode = next;
-		marker->twinMarker->nextInNode = next->twinMarker;
-		next->previousInNode = marker;
-		next->twinMarker->previousInNode = marker->twinMarker;
+		nextVal = PM_FI2P (next);
+		markerVal->nextInNode = next;
+		PM_FI2P (markerVal->twinMarker)->nextInNode = nextVal->twinMarker;
+		nextVal->previousInNode = marker;
+		PM_FI2P (nextVal->twinMarker)->previousInNode = markerVal->twinMarker;
 	}
 }
 
-void setTopOfTheNode(PassageMarker * marker)
+void setTopOfTheNode(PassageMarkerI marker)
 {
-	if (marker == NULL)
+	if (marker == NULL_IDX)
 		return;
 
-	marker->previousInNode = marker;
+	PM_FI2P (marker)->previousInNode = marker;
 }
 
-PassageMarker *getNextInSequence(PassageMarker * marker)
+PassageMarkerI getNextInSequence(PassageMarkerI marker)
 {
-	if (marker == NULL || marker->nextInSequence == NULL)
-		return NULL;
+	if (marker != NULL_IDX)
+	{
+		PassageMarker *markerVal;
 
-	return marker->nextInSequence;
+		markerVal = PM_FI2P (marker);
+		if (markerVal->nextInSequence == NULL_IDX)
+			return NULL_IDX;
+		return markerVal->nextInSequence;
+	}
+	return NULL_IDX;
 }
 
-PassageMarker *getPreviousInSequence(PassageMarker * marker)
+PassageMarkerI getPreviousInSequence(PassageMarkerI marker)
 {
-	if (marker == NULL)
-		return NULL;
+	PassageMarker *twinVal;
 
-	if (marker->twinMarker->nextInSequence == NULL)
-		return NULL;
+	if (marker == NULL_IDX)
+		return NULL_IDX;
 
-	return marker->twinMarker->nextInSequence->twinMarker;
+	twinVal = PM_FI2P (PM_FI2P (marker)->twinMarker);
+	if (twinVal->nextInSequence == NULL_IDX)
+		return NULL_IDX;
+
+	return PM_FI2P (twinVal->nextInSequence)->twinMarker;
 }
 
 void
-connectPassageMarkers(PassageMarker * previous, PassageMarker * next,
+connectPassageMarkers(PassageMarkerI previous, PassageMarkerI next,
 		      Graph * graph)
 {
-	if (previous != NULL)
+	if (previous != NULL_IDX)
 		setNextInSequence(previous, next);
 
-	if (next != NULL)
+	if (next != NULL_IDX)
 		setPreviousInSequence(previous, next);
 }
 
-char *readPassageMarker(PassageMarker * marker)
+char *readPassageMarker(PassageMarkerI marker)
 {
+	PassageMarker *markerVal;
 	char *s = mallocOrExit(100, char);
 
-	if (marker == NULL)
+	if (marker == NULL_IDX)
 		return s;
 
-	sprintf(s, "MARKER %ld (%lld -> %lld):", (long) marker->sequenceID,
-		(long long) marker->start, (long long) getPassageMarkerFinish(marker));
+	markerVal = PM_FI2P (marker);
+	sprintf(s, "MARKER %ld (%lld -> %lld):", (long) markerVal->sequenceID,
+		(long long) markerVal->start, (long long) getPassageMarkerFinish(marker));
 
-	if (getPreviousInSequence(marker) == NULL)
+	if (getPreviousInSequence(marker) == NULL_IDX)
 		sprintf(s, "%s START -> %ld", s,
 			(long) getNodeID(getNode(marker)));
 	else
@@ -246,7 +274,7 @@ char *readPassageMarker(PassageMarker * marker)
 			(long) getNodeID(getNode(getPreviousInSequence(marker))),
 			(long) getNodeID(getNode(marker)));
 
-	if (getNextInSequence(marker) == NULL)
+	if (getNextInSequence(marker) == NULL_IDX)
 		sprintf(s, "%s -> FINISH", s);
 	else
 		sprintf(s, "%s -> %ld ", s,
@@ -255,7 +283,7 @@ char *readPassageMarker(PassageMarker * marker)
 	return s;
 }
 
-char *readPassageMarkerSequence(PassageMarker * marker,
+char *readPassageMarkerSequence(PassageMarkerI marker,
 				TightString ** sequences, int WORDLENGTH)
 {
 	TightString *sequence =
@@ -263,7 +291,7 @@ char *readPassageMarkerSequence(PassageMarker * marker,
 	int i;
 	char *s = NULL;
 
-	if (marker == NULL)
+	if (marker == NULL_IDX)
 		return s;
 
 	s = mallocOrExit(getPassageMarkerLength(marker) + 1, char);
@@ -286,27 +314,32 @@ char *readPassageMarkerSequence(PassageMarker * marker,
 	return s;
 }
 
-PassageMarker *addPassageMarker(IDnum sequenceID, Coordinate start,
+PassageMarkerI addPassageMarker(IDnum sequenceID, Coordinate start,
 				Node * node)
 {
-	PassageMarker *marker = allocatePassageMarker();
-	PassageMarker *twinMarker = allocatePassageMarker();
+	PassageMarkerI marker = allocatePassageMarker();
+	PassageMarkerI twinMarker = allocatePassageMarker();
+	PassageMarker *markerVal;
+	PassageMarker *twinVal;
 
-	marker->sequenceID = sequenceID;
-	marker->start = start;
-	marker->node = node;
-	marker->nextInSequence = NULL;
-	marker->finishOffset = 0;
-	marker->twinMarker = twinMarker;
-	marker->status = false;
+	markerVal = PM_FI2P (marker);
+	twinVal = PM_FI2P (twinMarker);
 
-	twinMarker->sequenceID = -sequenceID;
-	twinMarker->start = start + getNodeLength(node);
-	twinMarker->node = getTwinNode(node);
-	twinMarker->nextInSequence = NULL;
-	twinMarker->finishOffset = 0;
-	twinMarker->twinMarker = marker;
-	twinMarker->status = false;
+	markerVal->sequenceID = sequenceID;
+	markerVal->start = start;
+	markerVal->node = node;
+	markerVal->nextInSequence = NULL_IDX;
+	markerVal->finishOffset = 0;
+	markerVal->twinMarker = twinMarker;
+	markerVal->status = false;
+
+	twinVal->sequenceID = -sequenceID;
+	twinVal->start = start + getNodeLength(node);
+	twinVal->node = getTwinNode(node);
+	twinVal->nextInSequence = NULL_IDX;
+	twinVal->finishOffset = 0;
+	twinVal->twinMarker = marker;
+	twinVal->status = false;
 
 	setNextInNode(marker, getMarker(node));
 	setMarker(node, marker);
@@ -333,87 +366,95 @@ PassageMarkerList *copyPassageMarkerList(PassageMarkerList * list)
 	return result;
 }
 
-PassageMarker *copyPassageMarker(PassageMarker * marker)
+PassageMarkerI copyPassageMarker(PassageMarkerI marker)
 {
-	PassageMarker *twin = marker->twinMarker;
-	PassageMarker *copy = allocatePassageMarker();
-	PassageMarker *twinCopy = allocatePassageMarker();
+	PassageMarker *markerVal = PM_FI2P (marker);
+	PassageMarker *twin = PM_FI2P (markerVal->twinMarker);
+	PassageMarkerI copy = allocatePassageMarker();
+	PassageMarkerI twinCopy = allocatePassageMarker();
+	PassageMarker *copyVal = PM_FI2P (copy);
+	PassageMarker *twinCopyVal = PM_FI2P (twinCopy);
 
-	copy->sequenceID = marker->sequenceID;
-	copy->start = marker->start;
-	copy->nextInNode = NULL;
-	copy->previousInNode = NULL;
-	copy->node = NULL;
-	copy->nextInSequence = marker->nextInSequence;
-	copy->finishOffset = marker->finishOffset;
-	copy->status = false;
+	copyVal->sequenceID = markerVal->sequenceID;
+	copyVal->start = markerVal->start;
+	copyVal->nextInNode = NULL_IDX;
+	copyVal->previousInNode = NULL_IDX;
+	copyVal->node = NULL;
+	copyVal->nextInSequence = markerVal->nextInSequence;
+	copyVal->finishOffset = markerVal->finishOffset;
+	copyVal->status = false;
 
-	twinCopy->sequenceID = twin->sequenceID;
-	twinCopy->start = twin->start;
-	twinCopy->nextInNode = NULL;
-	twinCopy->previousInNode = NULL;
-	twinCopy->node = NULL;
-	twinCopy->nextInSequence = twin->nextInSequence;
-	twinCopy->finishOffset = twin->finishOffset;
-	twinCopy->status = false;
+	twinCopyVal->sequenceID = twin->sequenceID;
+	twinCopyVal->start = twin->start;
+	twinCopyVal->nextInNode = NULL_IDX;
+	twinCopyVal->previousInNode = NULL_IDX;
+	twinCopyVal->node = NULL;
+	twinCopyVal->nextInSequence = twin->nextInSequence;
+	twinCopyVal->finishOffset = twin->finishOffset;
+	twinCopyVal->status = false;
 
-	copy->twinMarker = twinCopy;
-	twinCopy->twinMarker = copy;
+	copyVal->twinMarker = twinCopy;
+	twinCopyVal->twinMarker = copy;
 
 	return copy;
 }
 
-void incrementFinishOffset(PassageMarker * marker, Coordinate offset)
+void incrementFinishOffset(PassageMarkerI marker, Coordinate offset)
 {
-	marker->finishOffset += offset;
+	PM_FI2P (marker)->finishOffset += offset;
 }
 
-void incrementStartOffset(PassageMarker * marker, Coordinate offset)
+void incrementStartOffset(PassageMarkerI marker, Coordinate offset)
 {
-	marker->twinMarker->finishOffset += offset;
+	PM_FI2P (PM_FI2P (marker)->twinMarker)->finishOffset += offset;
 }
 
-Coordinate getFinishOffset(PassageMarker * marker)
+Coordinate getFinishOffset(PassageMarkerI marker)
 {
-	return marker->finishOffset;
+	return PM_FI2P (marker)->finishOffset;
 }
 
-void setFinishOffset(PassageMarker * marker, Coordinate offset)
+void setFinishOffset(PassageMarkerI marker, Coordinate offset)
 {
-	marker->finishOffset = offset;
+	PM_FI2P (marker)->finishOffset = offset;
 }
 
-Coordinate getStartOffset(PassageMarker * marker)
+Coordinate getStartOffset(PassageMarkerI marker)
 {
-	return marker->twinMarker->finishOffset;
+	return PM_FI2P (PM_FI2P (marker)->twinMarker)->finishOffset;
 }
 
-void setStartOffset(PassageMarker * marker, Coordinate offset)
+void setStartOffset(PassageMarkerI marker, Coordinate offset)
 {
-	marker->twinMarker->finishOffset = offset;
+	PM_FI2P (PM_FI2P (marker)->twinMarker)->finishOffset = offset;
 }
 
-void transposePassageMarker(PassageMarker * marker, Node * node)
+void transposePassageMarker(PassageMarkerI marker, Node * node)
 {
-	marker->node = node;
-	marker->twinMarker->node = getTwinNode(node);
+	PassageMarker *markerVal;
+	PassageMarker *twinMarkerVal;
+
+	markerVal = PM_FI2P (marker);
+	twinMarkerVal = PM_FI2P (markerVal->twinMarker);
+	markerVal->node = node;
+	twinMarkerVal->node = getTwinNode(node);
 	insertPassageMarker(marker, node);
-	insertPassageMarker(marker->twinMarker, getTwinNode(node));
+	insertPassageMarker(markerVal->twinMarker, getTwinNode(node));
 }
 
-PassageMarker *getTwinMarker(PassageMarker * marker)
+PassageMarkerI getTwinMarker(PassageMarkerI marker)
 {
-	return marker->twinMarker;
+	return PM_FI2P (marker)->twinMarker;
 }
 
-IDnum getPassageMarkerSequenceID(PassageMarker * marker)
+IDnum getPassageMarkerSequenceID(PassageMarkerI marker)
 {
-	return marker->sequenceID;
+	return PM_FI2P (marker)->sequenceID;
 }
 
-IDnum getAbsolutePassMarkerSeqID(PassageMarker * marker)
+IDnum getAbsolutePassMarkerSeqID(PassageMarkerI marker)
 {
-	IDnum ID = marker->sequenceID;
+	IDnum ID = PM_FI2P (marker)->sequenceID;
 
 	if (ID > 0)
 		return ID;
@@ -421,137 +462,165 @@ IDnum getAbsolutePassMarkerSeqID(PassageMarker * marker)
 		return -ID;
 }
 
-Node *getNode(PassageMarker * marker)
+Node *getNode(PassageMarkerI marker)
 {
-	if (marker == NULL)
+	if (marker == NULL_IDX)
 		return NULL;
 
-	return marker->node;
+	return PM_FI2P (marker)->node;
 }
 
-void concatenatePassageMarkers(PassageMarker * marker,
-			       PassageMarker * next)
+void concatenatePassageMarkers(PassageMarkerI marker,
+			       PassageMarkerI next)
 {
+	PassageMarker *markerVal;
+	PassageMarker *nextVal;
 
-	if (marker == NULL || next == NULL)
+	if (marker == NULL_IDX || next == NULL_IDX)
 		return;
 
-	marker->finishOffset = next->finishOffset;
-	marker->twinMarker->start = next->twinMarker->start;
-	marker->nextInSequence = next->nextInSequence;
+	markerVal = PM_FI2P (marker);
+	nextVal = PM_FI2P (next);
+
+	markerVal->finishOffset = nextVal->finishOffset;
+	PM_FI2P (markerVal->twinMarker)->start = PM_FI2P (nextVal->twinMarker)->start;
+	markerVal->nextInSequence = nextVal->nextInSequence;
 }
 
-boolean getPassageMarkerStatus(PassageMarker * marker)
+boolean getPassageMarkerStatus(PassageMarkerI marker)
 {
-	return marker->status;
+	return PM_FI2P (marker)->status;
 }
 
-void setPassageMarkerStatus(PassageMarker * marker, boolean status)
+void setPassageMarkerStatus(PassageMarkerI marker, boolean status)
 {
-	marker->status = status;
-	marker->twinMarker->status = status;
+	PassageMarker *markerVal = PM_FI2P (marker);
+
+	markerVal->status = status;
+	PM_FI2P (markerVal->twinMarker)->status = status;
 }
 
-boolean isDestinationToMarker(PassageMarker * marker, Node * node)
+boolean isDestinationToMarker(PassageMarkerI marker, Node * node)
 {
-	if (marker->nextInSequence == NULL)
+	PassageMarker *markerVal = PM_FI2P (marker);
+
+	if (markerVal->nextInSequence == NULL_IDX)
 		return false;
 
-	return marker->nextInSequence->node == node;
+	return PM_FI2P (markerVal->nextInSequence)->node == node;
 }
 
-boolean isTerminal(PassageMarker * marker)
+boolean isTerminal(PassageMarkerI marker)
 {
-	if (marker == NULL)
+	PassageMarker *markerVal;
+
+	if (marker == NULL_IDX)
 		return false;
 
-	return marker->nextInSequence == NULL;
+	markerVal = PM_FI2P (marker);
+	return markerVal->nextInSequence == NULL_IDX;
 }
 
-boolean isInitial(PassageMarker * marker)
+boolean isInitial(PassageMarkerI marker)
 {
-	if (marker == NULL)
+	PassageMarker *markerVal;
+
+	if (marker == NULL_IDX)
 		return false;
 
-	if (marker->twinMarker == NULL) {
+	markerVal = PM_FI2P (marker);
+	if (markerVal->twinMarker == NULL_IDX) {
 		printf("Unpaired marker seq %ld start %lld node %ld\n",
-		       (long) marker->sequenceID, (long long) marker->start,
-		       (long) getNodeID(marker->node));
+		       (long) markerVal->sequenceID, (long long) markerVal->start,
+		       (long) getNodeID(markerVal->node));
 		puts("SNAFU");
 		abort();
 	}
 
-	return marker->twinMarker->nextInSequence == NULL;
+	return PM_FI2P (markerVal->twinMarker)->nextInSequence == NULL_IDX;
 }
 
-Coordinate getPassageMarkerStart(PassageMarker * marker)
+Coordinate getPassageMarkerStart(PassageMarkerI marker)
 {
-	return marker->start;
+	return PM_FI2P (marker)->start;
 }
 
-void setPassageMarkerStart(PassageMarker * marker, Coordinate start)
+void setPassageMarkerStart(PassageMarkerI marker, Coordinate start)
 {
-	marker->start = start;
+	PM_FI2P (marker)->start = start;
 }
 
-Coordinate getPassageMarkerFinish(PassageMarker * marker)
+Coordinate getPassageMarkerFinish(PassageMarkerI marker)
 {
-	if (marker->twinMarker->start == -10)
+	PassageMarker *twinMarkerVal;
+
+	twinMarkerVal = PM_FI2P (PM_FI2P (marker)->twinMarker);
+	if (twinMarkerVal->start == -10)
 		return -10;
 
-	return marker->twinMarker->start;
+	return twinMarkerVal->start;
 }
 
-void setPassageMarkerFinish(PassageMarker * marker, Coordinate finish)
+void setPassageMarkerFinish(PassageMarkerI marker, Coordinate finish)
 {
+	PassageMarker *twinMarkerVal;
+
+	twinMarkerVal = PM_FI2P (PM_FI2P (marker)->twinMarker);
 	if (finish == -10)
-		marker->twinMarker->start = -10;
+		twinMarkerVal->start = -10;
 
-	marker->twinMarker->start = finish;
+	twinMarkerVal->start = finish;
 }
 
-Coordinate getPassageMarkerLength(PassageMarker * marker)
+Coordinate getPassageMarkerLength(PassageMarkerI marker)
 {
-	if (marker->start == -10 || marker->twinMarker->start == -10)
+	PassageMarker *markerVal;
+	PassageMarker *twinMarkerVal;
+
+	markerVal = PM_FI2P (marker);
+	twinMarkerVal = PM_FI2P (markerVal->twinMarker);
+	if (markerVal->start == -10 || twinMarkerVal->start == -10)
 		return 0;
 
-	else if (marker->sequenceID > 0)
-		return marker->twinMarker->start - marker->start;
+	else if (markerVal->sequenceID > 0)
+		return twinMarkerVal->start - markerVal->start;
 	else
-		return marker->start - marker->twinMarker->start;
+		return markerVal->start - twinMarkerVal->start;
 }
 
-int passageMarkerDirection(PassageMarker * marker)
+int passageMarkerDirection(PassageMarkerI marker)
 {
-	if (marker->sequenceID > 0)
+	if (PM_FI2P (marker)->sequenceID > 0)
 		return 1;
 	else
 		return -1;
 }
 
-PassageMarker *addUncertainPassageMarker(IDnum sequenceID, Node * node)
+PassageMarkerI addUncertainPassageMarker(IDnum sequenceID, Node * node)
 {
-	PassageMarker *marker = allocatePassageMarker();
-	PassageMarker *twinMarker = allocatePassageMarker();
+	PassageMarkerI marker = allocatePassageMarker();
+	PassageMarkerI twinMarker = allocatePassageMarker();
+	PassageMarker *markerVal = PM_FI2P (marker);
+	PassageMarker *twinMarkerVal = PM_FI2P (twinMarker);
 
-	marker->sequenceID = sequenceID;
-	marker->start = -10;
-	marker->node = node;
-	marker->nextInSequence = NULL;
-	marker->finishOffset = 0;
-	marker->twinMarker = twinMarker;
-	marker->status = false;
+	markerVal->sequenceID = sequenceID;
+	markerVal->start = -10;
+	markerVal->node = node;
+	markerVal->nextInSequence = NULL_IDX;
+	markerVal->finishOffset = 0;
+	markerVal->twinMarker = twinMarker;
+	markerVal->status = false;
 
-	twinMarker->sequenceID = -sequenceID;
-	twinMarker->start = -10;
+	twinMarkerVal->sequenceID = -sequenceID;
+	twinMarkerVal->start = -10;
 	if (node == NULL)
-		twinMarker->node = NULL;
+		twinMarkerVal->node = NULL;
 	else
-		twinMarker->node = getTwinNode(node);
-	twinMarker->nextInSequence = NULL;
-	twinMarker->finishOffset = 0;
-	twinMarker->twinMarker = marker;
-	twinMarker->status = false;
+		twinMarkerVal->node = getTwinNode(node);
+	twinMarkerVal->nextInSequence = NULL_IDX;
+	twinMarkerVal->finishOffset = 0;
+	twinMarkerVal->twinMarker = marker;
+	twinMarkerVal->status = false;
 
 	if (node != NULL) {
 		setNextInNode(marker, getMarker(node));
@@ -561,7 +630,7 @@ PassageMarker *addUncertainPassageMarker(IDnum sequenceID, Node * node)
 	return marker;
 }
 
-PassageMarkerList *newPassageMarkerList(PassageMarker * marker,
+PassageMarkerList *newPassageMarkerList(PassageMarkerI marker,
 					PassageMarkerList * next)
 {
 	PassageMarkerList *list = allocatePassageMarkerList();
@@ -570,28 +639,30 @@ PassageMarkerList *newPassageMarkerList(PassageMarker * marker,
 	return list;
 }
 
-PassageMarker *newPassageMarker(IDnum seqID, Coordinate start,
+PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
 				Coordinate finish, Coordinate startOffset,
 				Coordinate finishOffset)
 {
-	PassageMarker *marker = allocatePassageMarker();
-	PassageMarker *twinMarker = allocatePassageMarker();
+	PassageMarkerI marker = allocatePassageMarker();
+	PassageMarkerI twinMarker = allocatePassageMarker();
+	PassageMarker *markerVal = PM_FI2P (marker);
+	PassageMarker *twinMarkerVal = PM_FI2P (markerVal->twinMarker);
 
 //      printf("Values %d\t%d\t%d\t%d\t%d\n", seqID, start, finish, startOffset, finishOffset);
 
-	marker->sequenceID = seqID;
-	marker->node = NULL;
-	marker->nextInSequence = NULL;
-	marker->twinMarker = twinMarker;
-	marker->nextInNode = NULL;
-	marker->status = false;
+	markerVal->sequenceID = seqID;
+	markerVal->node = NULL;
+	markerVal->nextInSequence = NULL_IDX;
+	markerVal->twinMarker = twinMarker;
+	markerVal->nextInNode = NULL_IDX;
+	markerVal->status = false;
 
-	twinMarker->sequenceID = -seqID;
-	twinMarker->node = NULL;
-	twinMarker->nextInSequence = NULL;
-	twinMarker->twinMarker = marker;
-	twinMarker->nextInNode = NULL;
-	twinMarker->status = false;
+	twinMarkerVal->sequenceID = -seqID;
+	twinMarkerVal->node = NULL;
+	twinMarkerVal->nextInSequence = NULL_IDX;
+	twinMarkerVal->twinMarker = marker;
+	twinMarkerVal->nextInNode = NULL_IDX;
+	twinMarkerVal->status = false;
 
 	setPassageMarkerStart(marker, start);
 	setPassageMarkerFinish(marker, finish);
@@ -610,12 +681,13 @@ PassageMarker *newPassageMarker(IDnum seqID, Coordinate start,
 	return marker;
 }
 
-void exportMarker(FILE * outfile, PassageMarker * marker,
-		  TightString ** sequences, int WORDLENGTH)
+void exportMarker(FILE * outfile, PassageMarkerI marker,
+		  TightString * sequences, int WORDLENGTH)
 {
-	PassageMarker *current;
+	PassageMarker *markerVal = PM_FI2P (marker);
+	PassageMarkerI current;
 
-	if (marker->sequenceID > 0) {
+	if (markerVal->sequenceID > 0) {
 		if (!isInitial(marker)) {
 			return;
 		}
@@ -624,13 +696,13 @@ void exportMarker(FILE * outfile, PassageMarker * marker,
 		if (!isTerminal(marker)) {
 			return;
 		}
-		current = marker->twinMarker;
+		current = markerVal->twinMarker;
 	}
 
-	fprintf(outfile, "SEQ\t%d\n", current->sequenceID);
-	for (; current != NULL; current = current->nextInSequence) {
+	fprintf(outfile, "SEQ\t%d\n", PM_FI2P (current)->sequenceID);
+	for (; current != NULL_IDX; current = PM_FI2P (current)->nextInSequence) {
 		fprintf(outfile, "%ld\t%lld\t%lld\t%lld\t%lld",
-			(long) getNodeID(current->node), (long long) getStartOffset(current),
+			(long) getNodeID(PM_FI2P (current)->node), (long long) getStartOffset(current),
 			(long long) getPassageMarkerStart(current),
 			(long long) getPassageMarkerFinish(current),
 			(long long) getFinishOffset(current));

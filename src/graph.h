@@ -27,7 +27,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 //Creators/destructor
 Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
-	      Coordinate offset, IDnum ID, TightString ** sequences,
+	      Coordinate offset, IDnum ID, TightString * sequences,
 	      int WORDLENGTH);
 Node *emptyNode();
 void destroyNode(Node * node, Graph * graph);
@@ -47,8 +47,8 @@ boolean hasSingleArc(Node * node);
 Coordinate getNodeLength(Node * node);
 void appendDescriptors(Node * target, Node * source);
 void directlyAppendDescriptors(Node * target, Node * sourcei, Coordinate totalLength);
-void appendSequence(Node * node, TightString ** reads,
-		    PassageMarker * guide, Graph * graph);
+void appendSequence(Node * node, TightString * reads,
+		    PassageMarkerI guide, Graph * graph);
 void clipNodeLength(Node * node, Coordinate startClip,
 		    Coordinate finishClip);
 void splitNodeDescriptor(Node * source, Node * target, Coordinate offset);
@@ -57,9 +57,9 @@ void reallocateNodeDescriptor(Node * node, Coordinate length);
 Nucleotide getNucleotideInNode(Node * node, Coordinate index);
 
 // Passage markers
-void insertPassageMarker(PassageMarker * marker, Node * destination);
-PassageMarker *getMarker(Node * node);
-void setMarker(Node * node, PassageMarker * marker);
+void insertPassageMarker(PassageMarkerI marker, Node * destination);
+PassageMarkerI getMarker(Node * node);
+void setMarker(Node * node, PassageMarkerI marker);
 IDnum markerCount(Node * node);
 
 // Short read marker creation
@@ -75,13 +75,13 @@ ShortReadMarker *commonNodeReads(Node * nodeA, Node * nodeB, Graph * graph,
 				 IDnum * length);
 ShortReadMarker *extractBackOfNodeReads(Node * node, Coordinate breakpoint,
 					Graph * graph, IDnum * length,
-					PassageMarker * sourceMarker,
-					Coordinate * sequenceLengths);
+					PassageMarkerI sourceMarker,
+					IDnum * sequenceLengths);
 ShortReadMarker *extractFrontOfNodeReads(Node * node,
 					 Coordinate breakpoint,
 					 Graph * graph, IDnum * length,
-					 PassageMarker * sourceMarker,
-					 Coordinate * sequenceLengths);
+					 PassageMarkerI sourceMarker,
+					 IDnum * sequenceLengths);
 
 // Short read marker moving around
 void foldSymmetricalNodeReads(Node * node, Graph * graph);
@@ -208,7 +208,7 @@ void reassessArcMultiplicities(Graph * graph);
 void displayGraph(Graph * graph);
 Graph *importGraph(char *filename);
 Graph *importSimplifiedGraph(char *filename);
-void exportGraph(char *filename, Graph * graph, TightString ** sequences);
+void exportGraph(char *filename, Graph * graph, TightString * sequences);
 void exportDOTGraph(char *filename, Graph * graph);
 Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand);
 

@@ -23,8 +23,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 struct readSet_st {
 	char **sequences;
-	TightString **tSequences;
+	TightString *tSequences;
 	char **labels;
+	char *tSeqMem;
 	Quality **confidenceScores;
 	Probability **kmerProbabilities;
 	IDnum *mateReads;
@@ -36,8 +37,8 @@ ReadSet *newReadSet();
 ReadSet *newReadSetAroundTightStringArray(TightString ** array,
 					  IDnum length);
 
-Coordinate *getSequenceLengths(ReadSet * reads, int wordLength);
-Coordinate *getSequenceLengthsFromFile(char *filename, int wordLength);
+IDnum *getSequenceLengths(ReadSet * reads, int wordLength);
+IDnum *getSequenceLengthsFromFile(char *filename, int wordLength);
 
 void concatenateReadSets(ReadSet * A, ReadSet * B);
 

@@ -40,13 +40,12 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 typedef struct miniConnection_st MiniConnection;
 
 struct miniConnection_st {
-	Coordinate distance;
-	double variance;
 	Connection *frontReference;
 	Connection *backReference;
 	NodeList *nodeList;
-};
-
+	double variance;
+	IDnum distance;
+}  ATTRIBUTE_PACKED;
 
 // Global pointers
 static Graph *graph;
@@ -637,19 +636,19 @@ static void adjustShortReads(Node * target, Node * source)
 
 static void adjustLongReads(Node * target, Node * source)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Coordinate nodeLength = getNodeLength(source);
 
-	for (marker = getMarker(source); marker != NULL;
+	for (marker = getMarker(source); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		incrementFinishOffset(marker, nodeLength);
 }
 
-static boolean goesToNode(PassageMarker * marker, Node * node)
+static boolean goesToNode(PassageMarkerI marker, Node * node)
 {
-	PassageMarker *current;
+	PassageMarkerI current;
 
-	for (current = marker; current != NULL;
+	for (current = marker; current != NULL_IDX;
 	     current = getNextInSequence(current))
 		if (getNode(current) == node)
 			return true;
@@ -657,12 +656,12 @@ static boolean goesToNode(PassageMarker * marker, Node * node)
 	return false;
 }
 
-static boolean comesFromNode(PassageMarker * marker, Node * node)
+static boolean comesFromNode(PassageMarkerI marker, Node * node)
 {
 	Node *target = getTwinNode(node);
-	PassageMarker *current;
+	PassageMarkerI current;
 
-	for (current = getTwinMarker(marker); current != NULL;
+	for (current = getTwinMarker(marker); current != NULL_IDX;
 	     current = getNextInSequence(current))
 		if (getNode(current) == target)
 			return true;
@@ -670,12 +669,12 @@ static boolean comesFromNode(PassageMarker * marker, Node * node)
 	return false;
 }
 
-static void reconnectPassageMarker(PassageMarker * marker, Node * node,
-				   PassageMarker ** ptr)
+static void reconnectPassageMarker(PassageMarkerI marker, Node * node,
+				   PassageMarkerI * ptr)
 {
-	PassageMarker *current;
-	PassageMarker *next = getNextInSequence(marker);
-	PassageMarker *tmpMarker;
+	PassageMarkerI current;
+	PassageMarkerI next = getNextInSequence(marker);
+	PassageMarkerI tmpMarker;
 
 	for (current = marker; getNode(current) != node;
 	     current = getPreviousInSequence(current));
@@ -687,8 +686,8 @@ static void reconnectPassageMarker(PassageMarker * marker, Node * node,
 		tmpMarker = getPreviousInSequence(marker);
 		if (*ptr == marker || *ptr == getTwinMarker(marker))
 			*ptr = getNextInNode(*ptr);
-		setNextInSequence(marker, NULL);
-		setPreviousInSequence(NULL, marker);
+		setNextInSequence(marker, NULL_IDX);
+		setPreviousInSequence(NULL_IDX, marker);
 		destroyPassageMarker(marker);
 	}
 }
@@ -696,10 +695,10 @@ static void reconnectPassageMarker(PassageMarker * marker, Node * node,
 static void concatenateLongReads(Node * node, Node * candidate,
 				 Graph * graph)
 {
-	PassageMarker *marker, *tmpMarker;
+	PassageMarkerI marker, tmpMarker;
 
 	// Passage marker management in node:
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		if (!goesToNode(marker, candidate))
 			incrementFinishOffset(marker,
@@ -707,7 +706,7 @@ static void concatenateLongReads(Node * node, Node * candidate,
 	}
 
 	// Swapping new born passageMarkers from candidate to node
-	for (marker = getMarker(candidate); marker != NULL;
+	for (marker = getMarker(candidate); marker != NULL_IDX;
 	     marker = tmpMarker) {
 		tmpMarker = getNextInNode(marker);
 

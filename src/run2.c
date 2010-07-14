@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 	int arg_index, arg_int;
 	double arg_double;
 	char *arg;
-	Coordinate *sequenceLengths = NULL;
+	IDnum *sequenceLengths = NULL;
 	Category cat;
 	boolean scaffolding = true;
 	int pebbleRounds = 1;

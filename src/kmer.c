@@ -399,8 +399,9 @@ void printKmer(Kmer * kmer) {
 	puts("");
 }
 
+#if 0
 void testKmers(int argc, char** argv) {
-	Kmer kmer;		
+	Kmer kmer;
 	Kmer *k2;
 	Kmer k4;
 
@@ -448,6 +449,7 @@ void testKmers(int argc, char** argv) {
 	printf("%i\n", compareKmers(k2, &kmer)); 
 
 }
+#endif
 
 void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
 	register int i;

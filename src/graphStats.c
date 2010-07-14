@@ -33,16 +33,16 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "fibHeap.h"
 #include "utility.h"
 
-static void surveyPath(PassageMarker * marker)
+static void surveyPath(PassageMarkerI marker)
 {
 	Coordinate length = 0;
 	Coordinate realLength = 0;
-	PassageMarker *current = marker;
+	PassageMarkerI current = marker;
 
 	if (passageMarkerDirection(current) < 0)
 		current = getTwinMarker(current);
 
-	for (; current != NULL; current = getNextInSequence(current)) {
+	for (; current != NULL_IDX; current = getNextInSequence(current)) {
 		length +=
 		    getNodeLength(getNode(current)) -
 		    getStartOffset(current) - getFinishOffset(current);
@@ -57,11 +57,11 @@ static void surveyPath(PassageMarker * marker)
 void surveyPaths(Graph * graph)
 {
 	IDnum ID;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	for (ID = 1; ID <= nodeCount(graph); ID++)
 		for (marker = getMarker(getNodeInGraph(graph, ID));
-		     marker != NULL; marker = getNextInNode(marker))
+		     marker != NULL_IDX; marker = getNextInNode(marker))
 			if ((passageMarkerDirection(marker) > 0
 			     && isInitial(marker))
 			    || (passageMarkerDirection(marker) < 0
@@ -73,9 +73,9 @@ static PassageMarkerList *copyMarkers(Node * node)
 {
 	PassageMarkerList *list = NULL;
 	PassageMarkerList *new;
-	PassageMarker *currentMarker;
+	PassageMarkerI currentMarker;
 
-	for (currentMarker = getMarker(node); currentMarker != NULL;
+	for (currentMarker = getMarker(node); currentMarker != NULL_IDX;
 	     currentMarker = getNextInNode(currentMarker)) {
 		new = newPassageMarkerList(currentMarker, list);
 		list = new;
@@ -205,16 +205,16 @@ void testForBizarreMarkers(Graph * graph)
 {
 	IDnum index;
 	Node *node;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	for (index = 1; index < nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
 		if (node == NULL)
 			continue;
 
-		for (marker = getMarker(node); marker != NULL;
+		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
-			if (getTwinMarker(marker) == NULL) 
+			if (getTwinMarker(marker) == NULL_IDX) 
 				exitErrorf(EXIT_FAILURE, false, "Bizarre marker %s",
 				       readPassageMarker(marker));
 		}
@@ -281,12 +281,12 @@ IDnum countRepeats(Graph * graph)
 int nodeGenomicMultiplicity(Node * node, IDnum firstStrain)
 {
 	int counter = 0;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	if (node == NULL)
 		return 0;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) < firstStrain)
 			counter++;
@@ -298,13 +298,13 @@ int nodeGenomicMultiplicity(Node * node, IDnum firstStrain)
 IDnum nodeMultiplicity(Node * node)
 {
 	int counter = 0;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	if (node == NULL)
 		return 0;
 
 	marker = getMarker(node);
-	while (marker != NULL) {
+	while (marker != NULL_IDX) {
 		counter++;
 		marker = getNextInNode(marker);
 	}
@@ -333,7 +333,7 @@ void displayGraphStatistics(Graph * graph)
 
 void displayNodeStatisticsSelective(Node * node, IDnum first)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	boolean originalGenome;
 	boolean strain;
 
@@ -344,7 +344,7 @@ void displayNodeStatisticsSelective(Node * node, IDnum first)
 
 	originalGenome = false;
 	strain = false;
-	while (marker != NULL) {
+	while (marker != NULL_IDX) {
 		if (getAbsolutePassMarkerSeqID(marker) < first)
 			originalGenome = true;
 
@@ -385,9 +385,9 @@ void displayGraphStatisticsSelective(Graph * graph, IDnum first)
 
 boolean isOnlyGenome(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) >= firstStrain)
 			return false;
@@ -397,9 +397,9 @@ boolean isOnlyGenome(Node * node, IDnum firstStrain)
 
 boolean isOnlyStrain(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) < firstStrain)
 			return false;
@@ -415,13 +415,13 @@ boolean isSNP(Node * node, IDnum firstStrain, int WORDLENGTH)
 	if (getNodeLength(node) != WORDLENGTH)
 		return false;
 
-	if (getMarker(node) == NULL)
+	if (getMarker(node) == NULL_IDX)
 		return false;
 
 	if (getAbsolutePassMarkerSeqID(getMarker(node)) >= firstStrain)
 		return false;
 
-	if (getNextInNode(getMarker(node)) != NULL)
+	if (getNextInNode(getMarker(node)) != NULL_IDX)
 		return false;
 
 	if (arcCount(node) != 1)
@@ -453,10 +453,10 @@ boolean isSNP(Node * node, IDnum firstStrain, int WORDLENGTH)
 
 IDnum strainMarkerCount(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	IDnum counter = 0;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) >= firstStrain)
 			counter++;
@@ -471,11 +471,11 @@ boolean isError(Node * node, IDnum firstStrain)
 
 void removeStrainMarkers(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker;
-	PassageMarker *tmp = NULL;
+	PassageMarkerI marker;
+	PassageMarkerI tmp = NULL_IDX;
 
 	marker = getMarker(node);
-	while (marker != NULL) {
+	while (marker != NULL_IDX) {
 		tmp = getNextInNode(marker);
 
 		if (getAbsolutePassMarkerSeqID(marker) >= firstStrain)
@@ -545,11 +545,11 @@ IDnum countSNPs(Graph * graph, IDnum firstStrain, int WORDLENGTH)
 
 Coordinate commonLength(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker = getMarker(node);
+	PassageMarkerI marker = getMarker(node);
 	int orig = 0;
 	int strain = 0;
 
-	while (marker != NULL) {
+	while (marker != NULL_IDX) {
 		if (getAbsolutePassMarkerSeqID(marker) < firstStrain)
 			orig++;
 		else
@@ -582,9 +582,9 @@ boolean isMixed(Node * node, IDnum firstStrain)
 	    && !isOnlyGenome(node, firstStrain);
 }
 
-int countLocalBreakpoints(PassageMarker * marker, IDnum firstStrain)
+int countLocalBreakpoints(PassageMarkerI marker, IDnum firstStrain)
 {
-	PassageMarker *localMarker;
+	PassageMarkerI localMarker;
 	IDnum sequenceID = getAbsolutePassMarkerSeqID(marker);
 	IDnum localSeqID;
 	Coordinate start = getPassageMarkerStart(marker);
@@ -604,7 +604,7 @@ int countLocalBreakpoints(PassageMarker * marker, IDnum firstStrain)
 		arcCount++;
 	arcStatus = callocOrExit(arcCount, boolean);
 	// Check for other genomic markers in node
-	for (localMarker = getMarker(localNode); localMarker != NULL;
+	for (localMarker = getMarker(localNode); localMarker != NULL_IDX;
 	     localMarker = getNextInNode(localMarker)) {
 		localSeqID = getAbsolutePassMarkerSeqID(localMarker);
 		if (localSeqID >= firstStrain)
@@ -643,13 +643,13 @@ int countLocalBreakpoints(PassageMarker * marker, IDnum firstStrain)
 
 IDnum countBreakpoints(Graph * graph, IDnum firstStrain)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	IDnum seqIndex;
 	IDnum total = 0;
 
 	for (seqIndex = 1; seqIndex < firstStrain; seqIndex++) {
 		marker = getMarker(getNodeInGraph(graph, seqIndex));
-		while (marker != NULL) {
+		while (marker != NULL_IDX) {
 			total +=
 			    countLocalBreakpoints(marker, firstStrain);
 			marker = getNextInSequence(marker);
@@ -716,10 +716,10 @@ Coordinate countStrainOnlyBp(Graph * graph, IDnum firstStrain)
 
 IDnum genomeMarkerCount(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	IDnum counter = 0;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) < firstStrain)
 			counter++;
@@ -729,12 +729,12 @@ IDnum genomeMarkerCount(Node * node, IDnum firstStrain)
 
 Coordinate readCoverage(Node * node)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Coordinate sum = 0;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
-		if (getTwinMarker(marker) == NULL) {
+		if (getTwinMarker(marker) == NULL_IDX) {
 			printf("Node %d screwed up\n", getNodeID(node));
 			printf("Sequence %d\n",
 			       getPassageMarkerSequenceID(marker));
@@ -748,10 +748,10 @@ Coordinate readCoverage(Node * node)
 
 Coordinate refReadCoverage(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Coordinate sum = 0;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) < firstStrain)
 			sum += getPassageMarkerLength(marker);
@@ -761,10 +761,10 @@ Coordinate refReadCoverage(Node * node, IDnum firstStrain)
 
 Coordinate newReadCoverage(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Coordinate sum = 0;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) >= firstStrain) {
 			sum += getPassageMarkerLength(marker);
@@ -779,13 +779,13 @@ Coordinate newReadCoverage(Node * node, IDnum firstStrain)
 
 IDnum readStarts(Node * node)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	IDnum sum = 0;
 
 	if (node == NULL)
 		return 0;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		if (getPassageMarkerSequenceID(marker) > 0
 		    && isInitial(marker))
@@ -1022,15 +1022,15 @@ void displayStrainOnlyDescriptors(Graph * graph, IDnum firstStrain)
 	}
 }
 
-void displayLocalBreakpoint(PassageMarker * strainMarker,
+void displayLocalBreakpoint(PassageMarkerI strainMarker,
 			    IDnum firstStrain,
-			    PassageMarker * genomeMarker,
+			    PassageMarkerI genomeMarker,
 			    Node ** genomeDestination,
 			    Node ** strainDestination, IDnum * counter,
 			    IDnum nodeCount)
 {
 	boolean isTranslocation;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	Node *destination, *destinationA;
 	Node *destination2, *destination2A;
 	Node *node1, *node2;
@@ -1106,7 +1106,7 @@ void displayLocalBreakpoint(PassageMarker * strainMarker,
 
 	// Detect translocation
 	isTranslocation = true;
-	for (marker = getMarker(destination); marker != NULL;
+	for (marker = getMarker(destination); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) ==
 		    getAbsolutePassMarkerSeqID(genomeMarker)) {
@@ -1161,7 +1161,7 @@ void displayBreakpoints(Graph * graph, IDnum firstStrain)
 {
 	IDnum nodeIndex;
 	Node *node;
-	PassageMarker *strainMarker, *genomeMarker;
+	PassageMarkerI strainMarker, genomeMarker;
 	Node **genomeDestination =
 	    callocOrExit(2 * nodeCount(graph) + 1, Node *);
 	Node **strainDestination =
@@ -1190,14 +1190,14 @@ void displayBreakpoints(Graph * graph, IDnum firstStrain)
 			continue;
 		}
 
-		for (genomeMarker = getMarker(node); genomeMarker != NULL;
+		for (genomeMarker = getMarker(node); genomeMarker != NULL_IDX;
 		     genomeMarker = getNextInNode(genomeMarker))
 			if (getAbsolutePassMarkerSeqID(genomeMarker) <
 			    firstStrain)
 				break;
 
 		// Go through all strain passage marker
-		for (strainMarker = getMarker(node); strainMarker != NULL;
+		for (strainMarker = getMarker(node); strainMarker != NULL_IDX;
 		     strainMarker = getNextInNode(strainMarker)) {
 			displayLocalBreakpoint(strainMarker, firstStrain,
 					       genomeMarker,
@@ -1219,19 +1219,19 @@ void displayBreakpoints(Graph * graph, IDnum firstStrain)
 	free(genomeDestination);
 }
 
-PassageMarker *genomeMarker(Node * node, IDnum firstStrain)
+PassageMarkerI genomeMarker(Node * node, IDnum firstStrain)
 {
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	if (genomeMarkerCount(node, firstStrain) != 1)
-		return NULL;
+		return NULL_IDX;
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		if (getAbsolutePassMarkerSeqID(marker) < firstStrain)
 			return marker;
 
-	return NULL;
+	return NULL_IDX;
 }
 
 void exportArcSequence(Arc * arc, FILE * outfile, int WORDLENGTH,
@@ -1285,12 +1285,12 @@ void removeReferenceMarkers(Graph * graph, IDnum firstStrain)
 {
 	IDnum ID;
 	Node *node;
-	PassageMarker *marker, *oldMarker;
+	PassageMarkerI marker, oldMarker;
 
 	for (ID = 1; ID <= nodeCount(graph); ID++) {
 		node = getNodeInGraph(graph, ID);
 		marker = getMarker(node);
-		while (marker != NULL) {
+		while (marker != NULL_IDX) {
 			if (getAbsolutePassMarkerSeqID(marker) <
 			    firstStrain) {
 				if (!isInitial(marker))
@@ -1314,7 +1314,7 @@ void removeReferenceMarkers(Graph * graph, IDnum firstStrain)
 				marker = getNextInNode(marker);
 		}
 
-		if (getMarker(node) == NULL)
+		if (getMarker(node) == NULL_IDX)
 			destroyNode(node, graph);
 	}
 
@@ -1388,8 +1388,7 @@ void exportLongNodeSequences(char *filename, Graph * graph,
 				fprintf(outfile, "N");
 		}
 		fprintf(outfile, "\n");
-
-		destroyTightString(tString);
+		destroyTightString (tString);
 	}
 
 	fclose(outfile);
@@ -1600,14 +1599,14 @@ double estimated_cov(Graph * graph, char * directory)
 
 static void destroyMixedNode(Node * node)
 {
-	PassageMarker *marker = getMarker(node);
-	PassageMarker *current;
+	PassageMarkerI marker = getMarker(node);
+	PassageMarkerI current;
 
-	while (marker != NULL) {
+	while (marker != NULL_IDX) {
 		while (!isInitial(marker))
 			marker = getPreviousInSequence(marker);
 
-		while (marker != NULL) {
+		while (marker != NULL_IDX) {
 			current = marker;
 			marker = getNextInSequence(marker);
 			destroyPassageMarker(current);
@@ -1636,16 +1635,16 @@ void destroyMixedReads(Graph * graph, IDnum minCoverage)
 		if (node == NULL)
 			continue;
 
-		if (getMarker(node) == NULL)
+		if (getMarker(node) == NULL_IDX)
 			destroyNode(node, graph);
 	}
 
 	concatenateGraph(graph);
 }
 
-static boolean isConnectedRead(PassageMarker * marker)
+static boolean isConnectedRead(PassageMarkerI marker)
 {
-	PassageMarker *current;
+	PassageMarkerI current;
 
 	for (current = marker; getNodeStatus(getNode(current));
 	     current = getNextInSequence(current))
@@ -1661,15 +1660,15 @@ static boolean isConnectedRead(PassageMarker * marker)
 	return true;
 }
 
-static void destroyWholeRead(PassageMarker * marker)
+static void destroyWholeRead(PassageMarkerI marker)
 {
-	PassageMarker *current = marker;
-	PassageMarker *next;
+	PassageMarkerI current = marker;
+	PassageMarkerI next;
 
 	while (!isInitial(current))
 		current = getPreviousInSequence(current);
 
-	for (; current != NULL; current = next) {
+	for (; current != NULL_IDX; current = next) {
 		next = getNextInSequence(current);
 		destroyPassageMarker(current);
 	}
@@ -1679,7 +1678,7 @@ static void cleanUpNode(Node * node, Graph * graph)
 {
 	Category cat;
 	Node *twin = getTwinNode(node);
-	PassageMarker *marker, *twinMarker;
+	PassageMarkerI marker, twinMarker;
 
 	for (cat = 0; cat < CATEGORIES; cat++)
 		setVirtualCoverage(node, cat, 0);
@@ -1689,7 +1688,7 @@ static void cleanUpNode(Node * node, Graph * graph)
 	while (getArc(twin) != NULL)
 		destroyArc(getArc(twin), graph);
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		twinMarker = getTwinMarker(marker);
 
@@ -1710,7 +1709,7 @@ void destroySinglePoolNodes(Graph * graph)
 {
 	IDnum index;
 	Node *node;
-	PassageMarker *marker, *next;
+	PassageMarkerI marker, next;
 
 	puts("Destroying single pool nodes");
 	resetNodeStatus(graph);
@@ -1725,7 +1724,7 @@ void destroySinglePoolNodes(Graph * graph)
 		    && getVirtualCoverage(node, 1) != 0)
 			continue;
 
-		if (getMarker(node) == NULL)
+		if (getMarker(node) == NULL_IDX)
 			destroyNode(node, graph);
 		else
 			setNodeStatus(node, true);
@@ -1737,7 +1736,7 @@ void destroySinglePoolNodes(Graph * graph)
 		if (node == NULL || !getNodeStatus(node))
 			continue;
 
-		for (marker = getMarker(node); marker != NULL;
+		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = next) {
 			if (isConnectedRead(marker))
 				next = getNextInNode(marker);
@@ -1754,7 +1753,7 @@ void destroySinglePoolNodes(Graph * graph)
 		if (node == NULL || !getNodeStatus(node))
 			continue;
 
-		if (getMarker(node) == NULL)
+		if (getMarker(node) == NULL_IDX)
 			destroyNode(node, graph);
 		else
 			cleanUpNode(node, graph);
@@ -1930,30 +1929,30 @@ void destroyEmptyNodes(Graph * graph)
 		if (node == NULL)
 			continue;
 
-		if (getMarker(node) == NULL)
+		if (getMarker(node) == NULL_IDX)
 			destroyNode(node, graph);
 	}
 
 	concatenateGraph(graph);
 }
 
-static Coordinate getReadLength(PassageMarker * marker)
+static Coordinate getReadLength(PassageMarkerI marker)
 {
-	PassageMarker *current;
+	PassageMarkerI current;
 	Coordinate totalLength = 0;
 
-	for (current = marker; current != NULL;
+	for (current = marker; current != NULL_IDX;
 	     current = getNextInSequence(current))
 		totalLength += getPassageMarkerLength(current);
 
 	return totalLength;
 }
 
-static void destroyRead(PassageMarker * marker)
+static void destroyRead(PassageMarkerI marker)
 {
-	PassageMarker *current, *next;
+	PassageMarkerI current, next;
 
-	for (current = marker; current != NULL; current = next) {
+	for (current = marker; current != NULL_IDX; current = next) {
 		next = getNextInSequence(current);
 		destroyPassageMarker(current);
 	}
@@ -1963,7 +1962,7 @@ void removeShortReads(Graph * graph)
 {
 	IDnum index;
 	Node *node;
-	PassageMarker *marker, *next;
+	PassageMarkerI marker, next;
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -1971,7 +1970,7 @@ void removeShortReads(Graph * graph)
 			continue;
 
 
-		for (marker = getMarker(node); marker != NULL;
+		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = next) {
 			if (getPassageMarkerSequenceID(marker) > 0
 			    && isInitial(marker)
@@ -2078,7 +2077,7 @@ void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
 }
 
 static boolean terminalReferenceMarker(Node * node, ReadSet * reads) {
-	PassageMarker * marker;
+	PassageMarkerI marker;
 
 	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
 		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] == REFERENCE
@@ -2090,9 +2089,9 @@ static boolean terminalReferenceMarker(Node * node, ReadSet * reads) {
 }
 
 static boolean hasReferenceMarker(Node * node, ReadSet * reads) {
-	PassageMarker * marker;
+	PassageMarkerI marker;
 	
-	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
+	for (marker = getMarker(node); marker != NULL_IDX; marker = getNextInNode(marker))
 		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] == REFERENCE)
 			return true;
 
@@ -2108,7 +2107,7 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 	boolean denounceReads = readStartsAreActivated(graph);
 	boolean *res = NULL; 
 	ShortReadMarker *nodeArray, *shortMarker;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	IDnum maxIndex;
 	IDnum readID;
 	IDnum index2;
@@ -2230,7 +2229,7 @@ void removeLowCoverageNodes(Graph * graph, double minCov)
 {
 	IDnum index;
 	Node *node;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	if (minCov < 0)
 		return;
@@ -2243,7 +2242,7 @@ void removeLowCoverageNodes(Graph * graph, double minCov)
 		if (getNodeLength(node) > 0
 		    && getTotalCoverage(node) / getNodeLength(node) <
 		    minCov) {
-			while ((marker = getMarker(node))) {
+			while ((marker = getMarker(node)) != NULL_IDX) {
 				if (!isInitial(marker)
 				    && !isTerminal(marker))
 					disconnectNextPassageMarker
@@ -2262,7 +2261,7 @@ void removeHighCoverageNodes(Graph * graph, double maxCov)
 {
 	IDnum index;
 	Node *node;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 
 	if (maxCov < 0)
 		return;
@@ -2275,7 +2274,7 @@ void removeHighCoverageNodes(Graph * graph, double maxCov)
 		if (getNodeLength(node) > 0
 		    && getTotalCoverage(node) / getNodeLength(node) >
 		    maxCov) {
-			while ((marker = getMarker(node))) {
+			while ((marker = getMarker(node)) != NULL_IDX) {
 				if (!isInitial(marker)
 				    && !isTerminal(marker))
 					disconnectNextPassageMarker
@@ -2325,7 +2324,7 @@ static void exportAMOSLib(FILE * outfile, Graph * graph, Category cat)
 	fprintf(outfile, "}\n");
 }
 
-static void exportAMOSMarker(FILE * outfile, PassageMarker * marker,
+static void exportAMOSMarker(FILE * outfile, PassageMarkerI marker,
 			     Coordinate nodeLength, Coordinate start,
 			     Coordinate finish, int wordShift)
 {
@@ -2377,7 +2376,7 @@ static void exportAMOSShortMarker(FILE * outfile, ShortReadMarker * marker,
 	    getShortReadMarkerPosition(marker) -
 	    getShortReadMarkerOffset(marker);
 	TightString *sequence =
-	    reads->tSequences[getShortReadMarkerID(marker) - 1];
+	    getTightStringInArray (reads->tSequences, getShortReadMarkerID(marker) - 1);
 
 	if (getShortReadMarkerPosition(marker) == -1)
 		return;
@@ -2400,7 +2399,7 @@ static void exportAMOSReverseShortMarker(FILE * outfile,
 					 Coordinate finish)
 {
 	TightString *sequence =
-	    reads->tSequences[getShortReadMarkerID(marker) - 1];
+	    getTightStringInArray (reads->tSequences, getShortReadMarkerID(marker) - 1);
 
 	Coordinate offset =
 	    nodeLength - getShortReadMarkerPosition(marker) +
@@ -2427,7 +2426,7 @@ static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
 {
 	Coordinate start;
 	char str[100];
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	ShortReadMarker *shortMarkerArray, *shortMarker;
 	Coordinate index, maxIndex;
 	int wordShift = getWordLength(graph) - 1;
@@ -2457,7 +2456,7 @@ static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
 
 	free(string);
 
-	for (marker = getMarker(node); marker != NULL;
+	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker))
 		exportAMOSMarker(outfile, marker, getNodeLength(node),
 				 contigStart, contigFinish, wordShift);
@@ -2614,15 +2613,15 @@ void exportAMOSContigs(char *filename, Graph * graph,
 		    getInsertLength(graph,
 				    reads->categories[index - 1]) >= 0) {
 			exportAMOSRead(outfile,
-				       reads->tSequences[index - 1], index,
+				       getTightStringInArray(reads->tSequences, index - 1), index,
 				       index);
 			index++;
 			exportAMOSRead(outfile,
-				       reads->tSequences[index - 1], index,
+				       getTightStringInArray(reads->tSequences, index - 1), index,
 				       index - 1);
 		} else {
 			exportAMOSRead(outfile,
-				       reads->tSequences[index - 1], index,
+				       getTightStringInArray(reads->tSequences, index - 1), index,
 				       -1);
 		}
 	}
@@ -2790,7 +2789,7 @@ IDnum usedReads(Graph * graph, Coordinate minContigLength)
 	boolean * used = callocOrExit(sequenceCount(graph) + 1, boolean);
 	IDnum nodeID, readID;
 	Node * node;
-	PassageMarker * marker;
+	PassageMarkerI marker;
 	ShortReadMarker * shortReadArray, * shortReadMarker;
 	IDnum shortReadCount, shortReadIndex;
 
@@ -2800,7 +2799,7 @@ IDnum usedReads(Graph * graph, Coordinate minContigLength)
 			continue;
 		
 		// Long reads
-		for(marker = getMarker(node); marker != NULL; marker = getNextInNode(marker)) {
+		for(marker = getMarker(node); marker != NULL_IDX; marker = getNextInNode(marker)) {
 			readID = getPassageMarkerSequenceID(marker);
 			if (readID < 0)
 				readID = -readID;
@@ -2874,7 +2873,7 @@ void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLe
 	boolean * used = callocOrExit(sequenceCount(graph) + 1, boolean);
 	IDnum nodeID, readID;
 	Node * node;
-	PassageMarker * marker;
+	PassageMarkerI marker;
 	ShortReadMarker * shortReadArray, * shortReadMarker;
 	IDnum shortReadCount, shortReadIndex;
 
@@ -2890,7 +2889,7 @@ void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLe
 			continue;
 		
 		// Long reads
-		for(marker = getMarker(node); marker != NULL; marker = getNextInNode(marker)) {
+		for(marker = getMarker(node); marker != NULL_IDX; marker = getNextInNode(marker)) {
 			readID = getPassageMarkerSequenceID(marker);
 			if (readID < 0)
 				readID = -readID;
@@ -2920,7 +2919,7 @@ void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLe
 
 	for (readID = 1; readID <= sequenceCount(graph); readID++) 
 		if (!used[readID])
-			exportTightString(outfile, reads->tSequences[readID - 1], readID);	
+			exportTightString(outfile, getTightStringInArray(reads->tSequences, readID - 1), readID);
 
 	free(outFilename);
 	free(used);	
@@ -2944,11 +2943,11 @@ static IDnum getReferenceCount(ReadSet * reads) {
 typedef struct referenceCoord_st ReferenceCoord;
 
 struct referenceCoord_st {
+	IDnum start;
+	IDnum finish;
 	char * name;
-	Coordinate start;
-	Coordinate finish;
 	boolean positive_strand;
-};
+} ATTRIBUTE_PACKED;
 
 static ReferenceCoord * collectReferenceCoords(char * sequencesFilename, IDnum referenceCount) {
 	FILE * file = fopen(sequencesFilename, "r");
@@ -3003,12 +3002,12 @@ static ReferenceCoord * collectReferenceCoords(char * sequencesFilename, IDnum r
 }
 
 typedef struct refMap_st {
-	Coordinate start;
-	Coordinate finish;
+	IDnum start;
+	IDnum finish;
 	IDnum refID;
-	Coordinate refStart;
-	Coordinate refFinish;
-} ReferenceMapping; 
+	IDnum refStart;
+	IDnum refFinish;
+} ATTRIBUTE_PACKED ReferenceMapping; 
 
 static int compareReferenceMappings(const void * A, const void * B) {
 	ReferenceMapping * refMapA = (ReferenceMapping *) A;
@@ -3022,7 +3021,7 @@ static int compareReferenceMappings(const void * A, const void * B) {
 		return 1;
 }
 
-static void initializeReferenceMapping(ReferenceMapping * refMap, PassageMarker * marker, Node * node) {
+static void initializeReferenceMapping(ReferenceMapping * refMap, PassageMarkerI marker, Node * node) {
 	refMap->start = getStartOffset(marker);
 	refMap->finish = getNodeLength(node) - getFinishOffset(marker); 
 	refMap->refID = getPassageMarkerSequenceID(marker);
@@ -3063,13 +3062,13 @@ static void fprintfReferenceMapping(FILE * file, ReferenceMapping * mapping, Ref
 }
 
 static void exportLongNodeMapping(FILE * outfile, Node * node, ReadSet * reads, ReferenceCoord * refCoords, int wordLength) {
-	PassageMarker * marker;
+	PassageMarkerI marker;
 	ReferenceMapping * referenceMappings;
 	IDnum index;
 	IDnum referenceCount = 0;
 
 	// Count reference sequences
-	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
+	for (marker = getMarker(node); marker != NULL_IDX; marker = getNextInNode(marker))
 		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] == REFERENCE)
 			referenceCount++;
 
@@ -3081,7 +3080,7 @@ static void exportLongNodeMapping(FILE * outfile, Node * node, ReadSet * reads, 
 
 	// Initialize table
 	referenceCount = 0;
-	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
+	for (marker = getMarker(node); marker != NULL_IDX; marker = getNextInNode(marker))
 		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] == REFERENCE)
 			initializeReferenceMapping(&referenceMappings[referenceCount++], marker, node);
 

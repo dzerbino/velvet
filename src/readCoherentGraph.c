@@ -36,10 +36,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define MAX_READ_LENGTH 2000
 
 static Graph *graph = NULL;
-static PassageMarker *path = NULL;
+static PassageMarkerI path = NULL_IDX;
 static RecycleBin *listMemory = NULL;
 static double expected_coverage = 1;
-static TightString **sequences = NULL;
+static TightString *sequences = NULL;
 static int MULTIPLICITY_CUTOFF = 2;
 
 static IDnum multCounter = 0;
@@ -50,10 +50,10 @@ typedef struct rb_connection_st RBConnection;
 
 struct rb_connection_st {
 	Node *node;
-	PassageMarker *marker;
+	PassageMarkerI marker;
 	RBConnection *next;
 	IDnum multiplicity;
-};
+}  ATTRIBUTE_PACKED;
 
 static RecycleBin *nodeListMemory = NULL;
 
@@ -145,7 +145,7 @@ static void identifyUniqueNodes(boolean(*isUniqueFunction) (Node *))
 static boolean uniqueNodesConnect(Node * startingNode)
 {
 	Node *destination = NULL;
-	PassageMarker *startMarker, *currentMarker;
+	PassageMarkerI startMarker, currentMarker;
 	RBConnection *newList;
 	RBConnection *list = NULL;
 	boolean multipleHits = false;
@@ -153,20 +153,20 @@ static boolean uniqueNodesConnect(Node * startingNode)
 	if (arcCount(startingNode) == 0)
 		return false;
 
-	if (getMarker(startingNode) == NULL)
+	if (getMarker(startingNode) == NULL_IDX)
 		return false;
 
 	dbgCounter++;
 
 	// Checking for multiple destinations
-	for (startMarker = getMarker(startingNode); startMarker != NULL;
+	for (startMarker = getMarker(startingNode); startMarker != NULL_IDX;
 	     startMarker = getNextInNode(startMarker)) {
 		if (getFinishOffset(startMarker) >
 		    2 * getWordLength(graph))
 			continue;
 
 		for (currentMarker = getNextInSequence(startMarker);
-		     currentMarker != NULL;
+		     currentMarker != NULL_IDX;
 		     currentMarker = getNextInSequence(currentMarker)) {
 			if (!getUniqueness(getNode(currentMarker))) {
 				continue;
@@ -229,14 +229,14 @@ static boolean uniqueNodesConnect(Node * startingNode)
 	}
 	// Check for reciprocity
 	for (startMarker = getMarker(getTwinNode(destination));
-	     startMarker != NULL;
+	     startMarker != NULL_IDX;
 	     startMarker = getNextInNode(startMarker)) {
 		if (getFinishOffset(startMarker) >
 		    2 * getWordLength(graph))
 			continue;
 
 		for (currentMarker = getNextInSequence(startMarker);
-		     currentMarker != NULL;
+		     currentMarker != NULL_IDX;
 		     currentMarker = getNextInSequence(currentMarker)) {
 			if (!getUniqueness(getNode(currentMarker))) {
 				continue;
@@ -295,11 +295,11 @@ static boolean uniqueNodesConnect(Node * startingNode)
 	return true;
 }
 
-static boolean goesToNode(PassageMarker * marker, Node * node)
+static boolean goesToNode(PassageMarkerI marker, Node * node)
 {
-	PassageMarker *current;
+	PassageMarkerI current;
 
-	for (current = marker; current != NULL;
+	for (current = marker; current != NULL_IDX;
 	     current = getNextInSequence(current))
 		if (getNode(current) == node)
 			return true;
@@ -309,11 +309,11 @@ static boolean goesToNode(PassageMarker * marker, Node * node)
 
 static void updateMembers(Node * bypass, Node * nextNode)
 {
-	PassageMarker *marker, *next, *tmp;
+	PassageMarkerI marker, next, tmp;
 	Coordinate nextLength = getNodeLength(nextNode);
 
 	// Update  marker + arc info
-	for (marker = getMarker(bypass); marker != NULL; marker = tmp) {
+	for (marker = getMarker(bypass); marker != NULL_IDX; marker = tmp) {
 		tmp = getNextInNode(marker);
 
 		if (!isTerminal(marker)
@@ -349,9 +349,9 @@ static void updateMembers(Node * bypass, Node * nextNode)
 
 static void admitGroupies(Node * source, Node * bypass)
 {
-	PassageMarker *marker, *tmpMarker;
+	PassageMarkerI marker, tmpMarker;
 
-	for (marker = getMarker(source); marker != NULL;
+	for (marker = getMarker(source); marker != NULL_IDX;
 	     marker = tmpMarker) {
 		tmpMarker = getNextInNode(marker);
 		extractPassageMarker(marker);
@@ -362,7 +362,7 @@ static void admitGroupies(Node * source, Node * bypass)
 
 }
 
-static void adjustShortReads(Node * target, PassageMarker * pathMarker)
+static void adjustShortReads(Node * target, PassageMarkerI pathMarker)
 {
 	ShortReadMarker *targetArray, *marker;
 	IDnum targetLength, index;
@@ -390,7 +390,7 @@ static Node *bypass()
 	Node *next = NULL;
 	Arc *arc;
 	Category cat;
-	PassageMarker *nextMarker;
+	PassageMarkerI nextMarker;
 
 	// Remove unwanted arcs
 	while (getArc(bypass) != NULL)
@@ -465,7 +465,7 @@ static void trimLongReadTips()
 {
 	IDnum index;
 	Node *node;
-	PassageMarker *marker, *next;
+	PassageMarkerI marker, next;
 
 	printf("Trimming read tips\n");
 
@@ -475,7 +475,7 @@ static void trimLongReadTips()
 		if (getUniqueness(node))
 			continue;
 
-		for (marker = getMarker(node); marker != NULL;
+		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = next) {
 			next = getNextInNode(marker);
 
@@ -486,11 +486,11 @@ static void trimLongReadTips()
 				marker = getTwinMarker(marker);
 
 			while (!getUniqueness(getNode(marker))) {
-				if (next != NULL
+				if (next != NULL_IDX
 				    && (marker == next
 					|| marker == getTwinMarker(next)))
 					next = getNextInNode(next);
-				if (getNextInSequence(marker) != NULL) {
+				if (getNextInSequence(marker) != NULL_IDX) {
 					marker = getNextInSequence(marker);
 					destroyPassageMarker
 					    (getPreviousInSequence

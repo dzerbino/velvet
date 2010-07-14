@@ -41,7 +41,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 struct insertionMarker_st {
 	Annotation *annot;
 	boolean isStart;
-};
+}  ATTRIBUTE_PACKED;
 
 Coordinate getInsertionMarkerPosition(InsertionMarker * marker)
 {
