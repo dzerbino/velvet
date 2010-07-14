@@ -58,7 +58,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 static DFibHeapNode *allocateDFibHeapNode(DFibHeap * heap)
 {
 	return allocatePointer(heap->nodeMemory);
-};
+}
 
 static void deallocateDFibHeapNode(DFibHeapNode * a, DFibHeap * heap)
 {

@@ -407,7 +407,11 @@ void testKmers(int argc, char** argv) {
 	k2 = &k4;
 	int i;
 	
+	resetWordFilter(MAXKMERLENGTH);
+	resetKeyFilter(32 > 2 * MAXKMERLENGTH? 2 * MAXKMERLENGTH: 32);
 	printf("FORMATS %u %u %u %u\n", KMER_CHARS, KMER_INTS, KMER_LONGS, KMER_LONGLONGS);
+	printf("Long long k-mer index %i\n", longLongKmerFilterIndex);
+	printf("Long long key index %i\n", longLongKeyFilterIndex);
 	printf("FILTERS %hx %x %lx %llx\n", (short) charLeftFilter, (int) intLeftFilter, (long) longLeftFilter, (long long) longLongLeftFilter);
 	printf("FILTERS %hx %x %lx %llx\n", (short) charWordFilter, (int) intWordFilter, (long) longWordFilter, (long long) longLongWordFilter);
 	printKmer(&kmer);
@@ -425,14 +429,17 @@ void testKmers(int argc, char** argv) {
 	for (i = 0; i < MAXKMERLENGTH; i++) {
 		popNucleotide(&kmer);
 		printKmer(&kmer);
+		printf("%llx\n", (long long) getKmerKey(&kmer));
 	}
 
 	puts("Reverse complement");
 	resetWordFilter(9);
+	resetKeyFilter(18);
 	clearKmer(&kmer);
 	for (i = 0; i < MAXKMERLENGTH; i++) {
 		reversePushNucleotide(&kmer, ((i + 1)  % 4));
 		printKmer(&kmer);
+		printf("%llx\n", (long long) getKmerKey(&kmer));
 	}
 
 	puts("Copy");

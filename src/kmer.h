@@ -71,3 +71,5 @@ struct kmer_st {
 };
 
 #endif 
+
+void testKmers();

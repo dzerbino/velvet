@@ -281,6 +281,6 @@ V 1.0.05
 - Prevent reference sequences from being used in Pebble
 
 V 1.0.06
-- C99 compilation warnings
+- gnu99 compilation warnings
 - Raw(.gz) read parsers
 - Crashing bug at specific MAXKMERLENGTH/kmer combinations

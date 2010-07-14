@@ -44,7 +44,7 @@ static void printUsage()
 	puts("Advanced options:");
 	puts("\t-ins_length2 <integer>\t\t: expected distance between two paired-end reads in the second short-read dataset (default: no read pairing)");
 	puts("\t-ins_length_long <integer>\t: expected distance between two long paired-end reads (default: no read pairing)");
-	puts("\t-ins_length*_sd <integer>\t: est. standard deviation of respective dataset (default: 10\% of corresponding length)");
+	puts("\t-ins_length*_sd <integer>\t: est. standard deviation of respective dataset (default: 10% of corresponding length)");
 	puts("\t\t[replace '*' by nothing, '2' or '_long' as necessary]");
 	puts("\t-scaffolding <yes|no>\t\t: scaffolding of contigs used paired end information (default: on)");
 	puts("\t-max_branch_length <integer>\t: maximum length in base pair of bubble (default: 100)");

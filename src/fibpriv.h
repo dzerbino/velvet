@@ -84,7 +84,7 @@ struct fibheap {
 	FibHeapNode *fh_min;
 	FibHeapNode *fh_root;
 	void *fh_neginf;
-	boolean fh_keys:1;
+	boolean fh_keys;
 };
 
 static void fh_initheap(FibHeap *);

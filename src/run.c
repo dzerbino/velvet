@@ -42,8 +42,10 @@ static void printUsage()
 	puts("File format options:");
 	puts("\t-fasta");
 	puts("\t-fastq");
+	puts("\t-raw");
 	puts("\t-fasta.gz");
 	puts("\t-fastq.gz");
+	puts("\t-raw.gz");
 	puts("\t-sam");
 	puts("\t-bam");
 	puts("\t-eland");

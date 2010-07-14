@@ -59,7 +59,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 static FibHeapNode *allocateFibHeapEl(FibHeap * heap)
 {
 	return allocatePointer(heap->nodeMemory);
-};
+}
 
 static void deallocateFibHeapEl(FibHeapNode * a, FibHeap * heap)
 {
