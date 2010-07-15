@@ -285,3 +285,7 @@ V 1.0.06
 - Raw(.gz) read parsers
 - Crashing bug at specific MAXKMERLENGTH/kmer combinations
 - Memory optimisation by Sylvain Foret
+
+V 1.0.07
+- Double free in destroyReadSet
+- Memory leak of PreMarker arrays

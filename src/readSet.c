@@ -1986,7 +1986,6 @@ void destroyReadSet(ReadSet * reads)
 		for (index = 0; index < reads->readCount; index++)
 			free(reads->kmerProbabilities[index]);
 
-	free(reads->tSequences);
 	free(reads->labels);
 	free(reads->confidenceScores);
 	free(reads->kmerProbabilities);

@@ -377,6 +377,13 @@ void destroyPreGraph_pg(PreGraph * preGraph)
 	// Nodes
 	free(preGraph->preNodes);
 
+        // PreMarkers
+        if (preGraph->nodeReferenceMarkerCounts) {
+                free(preGraph->nodeReferenceMarkerCounts);
+                free(preGraph->nodeReferenceMarkers);
+                free(preGraph->referenceStarts);
+        }
+
 	// Graph
 	free(preGraph);
 
