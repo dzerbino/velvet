@@ -23,6 +23,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <string.h>
 #include <ctype.h>
 
+#ifdef OPENMP
+#include <omp.h>
+#endif
+
 #include "globals.h"
 #include "allocArray.h"
 #include "preGraph.h"
@@ -329,8 +333,14 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 	preNode = &(preGraph->preNodes[ID]);
 
 	// PreNode preArcs:
+#ifdef OPENMP
+	#pragma omp critical
+#endif
 	while (preNode->preArcLeft != NULL_IDX)
 		destroyPreArc_pg(preNode->preArcLeft, preGraph);
+#ifdef OPENMP
+	#pragma omp critical
+#endif
 	while (preNode->preArcRight != NULL_IDX)
 		destroyPreArc_pg(preNode->preArcRight, preGraph);
 
