@@ -289,3 +289,7 @@ V 1.0.06
 V 1.0.07
 - Double free in destroyReadSet
 - Memory leak of PreMarker arrays
+
+V 1.0.08
+- TourBus exhaustiveness bug
+- Crashing memory corruption bug

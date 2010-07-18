@@ -7,7 +7,8 @@ However, some code was reused with kind permission from:
 (http://www.ebi.ac.uk/~guy/exonerate/) 
 - Ewan Birney, for his hashing function
 (ftp://ftp.ebi.ac.uk/pub/software/unix/wise2/)
-- John Marshall, for the streamlined error handling.
+- John Marshall, for the streamlined error handling (utility.*),
+- Sylvain Foret, for memory reduction (allocArray.* and other corrections).
 
 Also this package uses and includes the zlib library developped by Jean-Loup
 Gailly and Mark Adler - more details in the zlib README file.

@@ -646,7 +646,7 @@ PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
 	PassageMarkerI marker = allocatePassageMarker();
 	PassageMarkerI twinMarker = allocatePassageMarker();
 	PassageMarker *markerVal = PM_FI2P (marker);
-	PassageMarker *twinMarkerVal = PM_FI2P (markerVal->twinMarker);
+	PassageMarker *twinMarkerVal = PM_FI2P (twinMarker);
 
 //      printf("Values %d\t%d\t%d\t%d\t%d\n", seqID, start, finish, startOffset, finishOffset);
 
