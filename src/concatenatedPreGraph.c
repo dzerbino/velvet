@@ -21,9 +21,38 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef OPENMP
+#include <omp.h>
+#endif
+
 #include "globals.h"
 #include "preGraph.h"
 #include "utility.h"
+
+#ifdef OPENMP
+// Homemade boolean markers for basic locking system to avoid too much pointer overhead
+static boolean * locks = NULL;
+
+// Homemade test lock function. Returns test if previously locked, locks and returns false otherwise
+static boolean test_lock(IDnum index) {
+	boolean * ptr = locks + index / 8;
+	boolean filter = (boolean) 1 << (index % 8);
+	
+	if (*ptr & filter)
+		return true;
+
+	*ptr ^= filter;	
+	return false;
+}
+
+static void free_lock(IDnum index) {
+	boolean * ptr = locks + index / 8;
+	boolean filter = (boolean) 1 << (index % 8);
+	
+	if (*ptr & filter)
+		*ptr ^= filter;	
+}
+#endif
 
 // Replaces two consecutive preNodes into a single equivalent preNode
 // The extra memory is freed
@@ -50,6 +79,17 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 		       && !isLoop_pg(preArc) 
 		       && getDestination_pg(preArc, preNodeBID) != preNodeAID) {
 
+#ifdef OPENMP
+		IDnum partnerID = getDestination_pg(preArc, preNodeBID);
+		boolean taken;
+		if (partnerID < 0) 
+			partnerID = -partnerID;
+		#pragma omp critical
+		taken = test_lock(partnerID);
+
+		if (taken)
+			break;
+#endif
 		totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
 		preNodeBID = getDestination_pg(preArc, preNodeBID);
 		preArc = getPreArc_pg(preNodeBID, preGraph);
@@ -139,6 +179,13 @@ void concatenatePreGraph_pg(PreGraph * preGraph)
 
 	velvetLog("Concatenation...\n");
 
+#ifdef OPENMP
+	boolean taken;
+	IDnum partnerIndex;
+	locks = callocOrExit(preNodeCount_pg(preGraph)/8 + 1, boolean);
+	#pragma omp parallel for
+#endif
+
 	for (preNodeIndex = 1; preNodeIndex < preNodeCount_pg(preGraph);
 	     preNodeIndex++) {
 		preNode = getPreNodeInPreGraph_pg(preGraph, preNodeIndex);
@@ -155,8 +202,21 @@ void concatenatePreGraph_pg(PreGraph * preGraph)
 					  preGraph)) {
 			if (isLoop_pg(preArc))
 				break;
+
+#ifdef OPENMP
+			partnerIndex = getOtherEnd_pg(preArc, preNodeIndex);
+			if (partnerIndex < 0)
+				partnerIndex = -partnerIndex;
+			#pragma omp critical
+			taken = test_lock(preNodeIndex) || test_lock(partnerIndex);
+			if (taken)
+				break;
+#endif
 			concatenatePreNodes(preNodeIndex, preArc,
 					    preGraph);
+#ifdef OPENMP
+			free_lock(preNodeIndex);
+#endif
 			preArc = getPreArc_pg(preNodeIndex, preGraph);
 		}
 
@@ -169,11 +229,28 @@ void concatenatePreGraph_pg(PreGraph * preGraph)
 					  preGraph)) {
 			if (isLoop_pg(preArc))
 				break;
+#ifdef OPENMP
+			partnerIndex = getOtherEnd_pg(preArc, -preNodeIndex);
+			if (partnerIndex < 0)
+				partnerIndex = -partnerIndex;
+			#pragma omp critical
+			taken = test_lock(preNodeIndex) || test_lock(partnerIndex);
+			if (taken)
+				break;
+#endif
 			concatenatePreNodes(-preNodeIndex, preArc,
 					    preGraph);
+#ifdef OPENMP
+			free_lock(preNodeIndex);
+#endif
 			preArc = getPreArc_pg(-preNodeIndex, preGraph);
 		}
 	}
+
+#ifdef OPENMP
+	free(locks);
+	locks = NULL;
+#endif
 
 	renumberPreNodes_pg(preGraph);
 	velvetLog("Concatenation over!\n");
