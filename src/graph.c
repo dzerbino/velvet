@@ -81,6 +81,7 @@ struct graph_st {
 	IDnum sequenceCount;
 	IDnum nodeCount;
 	int wordLength;
+	boolean double_stranded;
 };
 
 static RecycleBin *arcMemory = NULL;
@@ -2141,8 +2142,8 @@ void exportGraph(char *filename, Graph * graph, TightString * sequences)
 		printf("Writing into graph file %s...\n", filename);
 
 	// General data
-	fprintf(outfile, "%d\t%d\t%i\n", graph->nodeCount,
-		graph->sequenceCount, graph->wordLength);
+	fprintf(outfile, "%d\t%d\t%i\t%i\n", graph->nodeCount,
+		graph->sequenceCount, graph->wordLength, (int) graph->double_stranded);
 
 	// Node info
 	for (index = 1; index <= graph->nodeCount; index++) {
@@ -2236,11 +2237,12 @@ Graph *importGraph(char *filename)
 	// First  line
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-	sscanf(line, "%ld\t%ld\t%i\n", &long_var, &long_var2,
-	       &wordLength);
+	sscanf(line, "%ld\t%ld\t%i\t%hi\n", &long_var, &long_var2,
+	       &wordLength, &short_var);
 	nodeCounter = (IDnum) long_var;
 	sequenceCount = (IDnum) long_var2;
 	graph = emptyGraph(sequenceCount, wordLength);
+	graph->double_stranded = (boolean) short_var;
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
 
@@ -2460,11 +2462,12 @@ Graph *importSimplifiedGraph(char *filename)
 	// First  line
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-	sscanf(line, "%ld\t%ld\t%i\n", &long_var, &long_var2,
-	       &wordLength);
+	sscanf(line, "%ld\t%ld\t%i\t%hi\n", &long_var, &long_var2,
+	       &wordLength, &short_var);
 	nodeCounter = (IDnum) long_var;
 	sequenceCount = (IDnum) long_var2;
 	graph = emptyGraph(sequenceCount, wordLength);
+	graph->double_stranded = (boolean) short_var;
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
 	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
@@ -2691,6 +2694,7 @@ Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 	*double_strand = (boolean) short_var;
 	wordShift = wordLength - 1;
 	graph = emptyGraph(sequenceCount, wordLength);
+	graph->double_stranded = *double_stranded;
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
 	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
@@ -4243,4 +4247,8 @@ void reallocateNodeDescriptor(Node * node, Coordinate length) {
 	
 	free(twin->descriptor);
 	twin->descriptor = array;
+}
+
+boolean doubleStrandedGraph(Graph * graph) {
+	return graph->double_stranded;
 }

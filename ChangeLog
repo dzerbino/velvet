@@ -293,3 +293,6 @@ V 1.0.07
 V 1.0.08
 - TourBus exhaustiveness bug
 - Crashing memory corruption bug
+
+V 1.0.09
+- Strand specific transmission
