@@ -146,6 +146,7 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 	setPreNodeDescriptor_pg(descr, totalLength - wordLength + 1, preNodeAID, preGraph); 
 
 	// Correct preArcs
+	#pragma omp critical
 	for (preArc = getPreArc_pg(preNodeBID, preGraph); preArc != NULL_IDX;
 	     preArc = getNextPreArc_pg(preArc, preNodeBID)) {
 		if (getDestination_pg(preArc, preNodeBID) != -preNodeBID)
