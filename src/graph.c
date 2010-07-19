@@ -2694,7 +2694,7 @@ Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 	*double_strand = (boolean) short_var;
 	wordShift = wordLength - 1;
 	graph = emptyGraph(sequenceCount, wordLength);
-	graph->double_stranded = *double_stranded;
+	graph->double_stranded = *double_strand;
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
 	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
