@@ -44,24 +44,16 @@ static boolean test_lock(IDnum index) {
 	*ptr ^= filter;
 	return false;
 }
-
-static void free_lock(IDnum index) {
-	volatile boolean * ptr = locks + index / 8;
-	boolean filter = (boolean) 1 << (index % 8);
-
-	if (*ptr & filter)
-		*ptr ^= filter;	
-}
 #endif
 
 // Replaces two consecutive preNodes into a single equivalent preNode
 // The extra memory is freed
-static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
+static void concatenatePreNodes(IDnum preNodeAID, 
 				PreGraph * preGraph)
 {
 	IDnum preNodeBID = preNodeAID;
 	IDnum currentPreNodeID, nextPreNodeID;
-	PreArcI preArc = oldPreArc;
+	PreArcI preArc;
 	Coordinate totalLength = 0;
 	Coordinate arrayLength;
 	Descriptor * descr, * ptr;
@@ -71,38 +63,18 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 
 	//velvetLog("Concatenating nodes %li and %li\n", preNodeAID, preNodeBID);
 
-#ifdef OPENMP
-	nextPreNodeID = getOtherEnd_pg(preArc, preNodeAID);
-	if (nextPreNodeID < 0)
-		nextPreNodeID = -nextPreNodeID;
-#endif
 	while(hasSinglePreArc_pg(preNodeBID, preGraph)
-		       &&
-		       hasSinglePreArc_pg(getOtherEnd_pg
+	      && (preArc = getPreArc_pg(preNodeBID, preGraph))
+	      && hasSinglePreArc_pg(getOtherEnd_pg
 					  (preArc, preNodeBID),
 					  preGraph)
-		       && !isLoop_pg(preArc) 
-		       && getDestination_pg(preArc, preNodeBID) != preNodeAID) {
-#ifdef OPENMP
-		IDnum partnerID = getDestination_pg(preArc, preNodeBID);
-		boolean taken = false;
-		if (partnerID < 0) 
-			partnerID = -partnerID;
-		if (partnerID != nextPreNodeID)
-		{
-			#pragma omp critical
-			taken = test_lock(partnerID);
-		}
-
-		if (taken && preNodeBID == preNodeAID)
-			return;
-		else if (taken)
-			break;
-#endif
+	      && !isLoop_pg(preArc) 
+	      && getDestination_pg(preArc, preNodeBID) != preNodeAID) {
 		totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
 		preNodeBID = getDestination_pg(preArc, preNodeBID);
-		preArc = getPreArc_pg(preNodeBID, preGraph);
 	}
+	if (preNodeBID == preNodeAID)
+		return;
 	totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
 	totalLength += wordLength - 1;
 
@@ -193,99 +165,62 @@ void concatenatePreGraph_pg(PreGraph * preGraph)
 #endif
 	for (preNodeIndex = 1; preNodeIndex < preNodeCount_pg(preGraph);
 	     preNodeIndex++) {
-		PreArcI preArc;
 		PreNode *preNode;
-#ifdef OPENMP
-		IDnum partnerIndex;
-		boolean taken = false;
-#endif
 		preNode = getPreNodeInPreGraph_pg(preGraph, preNodeIndex);
 
 		if (preNode == NULL)
 			continue;
-
-		preArc = getPreArc_pg(preNodeIndex, preGraph);
-
-		while (hasSinglePreArc_pg(preNodeIndex, preGraph)
-		       &&
-		       hasSinglePreArc_pg(getOtherEnd_pg
-					  (preArc, preNodeIndex),
-					  preGraph)) {
-			if (isLoop_pg(preArc))
-				break;
-
 #ifdef OPENMP
-			partnerIndex = getOtherEnd_pg(preArc, preNodeIndex);
-			if (partnerIndex < 0)
-				partnerIndex = -partnerIndex;
-			taken = false;
-			#pragma omp critical
-			{
-				if (!test_lock(preNodeIndex))
-				{
-					if (test_lock(partnerIndex))
-					{
-						free_lock (preNodeIndex);
-						taken = true;
-					}
+		boolean taken = false;
+		IDnum preNodeBID;
+		IDnum partnerID;
+		PreArcI preArc;
+		#pragma omp critical
+		{
+			if (test_lock(preNodeIndex)) 
+				taken = true;
+			else {
+				// Lock all the chain downstream of node
+				preNodeBID = preNodeIndex;
+				while(hasSinglePreArc_pg(preNodeBID, preGraph)
+				      && (preArc = getPreArc_pg(preNodeBID, preGraph))
+				      && hasSinglePreArc_pg(getOtherEnd_pg
+								  (preArc, preNodeBID),
+								  preGraph)
+				      && !isLoop_pg(preArc) 
+				      && getDestination_pg(preArc, preNodeBID) != preNodeIndex) {
+					partnerID = getDestination_pg(preArc, preNodeBID);
+					if (partnerID < 0) 
+						partnerID = -partnerID;
+					if(test_lock(partnerID))
+						abort();
+					preNodeBID = getDestination_pg(preArc, preNodeBID);
 				}
-				else
-					taken = true;
-			}
-			if (taken)
-				break;
-#endif
-			concatenatePreNodes(preNodeIndex, preArc,
-					    preGraph);
-#ifdef OPENMP
-			#pragma omp critical
-			free_lock(preNodeIndex);
-			#pragma omp critical
-			free_lock(partnerIndex);
-#endif
-			preArc = getPreArc_pg(preNodeIndex, preGraph);
-		}
 
-		preArc = getPreArc_pg(-preNodeIndex, preGraph);
-
-		while (hasSinglePreArc_pg(-preNodeIndex, preGraph)
-		       &&
-		       hasSinglePreArc_pg(getOtherEnd_pg
-					  (preArc, -preNodeIndex),
-					  preGraph)) {
-			if (isLoop_pg(preArc))
-				break;
-#ifdef OPENMP
-			partnerIndex = getOtherEnd_pg(preArc, -preNodeIndex);
-			if (partnerIndex < 0)
-				partnerIndex = -partnerIndex;
-			taken = false;
-			#pragma omp critical
-			{
-				if (!test_lock(preNodeIndex))
-				{
-					if (test_lock(partnerIndex))
-					{
-						free_lock (preNodeIndex);
-						taken = true;
-					}
+				// Lock all the chain upstream of node
+				preNodeBID = -preNodeIndex;
+				while(hasSinglePreArc_pg(preNodeBID, preGraph)
+				      && (preArc = getPreArc_pg(preNodeBID, preGraph))
+				      && hasSinglePreArc_pg(getOtherEnd_pg
+								  (preArc, preNodeBID),
+								  preGraph)
+				      && !isLoop_pg(preArc) 
+				      && getDestination_pg(preArc, preNodeBID) != -preNodeIndex) {
+					partnerID = getDestination_pg(preArc, preNodeBID);
+					if (partnerID < 0) 
+						partnerID = -partnerID;
+					if(test_lock(partnerID))
+						abort();
+					preNodeBID = getDestination_pg(preArc, preNodeBID);
 				}
-				else
-					taken = true;
 			}
-			if (taken)
-				break;
-#endif
-			concatenatePreNodes(-preNodeIndex, preArc,
-					    preGraph);
-#ifdef OPENMP
-			#pragma omp critical
-			free_lock(preNodeIndex);
-			#pragma omp critical
-			free_lock(partnerIndex);
-#endif
-			preArc = getPreArc_pg(-preNodeIndex, preGraph);
 		}
+		if (taken) 
+			continue;
+#endif
+
+		concatenatePreNodes(preNodeIndex, preGraph);
+		concatenatePreNodes(-preNodeIndex, preGraph);
 	}
 
 #ifdef OPENMP
