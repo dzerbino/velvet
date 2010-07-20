@@ -196,6 +196,7 @@ IDnum nodeCount(Graph * graph);
 IDnum sequenceCount(Graph * graph);
 void renumberNodes(Graph * graph);
 int getWordLength(Graph * graph);
+boolean doubleStrandedGraph(Graph * graph);
 
 // Element status 
 void resetNodeStatus(Graph * graph);

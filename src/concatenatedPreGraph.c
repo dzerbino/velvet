@@ -87,7 +87,9 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 		#pragma omp critical
 		taken = test_lock(partnerID);
 
-		if (taken)
+		if (taken && preNodeBID == preNodeAID)
+			return;
+		else if (taken)
 			break;
 #endif
 		totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
