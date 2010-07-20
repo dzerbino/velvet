@@ -31,24 +31,24 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #ifdef OPENMP
 // Homemade boolean markers for basic locking system to avoid too much pointer overhead
-static boolean * locks = NULL;
+static volatile boolean * locks = NULL;
 
 // Homemade test lock function. Returns test if previously locked, locks and returns false otherwise
 static boolean test_lock(IDnum index) {
-	boolean * ptr = locks + index / 8;
+	volatile boolean * ptr = locks + index / 8;
 	boolean filter = (boolean) 1 << (index % 8);
-	
+
 	if (*ptr & filter)
 		return true;
 
-	*ptr ^= filter;	
+	*ptr ^= filter;
 	return false;
 }
 
 static void free_lock(IDnum index) {
-	boolean * ptr = locks + index / 8;
+	volatile boolean * ptr = locks + index / 8;
 	boolean filter = (boolean) 1 << (index % 8);
-	
+
 	if (*ptr & filter)
 		*ptr ^= filter;	
 }
@@ -71,6 +71,11 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 
 	//printf("Concatenating nodes %li and %li\n", preNodeAID, preNodeBID);
 
+#ifdef OPENMP
+	nextPreNodeID = getOtherEnd_pg(preArc, preNodeAID);
+	if (nextPreNodeID < 0)
+		nextPreNodeID = -nextPreNodeID;
+#endif
 	while(hasSinglePreArc_pg(preNodeBID, preGraph)
 		       &&
 		       hasSinglePreArc_pg(getOtherEnd_pg
@@ -78,14 +83,16 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 					  preGraph)
 		       && !isLoop_pg(preArc) 
 		       && getDestination_pg(preArc, preNodeBID) != preNodeAID) {
-
 #ifdef OPENMP
 		IDnum partnerID = getDestination_pg(preArc, preNodeBID);
-		boolean taken;
+		boolean taken = false;
 		if (partnerID < 0) 
 			partnerID = -partnerID;
-		#pragma omp critical
-		taken = test_lock(partnerID);
+		if (partnerID != nextPreNodeID)
+		{
+			#pragma omp critical
+			taken = test_lock(partnerID);
+		}
 
 		if (taken && preNodeBID == preNodeAID)
 			return;
@@ -177,20 +184,21 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 void concatenatePreGraph_pg(PreGraph * preGraph)
 {
 	IDnum preNodeIndex;
-	PreArcI preArc;
-	PreNode *preNode;
 
 	puts("Concatenation...");
 
 #ifdef OPENMP
-	boolean taken;
-	IDnum partnerIndex;
 	locks = callocOrExit(preNodeCount_pg(preGraph)/8 + 1, boolean);
 	#pragma omp parallel for
 #endif
-
 	for (preNodeIndex = 1; preNodeIndex < preNodeCount_pg(preGraph);
 	     preNodeIndex++) {
+		PreArcI preArc;
+		PreNode *preNode;
+#ifdef OPENMP
+		IDnum partnerIndex;
+		boolean taken = false;
+#endif
 		preNode = getPreNodeInPreGraph_pg(preGraph, preNodeIndex);
 
 		if (preNode == NULL)
@@ -210,15 +218,30 @@ void concatenatePreGraph_pg(PreGraph * preGraph)
 			partnerIndex = getOtherEnd_pg(preArc, preNodeIndex);
 			if (partnerIndex < 0)
 				partnerIndex = -partnerIndex;
+			taken = false;
 			#pragma omp critical
-			taken = test_lock(preNodeIndex) || test_lock(partnerIndex);
+			{
+				if (!test_lock(preNodeIndex))
+				{
+					if (test_lock(partnerIndex))
+					{
+						free_lock (preNodeIndex);
+						taken = true;
+					}
+				}
+				else
+					taken = true;
+			}
 			if (taken)
 				break;
 #endif
 			concatenatePreNodes(preNodeIndex, preArc,
 					    preGraph);
 #ifdef OPENMP
+			#pragma omp critical
 			free_lock(preNodeIndex);
+			#pragma omp critical
+			free_lock(partnerIndex);
 #endif
 			preArc = getPreArc_pg(preNodeIndex, preGraph);
 		}
@@ -236,22 +259,37 @@ void concatenatePreGraph_pg(PreGraph * preGraph)
 			partnerIndex = getOtherEnd_pg(preArc, -preNodeIndex);
 			if (partnerIndex < 0)
 				partnerIndex = -partnerIndex;
+			taken = false;
 			#pragma omp critical
-			taken = test_lock(preNodeIndex) || test_lock(partnerIndex);
+			{
+				if (!test_lock(preNodeIndex))
+				{
+					if (test_lock(partnerIndex))
+					{
+						free_lock (preNodeIndex);
+						taken = true;
+					}
+				}
+				else
+					taken = true;
+			}
 			if (taken)
 				break;
 #endif
 			concatenatePreNodes(-preNodeIndex, preArc,
 					    preGraph);
 #ifdef OPENMP
+			#pragma omp critical
 			free_lock(preNodeIndex);
+			#pragma omp critical
+			free_lock(partnerIndex);
 #endif
 			preArc = getPreArc_pg(-preNodeIndex, preGraph);
 		}
 	}
 
 #ifdef OPENMP
-	free(locks);
+	free((boolean*)locks);
 	locks = NULL;
 #endif
 
