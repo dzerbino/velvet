@@ -29,6 +29,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #endif
 
 #include "run.h"
+#include "utility.h"
 
 static void printUsage()
 {
@@ -148,7 +149,7 @@ int main(int argc, char **argv)
 	splayTable = newSplayTable(hashLength, double_strand);
 
 	allSequences = importReadSet(seqFilename);
-	printf("%i sequences in total.\n", allSequences->readCount);
+	velvetLog("%i sequences in total.\n", allSequences->readCount);
 
 	strcpy(filename, directory);
 	strcat(filename, "/Roadmaps");

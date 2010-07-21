@@ -563,10 +563,10 @@ void exportSequenceArray(char *filename, TightString ** array,
 	FILE *outfile = fopen(filename, "w+");
 
 	if (outfile == NULL) {
-		puts("Couldn't open file, sorry");
+		velvetLog("Couldn't open file, sorry\n");
 		return;
 	} else
-		printf("Writing into file: %s\n", filename);
+		velvetLog("Writing into file: %s\n", filename);
 
 	for (index = 0; index < sequenceCount; index++) {
 		exportTightString(outfile, array[index], index);
@@ -574,5 +574,5 @@ void exportSequenceArray(char *filename, TightString ** array,
 
 	fclose(outfile);
 
-	puts("Done");
+	velvetLog("Done\n");
 }

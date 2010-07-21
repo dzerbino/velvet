@@ -46,7 +46,7 @@ newAllocArray (size_t elementSize, char *name)
 	AllocArray *array;
 
 	if (elementSize < sizeof(AllocArrayFreeElement)) {
-		puts("Elements too small to create an AllocArray!");
+		velvetLog("Elements too small to create an AllocArray!\n");
 		exit(-1);
 	}
 	array = mallocOrExit (1, AllocArray);
@@ -78,10 +78,10 @@ destroyAllocArray (AllocArray *array)
 			free (array->blocks[i]);
 		free (array->blocks);
 #if DEBUG
-		printf (">>> Allocation summary for %s\n", array->name);
-		printf (">>> Alloc'ed %ld bytes\n", array->blockSize * array->currentBlocks);
-		printf (">>> Alloc'ed %ld elements\n", array->elementsAllocated);
-		printf (">>> Recycled %ld elements\n", array->elementsRecycled);
+		velvetLog (">>> Allocation summary for %s\n", array->name);
+		velvetLog (">>> Alloc'ed %ld bytes\n", array->blockSize * array->currentBlocks);
+		velvetLog (">>> Alloc'ed %ld elements\n", array->elementsAllocated);
+		velvetLog (">>> Recycled %ld elements\n", array->elementsRecycled);
 #endif
 		free (array);
 	}
@@ -116,7 +116,7 @@ allocArrayAllocate (AllocArray *array)
 #if DEBUG
 	if (array->maxElements * (array->currentBlocks - 1) + array->currentElements == UINT32_MAX)
 	{
-		printf (">>> Reached maximum `%s' addressable with 32 bits\n", array->name);
+		velvetLog (">>> Reached maximum `%s' addressable with 32 bits\n", array->name);
 		abort();
 	}
 	array->elementsAllocated++;

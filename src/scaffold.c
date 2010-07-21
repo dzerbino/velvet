@@ -173,7 +173,7 @@ void destroyConnection(Connection * connect, IDnum nodeID)
 {
 	Connection *previous, *next;
 
-	//printf("Destroying connection from %li to %li\n", nodeID, getNodeID(connect->destination));
+	//velvetLog("Destroying connection from %li to %li\n", nodeID, getNodeID(connect->destination));
 
 	if (connect == NULL)
 		return;
@@ -233,7 +233,7 @@ static IDnum *computeReadToNodeCounts()
 	Node *node;
 	IDnum nodeReadCount;
 
-	puts("Computing read to node mapping array sizes");
+	velvetLog("Computing read to node mapping array sizes\n");
 
 	for (nodeIndex = 0; nodeIndex < maxNodeIndex; nodeIndex++) {
 		node = getNodeInGraph(graph, nodeIndex - nodeCount(graph));
@@ -366,7 +366,7 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts, ReadSet
 	boolean *readMarker =
 	    callocOrExit(sequenceCount(graph) + 1, boolean); /* SF TODO This could be a bit field */
 
-	puts("Computing read to node mappings");
+	velvetLog("Computing read to node mappings\n");
 
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
 		if (nodeID != 0 && getNodeInGraph(graph, nodeID))
@@ -533,7 +533,7 @@ static void estimateLibraryInsertLength(Coordinate * coOccurences, IDnum coOccur
 	if (variance == 0)
 		variance = 1;
 
-	printf("Paired-end library %i has length: %lli, sample standard deviation: %lli\n", libID + 1, (long long) median, (long long) sqrt(variance));
+	velvetLog("Paired-end library %i has length: %lli, sample standard deviation: %lli\n", libID + 1, (long long) median, (long long) sqrt(variance));
 	setInsertLengths(graph, libID, median, sqrt(variance));
 	estimated[libID] = true;
 }
@@ -554,7 +554,7 @@ static void estimateMissingInsertLengths(ReadOccurence ** readNodes, IDnum * rea
 	IDnum coOccurencesCounts[CATEGORIES + 1]; 
 	Category libID;
 
-	puts("Estimating library insert lengths...");
+	velvetLog("Estimating library insert lengths...\n");
 
 	boolean * interestingReads = countCoOccurences(coOccurencesCounts, readNodes, readNodeCounts, readPairs, cats);
 
@@ -569,7 +569,7 @@ static void estimateMissingInsertLengths(ReadOccurence ** readNodes, IDnum * rea
 	
 	free(interestingReads);
 
-	puts("Done");
+	velvetLog("Done\n");
 }
 
 static Connection *findConnection(IDnum nodeID, IDnum node2ID)
@@ -957,11 +957,11 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 	IDnum nodes = nodeCount(graph);
 	scaffold = callocOrExit(2 * nodes + 1, Connection *);
 
-	puts("Computing direct node to node mappings");
+	velvetLog("Computing direct node to node mappings\n");
 
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++) {
 		if (nodeID % 10000 == 0)
-			printf("Scaffolding node %d\n", nodeID);
+			velvetLog("Scaffolding node %d\n", nodeID);
 
 		projectFromNode(nodeID, readNodes, readNodeCounts,
 				readPairs, cats, dubious, lengths);

@@ -110,7 +110,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 	long long_var, long_var2;
 	long long longlong_var, longlong_var2, longlong_var3;
 
-	printf("Reading roadmap file %s\n", filename);
+	velvetLog("Reading roadmap file %s\n", filename);
 
 	file = fopen(filename, "r");
 	if (!fgets(line, maxline, file))
@@ -163,7 +163,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 		}
 	}
 
-	printf("%d roadmaps reads\n", rdmapIndex);
+	velvetLog("%d roadmaps reads\n", rdmapIndex);
 
 	fclose(file);
 	free(line);
@@ -191,7 +191,7 @@ RoadMapArray *importReferenceRoadMapArray(char *filename, IDnum referenceCount)
 	long long_var, long_var2;
 	long long longlong_var, longlong_var2, longlong_var3;
 
-	printf("Reading roadmap file %s\n", filename);
+	velvetLog("Reading roadmap file %s\n", filename);
 
 	file = fopen(filename, "r");
 	if (!fgets(line, maxline, file))
@@ -255,7 +255,7 @@ RoadMapArray *importReferenceRoadMapArray(char *filename, IDnum referenceCount)
 		}
 	}
 
-	printf("%d roadmaps reads\n", rdmapIndex);
+	velvetLog("%d roadmaps reads\n", rdmapIndex);
 
 	fclose(file);
 	free(line);

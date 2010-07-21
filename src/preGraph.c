@@ -321,7 +321,7 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 	IDnum index;
 	PreMarker * preMarker;
 
-	//printf("Destroying %ld\n and twin %ld\n", getPreNodeID(preNode), getPreNodeID(twin));
+	//velvetLog("Destroying %ld\n and twin %ld\n", getPreNodeID(preNode), getPreNodeID(twin));
 
 	if (ID < 0)
 		ID = -ID;
@@ -906,8 +906,8 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 	PreMarker * preMarker;
 	PreArcI preArc;
 
-	puts("Renumbering preNodes");
-	printf("Initial preNode count %d\n", preGraph->preNodeCount);
+	velvetLog("Renumbering preNodes\n");
+	velvetLog("Initial preNode count %d\n", preGraph->preNodeCount);
 
 	for (preNodeIndex = 1; preNodeIndex <= preNodes; preNodeIndex++) {
 		currentPreNode = &(preGraph->preNodes[preNodeIndex]);
@@ -961,7 +961,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 				     preGraph->preNodeCount +
 				      1, PreNode);
 
-	printf("Destroyed %d preNodes\n", counter);
+	velvetLog("Destroyed %d preNodes\n", counter);
 }
 
 // Allocate memory for an empty preGraph created with sequenceCount different sequences
@@ -1178,10 +1178,10 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 
 	outfile = fopen(filename, "w");
 	if (outfile == NULL) {
-		puts("Couldn't open file, sorry");
+		velvetLog("Couldn't open file, sorry\n");
 		return;
 	} else
-		printf("Writing into pregraph file %s...\n", filename);
+		velvetLog("Writing into pregraph file %s...\n", filename);
 
 	// General data
 	fprintf(outfile, "%ld\t%ld\t%i\t%hi\n", (long) preGraph->preNodeCount,

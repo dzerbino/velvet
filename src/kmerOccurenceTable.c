@@ -154,12 +154,12 @@ void sortKmerOccurenceTable(KmerOccurenceTable * table) {
 	IDnum *accelPtr = NULL;
 	IDnum kmerOccurenceIndex;
 
-	puts("Sorting kmer occurence table ... ");
+	velvetLog("Sorting kmer occurence table ...\n");
 
 	qsort(table->kmerTable, table->kmerTableSize, sizeof(KmerOccurence),
 	      compareKmerOccurences);
 
-	puts("Sorting done.");
+	velvetLog("Sorting done.\n");
 
 	// Fill up acceleration table
 	if (table->accelerationTable != NULL) {

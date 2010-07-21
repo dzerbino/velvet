@@ -74,7 +74,7 @@ orderInsertionMarkers(InsertionMarker ** insMarkers,
 	IDnum sequenceIndex;
 	IDnum sequenceCounter = rdmaps->length;
 
-	puts("Ordering insertion markers");
+	velvetLog("Ordering insertion markers\n");
 	for (sequenceIndex = 1; sequenceIndex <= sequenceCounter;
 	     sequenceIndex++) {
 		qsort(insMarkers[sequenceIndex],
@@ -102,7 +102,7 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 	// Counting insertion markers
 	for (sequenceIndex = 1; sequenceIndex < sequenceCounter + 1;
 	     sequenceIndex++) {
-		//printf("Going through sequence %d\n", sequenceIndex);
+		//velvetLog("Going through sequence %d\n", sequenceIndex);
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
 		lastAnnotIndex = getAnnotationCount(rdmap);
 
@@ -139,7 +139,7 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 	annot = rdmaps->annotations;
 	for (sequenceIndex = 1; sequenceIndex < sequenceCounter + 1;
 	     sequenceIndex++) {
-		//printf("Going through sequence %d\n", sequenceIndex);
+		//velvetLog("Going through sequence %d\n", sequenceIndex);
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
 		lastAnnotIndex = getAnnotationCount(rdmap);
 
@@ -341,8 +341,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex <= sequenceCount_pg(preGraph);
 	     sequenceIndex++) {
 		if (sequenceIndex % 100000 == 0)
-			printf("Sequence %d / %d\n", sequenceIndex,
-			       sequenceCount_pg(preGraph));
+			velvetLog("Sequence %d / %d\n", sequenceIndex,
+				  sequenceCount_pg(preGraph));
 
 		while (line[0] != '>')
 			if (!fgets(line, lineLength, file))
@@ -358,7 +358,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		// Reading first (k-1) nucleotides
 		tooShort = false;
 		clearKmer(&initialKmer);
-		//printf("Initial kmer: ");
+		//velvetLog("Initial kmer: ");
 		for (readIndex = 0; readIndex < WORDLENGTH - 1;
 		     readIndex++) {
 			c = getc(file);
@@ -386,7 +386,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				pushNucleotide(&initialKmer, THYMINE);
 				break;
 			default:
-				printf
+				velvetLog
 				    ("Irregular sequence file: are you sure your Sequence and Roadmap file come from the same source?\n");
 				fflush(stdout);
 				abort();
@@ -396,7 +396,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		//	puts("");
 
 		if (tooShort) {
-			//printf("Skipping short read.. %d\n", sequenceIndex);
+			//velvetLog("Skipping short read.. %d\n", sequenceIndex);
 			chains[sequenceIndex] = preNodeCounter;
 			if (!fgets(line, lineLength, file) && sequenceIndex < sequenceCount_pg(preGraph))
 				exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
@@ -418,7 +418,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 
 			if (currentPosition != nextStop) {
 				//if (sequenceIndex == 481)
-				//	printf("Adding pre nodes from %lli to %lli\n", (long long) currentPosition, (long long) nextStop);
+				//	velvetLog("Adding pre nodes from %lli to %lli\n", (long long) currentPosition, (long long) nextStop);
 				addPreNodeToPreGraph_pg(preGraph,
 							currentPosition,
 							nextStop,
@@ -468,7 +468,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 						pushNucleotide(&initialKmer, THYMINE);
 						break;
 					default:
-						printf
+						velvetLog
 						    ("Irregular sequence file: are you sure your Sequence and Roadmap file come from the same source?\n");
 						fflush(stdout);
 #ifdef DEBUG 
@@ -496,7 +496,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				    getInsertionMarkerPosition
 				    (currentMarker);
 				//if (sequenceIndex == 481)
-				//	printf("Adding pre nodes from %lli to %lli\n", (long long) currentPosition, (long long) nextStop);
+				//	velvetLog("Adding pre nodes from %lli to %lli\n", (long long) currentPosition, (long long) nextStop);
 				addPreNodeToPreGraph_pg(preGraph,
 							currentPosition,
 							nextStop, file,
@@ -628,7 +628,7 @@ static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex++) {
 
 		if (sequenceIndex % 100000 == 0)
-			printf("Connecting %d / %d\n", sequenceIndex,
+			velvetLog("Connecting %d / %d\n", sequenceIndex,
 			       sequenceCount_pg(preGraph));
 
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
@@ -697,7 +697,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex++) {
 
 		if (sequenceIndex % 100000 == 0)
-			printf("Connecting %d / %d\n", sequenceIndex,
+			velvetLog("Connecting %d / %d\n", sequenceIndex,
 			       sequenceCount_pg(preGraph));
 
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
@@ -773,29 +773,29 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 	PreGraph *preGraph =
 	    emptyPreGraph_pg(sequenceCount, rdmapArray->referenceCount, rdmapArray->WORDLENGTH, rdmapArray->double_strand);
 
-	puts("Creating insertion markers");
+	velvetLog("Creating insertion markers\n");
 	setInsertionMarkers(rdmapArray, markerCounters, &veryLastMarker,
 			    &insertionMarkers);
 
-	puts("Counting preNodes");
+	velvetLog("Counting preNodes\n");
 	countPreNodes(rdmapArray, preGraph, markerCounters,
 		      insertionMarkers, veryLastMarker);
 
-	printf("%d preNodes counted, creating them now\n",
-	       preNodeCount_pg(preGraph));
+	velvetLog("%d preNodes counted, creating them now\n",
+		  preNodeCount_pg(preGraph));
 	createPreNodes(rdmapArray, preGraph, markerCounters,
 		       insertionMarkers, veryLastMarker, chains,
 		       sequenceFilename, WORDLENGTH);
 
-	puts("Adjusting marker info...");
+	velvetLog("Adjusting marker info...\n");
 	convertInsertionMarkers(insertionMarkers, veryLastMarker, chains);
 
-	puts("Connecting preNodes");
+	velvetLog("Connecting preNodes\n");
 	connectPreNodes(rdmapArray, preGraph, chains);
 
-	puts("Cleaning up memory");
+	velvetLog("Cleaning up memory\n");
 	cleanUpMemory(preGraph, rdmapArray, chains);
-	puts("Done creating preGraph");
+	velvetLog("Done creating preGraph\n");
 
 	return preGraph;
 }

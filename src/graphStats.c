@@ -499,9 +499,9 @@ void chainSawCorrection(Graph * graph, int minMult)
 		}
 	}
 
-	printf("%d dubious nodes removed\n", removed);
+	velvetLog("%d dubious nodes removed\n", removed);
 	concatenateGraph(graph);
-	printf("%d node in the end\n", nodeCount(graph));
+	velvetLog("%d node in the end\n", nodeCount(graph));
 }
 
 void grossErrorRemoval(Graph * graph, IDnum firstStrain)
@@ -524,9 +524,9 @@ void grossErrorRemoval(Graph * graph, IDnum firstStrain)
 		}
 	}
 
-	printf("%d dubious nodes removed\n", removed);
+	velvetLog("%d dubious nodes removed\n", removed);
 	concatenateGraph(graph);
-	printf("%d node in the end\n", nodeCount(graph));
+	velvetLog("%d node in the end\n", nodeCount(graph));
 }
 
 IDnum countSNPs(Graph * graph, IDnum firstStrain, int WORDLENGTH)
@@ -735,9 +735,9 @@ Coordinate readCoverage(Node * node)
 	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		if (getTwinMarker(marker) == NULL_IDX) {
-			printf("Node %d screwed up\n", getNodeID(node));
-			printf("Sequence %d\n",
-			       getPassageMarkerSequenceID(marker));
+			velvetLog("Node %d screwed up\n", getNodeID(node));
+			velvetLog("Sequence %d\n",
+				  getPassageMarkerSequenceID(marker));
 			abort();
 		}
 		sum += getPassageMarkerLength(marker);
@@ -769,9 +769,9 @@ Coordinate newReadCoverage(Node * node, IDnum firstStrain)
 		if (getAbsolutePassMarkerSeqID(marker) >= firstStrain) {
 			sum += getPassageMarkerLength(marker);
 			if (getPassageMarkerLength(marker) < 0)
-				printf("Bizarre marker %d at node %d\n",
-				       getPassageMarkerSequenceID(marker),
-				       getNodeID(node));
+				velvetLog("Bizarre marker %d at node %d\n",
+					  getPassageMarkerSequenceID(marker),
+					  getNodeID(node));
 		}
 
 	return sum;
@@ -839,10 +839,10 @@ void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads)
 
 	outfile = fopen(filename, "w");
 	if (outfile == NULL) {
-		printf("Couldn't open file %s, sorry\n", filename);
+		velvetLog("Couldn't open file %s, sorry\n", filename);
 		return;
 	} else
-		printf("Writing into stats file %s...\n", filename);
+		velvetLog("Writing into stats file %s...\n", filename);
 
 	fprintf(outfile, "ID\tlgth\tout\tin\tlong_cov");
 
@@ -906,7 +906,7 @@ void destroyStrainSpecificIslands(Graph * graph, IDnum firstStrain)
 
 	resetNodeStatus(graph);
 
-	puts("Destroying disconnected strain specific sub-graphs");
+	velvetLog("Destroying disconnected strain specific sub-graphs\n");
 
 	// Mark all genomic nodes 
 	for (index = 1; index <= nodeCount(graph); index++) {
@@ -953,7 +953,7 @@ void destroyStrainSpecificIslands(Graph * graph, IDnum firstStrain)
 	}
 
 	// Renumber graph nodes
-	printf("Removed %d nodes \n", counter);
+	velvetLog("Removed %d nodes\n", counter);
 	renumberNodes(graph);
 }
 
@@ -971,7 +971,7 @@ void displayStrainOnlySequences(Graph * graph, IDnum firstStrain,
 	Coordinate readCoord;
 
 	if (outfile == NULL) {
-		printf("Could not write into %s, sorry\n", filename);
+		velvetLog("Could not write into %s, sorry\n", filename);
 		return;
 	}
 
@@ -1011,12 +1011,12 @@ void displayStrainOnlyDescriptors(Graph * graph, IDnum firstStrain)
 	destroyStrainSpecificIslands(graph, firstStrain);
 
 	for (nodeIndex = 1; nodeIndex <= nodeCount(graph); nodeIndex++) {
-		printf("node %d from %d\n", nodeIndex, nodeCount(graph));
+		velvetLog("node %d from %d\n", nodeIndex, nodeCount(graph));
 		node = getNodeInGraph(graph, nodeIndex);
 
 		if (isOnlyStrain(node, firstStrain)) {
 			str = readNode(node);
-			printf("> UNIQUE SEQUENCE %s\n", str);
+			velvetLog("> UNIQUE SEQUENCE %s\n", str);
 			free(str);
 		}
 	}
@@ -1047,7 +1047,7 @@ void displayLocalBreakpoint(PassageMarkerI strainMarker,
 
 	// Eliminate those that follow some local strain
 	if (isDestinationToMarker(genomeMarker, destinationA)) {
-//              puts("Parallel paths");
+//              velvetLog("Parallel paths\n");
 		return;
 	}
 
@@ -1056,12 +1056,12 @@ void displayLocalBreakpoint(PassageMarkerI strainMarker,
 	if (destination2A == NULL)
 		return;
 
-	printf("Lengths %lld %lld\n", (long long) getNodeLength(destinationA),
-	       (long long) getNodeLength(destination2A));
+	velvetLog("Lengths %lld %lld\n", (long long) getNodeLength(destinationA),
+		  (long long) getNodeLength(destination2A));
 
 	// Hop to another genomic node
 //      if (getNodeLength(destinationA) > 24) {
-	//printf("wrong length %d %d\n", getNodeLength(destination) , getNodeID(destination));
+	//velvetLog("wrong length %d %d\n", getNodeLength(destination) , getNodeID(destination));
 //              return;
 //      }
 
@@ -1073,12 +1073,12 @@ void displayLocalBreakpoint(PassageMarkerI strainMarker,
 
 	// Eliminate those that point to uniquely strain sequences 
 	if (nodeGenomicMultiplicity(destination, firstStrain) != 1) {
-//              puts("Multiple genome reads");
+//              velvetLog("Multiple genome reads\n");
 		return;
 	}
 	// Hop to another genomic node
 //      if (getNodeLength(destination2A) != 24) {
-	//puts("wrong length 2");
+	//velvetLog("wrong length 2\n");
 //              return;
 //      }
 
@@ -1100,8 +1100,8 @@ void displayLocalBreakpoint(PassageMarkerI strainMarker,
 	strainDestination[localID + nodeCount] = destination;
 	genomeDestination[localID + nodeCount] = destination2;
 
-//      printf("Assigning %p and %p to %d\n", destination, destination2, localID);
-	printf("lengths %lld\t%lld\n", (long long) getNodeLength(destinationA),
+//      velvetLog("Assigning %p and %p to %d\n", destination, destination2, localID);
+	velvetLog("lengths %lld\t%lld\n", (long long) getNodeLength(destinationA),
 	       (long long) getNodeLength(destination2A));
 
 	// Detect translocation
@@ -1115,19 +1115,19 @@ void displayLocalBreakpoint(PassageMarkerI strainMarker,
 		}
 
 	if (isTranslocation) {
-		printf("BREAK TRANS\t%ld\t%lld\t%lld\t%lld\n",
-		       (long) getAbsolutePassMarkerSeqID(genomeMarker),
-		       (long long) getPassageMarkerStart(genomeMarker),
-		       (long long) getNodeLength(destinationA),
-		       (long long) getNodeLength(destination2A));
+		velvetLog("BREAK TRANS\t%ld\t%lld\t%lld\t%lld\n",
+			  (long) getAbsolutePassMarkerSeqID(genomeMarker),
+			  (long long) getPassageMarkerStart(genomeMarker),
+			  (long long) getNodeLength(destinationA),
+			  (long long) getNodeLength(destination2A));
 		counter[2]++;
 		return;
 	}
 	// Detect breakpoint
-	printf("BREAK INTRA\t%ld\t%lld\t%lld\t%lld\n",
-	       (long) getAbsolutePassMarkerSeqID(genomeMarker),
-	       (long long) getPassageMarkerStart(genomeMarker),
-	       (long long) getNodeLength(destinationA), (long long) getNodeLength(destination2A));
+	velvetLog("BREAK INTRA\t%ld\t%lld\t%lld\t%lld\n",
+		  (long) getAbsolutePassMarkerSeqID(genomeMarker),
+		  (long long) getPassageMarkerStart(genomeMarker),
+		  (long long) getNodeLength(destinationA), (long long) getNodeLength(destination2A));
 	counter[1]++;
 
 	// Check for inversion
@@ -1135,7 +1135,7 @@ void displayLocalBreakpoint(PassageMarkerI strainMarker,
 	    -getPassageMarkerSequenceID(genomeMarker))
 		return;
 
-//      puts("potential!!");
+//      velvetLog("potential!!\n");
 
 	node1 = getTwinNode(destination);
 
@@ -1146,15 +1146,15 @@ void displayLocalBreakpoint(PassageMarkerI strainMarker,
 		if (getNodeStatus(node2))
 			if (strainDestination[getNodeID(node2) + nodeCount]
 			    == destination2) {
-//                                      puts("Safe");
+//                                      velvetLog("Safe\n");
 				counter[1] -= 4;
 				counter[0]++;
 			} else;
-//                              puts("stopped 3");
+//                              velvetLog("stopped 3\n");
 		else;
-//                      puts("stopped 2");
+//                      velvetLog("stopped 2\n");
 	} else;
-//              puts("stopped 1");
+//              velvetLog("stopped 1\n");
 }
 
 void displayBreakpoints(Graph * graph, IDnum firstStrain)
@@ -1214,7 +1214,7 @@ void displayBreakpoints(Graph * graph, IDnum firstStrain)
 	}
 
 
-	printf("%d\t%d\t%d\n", counters[0], counters[1], counters[2]);
+	velvetLog("%d\t%d\t%d\n", counters[0], counters[1], counters[2]);
 	free(strainDestination);
 	free(genomeDestination);
 }
@@ -1261,7 +1261,7 @@ void projectGraphToFile(Graph * graph, char *filename, int WORDLENGTH,
 	Arc *arc;
 
 	if (outfile == NULL) {
-		printf("Could not open %s, sorry\n", filename);
+		velvetLog("Could not open %s, sorry\n", filename);
 		return;
 	}
 
@@ -1335,10 +1335,10 @@ void exportLongNodeSequences(char *filename, Graph * graph,
 	//double sensitivity, specificity;
 
 	if (outfile == NULL) {
-		printf("Could not write into %s, sorry\n", filename);
+		velvetLog("Could not write into %s, sorry\n", filename);
 		return;
 	} else {
-		printf("Writing contigs into %s...\n", filename);
+		velvetLog("Writing contigs into %s...\n", filename);
 	}
 
 	for (nodeIndex = 1; nodeIndex <= nodeCount(graph); nodeIndex++) {
@@ -1423,7 +1423,7 @@ void exportMediumNodeSequences(char* filename, Graph * graph, Coordinate minLeng
 		fprintf(outfile,
 			"> MEDIUM NODE %d, Sensitivity = %f, Specificity = %f\n",
 			nodeIndex, sensitivity, specificity);
-		printf
+		velvetLog
 		    ("> MEDIUM NODE %d, Sensitivity = %f, Specificity = %f\n",
 		     nodeIndex, sensitivity, specificity);
 
@@ -1465,7 +1465,7 @@ Coordinate n50(Graph * graph)
 	Node *node;
 
 	if (nodeCount(graph) == 0) {
-		puts("EMPTY GRAPH");
+		velvetLog("EMPTY GRAPH\n");
 		return 0;
 	}
 
@@ -1553,10 +1553,10 @@ double estimated_cov(Graph * graph, char * directory)
 		exitErrorf(EXIT_FAILURE, true, "Could not write to %s",
 		       logFilename);
 
-	puts("Measuring median coverage depth...");
+	velvetLog("Measuring median coverage depth...\n");
 
 	if (nodeCount(graph) == 0) {
-		puts("EMPTY GRAPH");
+		velvetLog("EMPTY GRAPH\n");
 		return 0;
 	}
 
@@ -1578,7 +1578,7 @@ double estimated_cov(Graph * graph, char * directory)
 		node = nodeArray[index];
 		sumLength += getNodeLength(node);
 		if (sumLength >= halfTotalLength) {
-			printf("Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
+			velvetLog("Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
 			fprintf(logFile, "Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
 			free(nodeArray);
 			fclose(logFile);
@@ -1711,7 +1711,7 @@ void destroySinglePoolNodes(Graph * graph)
 	Node *node;
 	PassageMarkerI marker, next;
 
-	puts("Destroying single pool nodes");
+	velvetLog("Destroying single pool nodes\n");
 	resetNodeStatus(graph);
 
 	// Remove empty, single pool nodes, mark other single pool nodes
@@ -1759,7 +1759,7 @@ void destroySinglePoolNodes(Graph * graph)
 			cleanUpNode(node, graph);
 	}
 
-	puts("Done");
+	velvetLog("Done\n");
 
 	concatenateGraph(graph);
 }
@@ -1770,7 +1770,7 @@ void destroyShortTips(Graph * graph)
 	Node *node;
 	boolean modified = true;
 
-	puts("Removing short tips");
+	velvetLog("Removing short tips\n");
 
 	while (modified) {
 		modified = false;
@@ -1789,7 +1789,7 @@ void destroyShortTips(Graph * graph)
 		}
 	}
 
-	puts("Done");
+	velvetLog("Done\n");
 
 	concatenateGraph(graph);
 }
@@ -1842,14 +1842,14 @@ void destroyDisconnectedElements(Graph * graph)
 
 	resetNodeStatus(graph);
 
-	puts("Destroying disconnected domains");
+	velvetLog("Destroying disconnected domains\n");
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
 		if (node == NULL || getNodeStatus(node))
 			continue;
 		domainSize = connectDomain(node);
-		printf("CONNECT\t%lld\n", (long long) domainSize);
+		velvetLog("CONNECT\t%lld\n", (long long) domainSize);
 		insertNodeIntoHeap(heap, domainSize, node);
 		domainSizes[index] = domainSize;
 	}
@@ -1867,7 +1867,7 @@ void destroyDisconnectedElements(Graph * graph)
 
 	destroyHeap(heap);
 	free(domainSizes);
-	puts("Done");
+	velvetLog("Done\n");
 
 	concatenateGraph(graph);
 }
@@ -1913,10 +1913,10 @@ void measureTangleSizes(Graph * graph, Coordinate maxLength)
 		if (node == NULL || getNodeStatus(node))
 			continue;
 		domainSize = connectDomainNodeCount(node);
-		printf("CONNECT\t%lld\n", (long long) domainSize);
+		velvetLog("CONNECT\t%lld\n", (long long) domainSize);
 	}
 
-	puts("Done");
+	velvetLog("Done\n");
 }
 
 void destroyEmptyNodes(Graph * graph)
@@ -2006,7 +2006,7 @@ void destroySinglePoolNodesStrict(Graph * graph)
 	IDnum index;
 	Node *node;
 
-	puts("Destroying single pool nodes");
+	velvetLog("Destroying single pool nodes\n");
 	resetNodeStatus(graph);
 
 	// Remove empty, single pool nodes, mark other single pool nodes
@@ -2022,7 +2022,7 @@ void destroySinglePoolNodesStrict(Graph * graph)
 		destroyNode(node, graph);
 	}
 
-	puts("Done");
+	velvetLog("Done\n");
 
 	concatenateGraph(graph);
 }
@@ -2039,7 +2039,7 @@ void contigStats(Node ** contigs, IDnum readCount)
 	for (index = 0; index <= readCount; index++) {
 		if (contigs[index] != NULL) {
 			node = contigs[index];
-			printf("CONTIG %lld\n", (long long) getNodeLength(node));
+			velvetLog("CONTIG %lld\n", (long long) getNodeLength(node));
 			insertNodeIntoHeap(heap, getNodeLength(node),
 					   node);
 			totalLength += getNodeLength(node);
@@ -2056,7 +2056,7 @@ void contigStats(Node ** contigs, IDnum readCount)
 	}
 
 	destroyHeap(heap);
-	printf("N50 %lld Total %lld\n", (long long) getNodeLength(node), (long long) totalLength);
+	velvetLog("N50 %lld Total %lld\n", (long long) getNodeLength(node), (long long) totalLength);
 }
 
 void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
@@ -2112,7 +2112,7 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 	IDnum readID;
 	IDnum index2;
 
-	printf("Removing contigs with coverage < %f...\n", minCov);
+	velvetLog("Removing contigs with coverage < %f...\n", minCov);
 		
 	if (denounceReads)
 		res = callocOrExit(sequenceCount(graph), boolean);
@@ -2133,7 +2133,7 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 					    getShortReadMarkerAtIndex(nodeArray,
 								      index2);
 					readID = getShortReadMarkerID(shortMarker);
-					//printf("Dubious %d\n", readID);
+					//velvetLog("Dubious %d\n", readID);
 					if (readID > 0)
 						res[readID - 1] = true;
 					else
@@ -2148,7 +2148,7 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 					    getShortReadMarkerAtIndex(nodeArray,
 								      index2);
 					readID = getShortReadMarkerID(shortMarker);
-					//printf("Dubious %d\n", readID);
+					//velvetLog("Dubious %d\n", readID);
 					if (readID > 0)
 						res[readID - 1] = true;
 					else
@@ -2186,7 +2186,7 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 					    getShortReadMarkerAtIndex(nodeArray,
 								      index2);
 					readID = getShortReadMarkerID(shortMarker);
-					//printf("Dubious %d\n", readID);
+					//velvetLog("Dubious %d\n", readID);
 					if (readID > 0)
 						res[readID - 1] = true;
 					else
@@ -2201,7 +2201,7 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 					    getShortReadMarkerAtIndex(nodeArray,
 								      index2);
 					readID = getShortReadMarkerID(shortMarker);
-					//printf("Dubious %d\n", readID);
+					//velvetLog("Dubious %d\n", readID);
 					if (readID > 0)
 						res[readID - 1] = true;
 					else
@@ -2234,7 +2234,7 @@ void removeLowCoverageNodes(Graph * graph, double minCov)
 	if (minCov < 0)
 		return;
 
-	printf("Applying a coverage cutoff of %f...\n", minCov);
+	velvetLog("Applying a coverage cutoff of %f...\n", minCov);
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -2266,7 +2266,7 @@ void removeHighCoverageNodes(Graph * graph, double maxCov)
 	if (maxCov < 0)
 		return;
 
-	printf("Applying an upper coverage cutoff of %f...\n", maxCov);
+	velvetLog("Applying an upper coverage cutoff of %f...\n", maxCov);
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -2581,7 +2581,7 @@ void exportAMOSContigs(char *filename, Graph * graph,
 	Node *node;
 	FILE *outfile;
 
-	printf("Writing into AMOS file %s...\n", filename);
+	velvetLog("Writing into AMOS file %s...\n", filename);
 	outfile = fopen(filename, "w");
 
 	if (outfile == NULL)
@@ -2859,7 +2859,7 @@ void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *director
 	     (long) sequenceCount(graph));
 
 	fprintf(logFile, "%s", statsLine);
-	fprintf(stdout, "%s", statsLine);
+	velvetLog("%s", statsLine);
 
 	fclose(logFile);
 	free(logFilename);
@@ -2881,7 +2881,7 @@ void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLe
 	strcat(outFilename, "/UnusedReads.fa");
 	outfile = fopen(outFilename, "w");
 
-	printf("Printing unused reads into %s\n", outFilename);
+	velvetLog("Printing unused reads into %s\n", outFilename);
 
 	for(nodeID = 1; nodeID <= nodeCount(graph); nodeID++) {
 		node = getNodeInGraph(graph, nodeID);
@@ -3111,10 +3111,10 @@ void exportLongNodeMappings(char *filename, Graph * graph, ReadSet * reads,
 
 	outfile = fopen(filename, "w");
 	if (outfile == NULL) {
-		printf("Could not write into %s, sorry\n", filename);
+		velvetLog("Could not write into %s, sorry\n", filename);
 		return;
 	} else {
-		printf("Writing contigs into %s...\n", filename);
+		velvetLog("Writing contigs into %s...\n", filename);
 	}
 
 	for (nodeIndex = 1; nodeIndex <= nodeCount(graph); nodeIndex++) {
