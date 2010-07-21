@@ -112,7 +112,7 @@ void velvetLog(const char *format, ...)
 	gettimeofday(&tvNow, NULL);
 	timersub(&tvNow, &tvStart, &tvDiff);
 
-	printf("[%ld.%ld] ", tvDiff.tv_sec, tvDiff.tv_usec);
+	printf("[%ld.%06ld] ", tvDiff.tv_sec, tvDiff.tv_usec);
 	va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
