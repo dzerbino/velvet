@@ -798,7 +798,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	}
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
-	printf(">>> Sequences loaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
+	velvetLog("Sequences loaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
 
 	fclose(outfile);
 	if (seqFile)
