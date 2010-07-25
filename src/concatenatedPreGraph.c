@@ -21,39 +21,18 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef OPENMP
-#include <omp.h>
-#endif
-
 #include "globals.h"
 #include "preGraph.h"
 #include "utility.h"
 
-#ifdef OPENMP
-// Homemade boolean markers for basic locking system to avoid too much pointer overhead
-static volatile boolean * locks = NULL;
-
-// Homemade test lock function. Returns test if previously locked, locks and returns false otherwise
-static boolean test_lock(IDnum index) {
-	volatile boolean * ptr = locks + index / 8;
-	boolean filter = (boolean) 1 << (index % 8);
-
-	if (*ptr & filter)
-		return true;
-
-	*ptr ^= filter;
-	return false;
-}
-#endif
-
 // Replaces two consecutive preNodes into a single equivalent preNode
 // The extra memory is freed
-static void concatenatePreNodes(IDnum preNodeAID, 
+static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 				PreGraph * preGraph)
 {
 	IDnum preNodeBID = preNodeAID;
 	IDnum currentPreNodeID, nextPreNodeID;
-	PreArcI preArc;
+	PreArcI preArc = oldPreArc;
 	Coordinate totalLength = 0;
 	Coordinate arrayLength;
 	Descriptor * descr, * ptr;
@@ -61,20 +40,20 @@ static void concatenatePreNodes(IDnum preNodeAID,
 	int wordLength = getWordLength_pg(preGraph);
 	Coordinate totalOffset = 0;
 
-	//velvetLog("Concatenating nodes %li and %li\n", preNodeAID, preNodeBID);
+	//printf("Concatenating nodes %li and %li\n", preNodeAID, preNodeBID);
 
 	while(hasSinglePreArc_pg(preNodeBID, preGraph)
-	      && (preArc = getPreArc_pg(preNodeBID, preGraph))
-	      && hasSinglePreArc_pg(getOtherEnd_pg
+		       &&
+		       hasSinglePreArc_pg(getOtherEnd_pg
 					  (preArc, preNodeBID),
 					  preGraph)
-	      && !isLoop_pg(preArc) 
-	      && getDestination_pg(preArc, preNodeBID) != preNodeAID) {
+		       && !isLoop_pg(preArc) 
+		       && getDestination_pg(preArc, preNodeBID) != preNodeAID) {
+
 		totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
 		preNodeBID = getDestination_pg(preArc, preNodeBID);
+		preArc = getPreArc_pg(preNodeBID, preGraph);
 	}
-	if (preNodeBID == preNodeAID)
-		return;
 	totalLength += getPreNodeLength_pg(preNodeBID, preGraph);
 	totalLength += wordLength - 1;
 
@@ -127,7 +106,6 @@ static void concatenatePreNodes(IDnum preNodeAID,
 	setPreNodeDescriptor_pg(descr, totalLength - wordLength + 1, preNodeAID, preGraph); 
 
 	// Correct preArcs
-	#pragma omp critical
 	for (preArc = getPreArc_pg(preNodeBID, preGraph); preArc != NULL_IDX;
 	     preArc = getNextPreArc_pg(preArc, preNodeBID)) {
 		if (getDestination_pg(preArc, preNodeBID) != -preNodeBID)
@@ -156,80 +134,49 @@ static void concatenatePreNodes(IDnum preNodeAID,
 void concatenatePreGraph_pg(PreGraph * preGraph)
 {
 	IDnum preNodeIndex;
+	PreArcI preArc;
+	PreNode *preNode;
 
-	velvetLog("Concatenation...\n");
+	puts("Concatenation...");
 
-#ifdef OPENMP
-	locks = callocOrExit(preNodeCount_pg(preGraph)/8 + 1, boolean);
-	#pragma omp parallel for
-#endif
 	for (preNodeIndex = 1; preNodeIndex < preNodeCount_pg(preGraph);
 	     preNodeIndex++) {
-		PreNode *preNode;
 		preNode = getPreNodeInPreGraph_pg(preGraph, preNodeIndex);
 
 		if (preNode == NULL)
 			continue;
-#ifdef OPENMP
-		boolean taken = false;
-		IDnum preNodeBID;
-		IDnum partnerID;
-		PreArcI preArc;
-		#pragma omp critical
-		{
-			if (test_lock(preNodeIndex)) 
-				taken = true;
-			else {
-				// Lock all the chain downstream of node
-				preNodeBID = preNodeIndex;
-				while(hasSinglePreArc_pg(preNodeBID, preGraph)
-				      && (preArc = getPreArc_pg(preNodeBID, preGraph))
-				      && hasSinglePreArc_pg(getOtherEnd_pg
-								  (preArc, preNodeBID),
-								  preGraph)
-				      && !isLoop_pg(preArc) 
-				      && getDestination_pg(preArc, preNodeBID) != preNodeIndex) {
-					partnerID = getDestination_pg(preArc, preNodeBID);
-					if (partnerID < 0) 
-						partnerID = -partnerID;
-					if(test_lock(partnerID))
-						abort();
-					preNodeBID = getDestination_pg(preArc, preNodeBID);
-				}
 
-				// Lock all the chain upstream of node
-				preNodeBID = -preNodeIndex;
-				while(hasSinglePreArc_pg(preNodeBID, preGraph)
-				      && (preArc = getPreArc_pg(preNodeBID, preGraph))
-				      && hasSinglePreArc_pg(getOtherEnd_pg
-								  (preArc, preNodeBID),
-								  preGraph)
-				      && !isLoop_pg(preArc) 
-				      && getDestination_pg(preArc, preNodeBID) != -preNodeIndex) {
-					partnerID = getDestination_pg(preArc, preNodeBID);
-					if (partnerID < 0) 
-						partnerID = -partnerID;
-					if(test_lock(partnerID))
-						abort();
-					preNodeBID = getDestination_pg(preArc, preNodeBID);
-				}
-			}
+		preArc = getPreArc_pg(preNodeIndex, preGraph);
+
+		while (hasSinglePreArc_pg(preNodeIndex, preGraph)
+		       &&
+		       hasSinglePreArc_pg(getOtherEnd_pg
+					  (preArc, preNodeIndex),
+					  preGraph)) {
+			if (isLoop_pg(preArc))
+				break;
+			concatenatePreNodes(preNodeIndex, preArc,
+					    preGraph);
+			preArc = getPreArc_pg(preNodeIndex, preGraph);
 		}
-		if (taken) 
-			continue;
-#endif
 
-		concatenatePreNodes(preNodeIndex, preGraph);
-		concatenatePreNodes(-preNodeIndex, preGraph);
+		preArc = getPreArc_pg(-preNodeIndex, preGraph);
+
+		while (hasSinglePreArc_pg(-preNodeIndex, preGraph)
+		       &&
+		       hasSinglePreArc_pg(getOtherEnd_pg
+					  (preArc, -preNodeIndex),
+					  preGraph)) {
+			if (isLoop_pg(preArc))
+				break;
+			concatenatePreNodes(-preNodeIndex, preArc,
+					    preGraph);
+			preArc = getPreArc_pg(-preNodeIndex, preGraph);
+		}
 	}
 
-#ifdef OPENMP
-	free((boolean*)locks);
-	locks = NULL;
-#endif
-
 	renumberPreNodes_pg(preGraph);
-	velvetLog("Concatenation over!\n");
+	puts("Concatenation over!");
 }
 
 static boolean isEligibleTip(IDnum index, PreGraph * preGraph, Coordinate
@@ -287,7 +234,7 @@ void clipTips_pg(PreGraph * preGraph)
 	Coordinate cutoffLength = getWordLength_pg(preGraph) * 2;
 	IDnum counter = 0;
 
-	velvetLog("Clipping short tips off preGraph\n");
+	puts("Clipping short tips off preGraph");
 
 	while (modified) {
 		modified = false;
@@ -309,6 +256,6 @@ void clipTips_pg(PreGraph * preGraph)
 	}
 
 	concatenatePreGraph_pg(preGraph);
-	velvetLog("%d tips cut off\n", counter);
-	velvetLog("%d nodes left\n", preNodeCount_pg(preGraph));
+	printf("%d tips cut off\n", counter);
+	printf("%d nodes left\n", preNodeCount_pg(preGraph));
 }

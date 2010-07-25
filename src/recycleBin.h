@@ -51,13 +51,4 @@ size_t RecycleBin_memory_usage(RecycleBin * recycle_bin);
 size_t recycleBinFreeSpace(RecycleBin * recycle_bin);
 size_t recycleBinAvailablePointers(RecycleBin * recycle_bin);
 
-#ifdef OPENMP
-// For multithreading: thread-specific recycle bins
-RecycleBin *newRecycleBinArray(unsigned int n,
-			       size_t node_size, int nodes_per_chunk);
-void destroyRecycleBinArray(RecycleBin * recycle_bin);
-RecycleBin *getRecycleBinInArray(RecycleBin *recycleBin,
-				 int	     position);
-#endif
-
 #endif				/* INCLUDED_RECYCLEBIN_H */

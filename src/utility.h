@@ -51,8 +51,4 @@ void setProgramName(const char *name);
 void exitErrorf(int exitStatus, boolean showErrno, const char *format, ...)
        ATTRIBUTE((format(printf, 3, 4), noreturn));
 
-// Velvet-specific logging utility
-void velvetLog(const char *format, ...)
-	ATTRIBUTE((format(printf, 1, 2)));
-
 #endif

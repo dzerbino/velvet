@@ -46,9 +46,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 ReadSet *newReadSet()
 {
 	ReadSet *rs = callocOrExit(1, ReadSet);
-	int i;
-	for (i = 0; i < CATEGORIES; i++)
-		rs->categoriesOffsets[i] = -1;
 	return rs;
 }
 
@@ -150,10 +147,10 @@ static void addReferenceCoordinate(ReferenceCoordinateTable * table, char * name
 	ReferenceCoordinate * refCoord;
 
 	if ((refCoord = findReferenceCoordinate(table, name, start, finish, positive_strand))) {
-		velvetLog("Overlapping reference coordinates:\n");
-		velvetLog("%s:%lli-%lli\n", name, (long long) start, (long long) finish);
-		velvetLog("%s:%lli-%lli\n", refCoord->name, (long long) refCoord->start, (long long) refCoord->finish);
-		velvetLog("Exiting...\n");
+		printf("Overlapping reference coordinates:\n");
+		printf("%s:%lli-%lli\n", name, (long long) start, (long long) finish);
+		printf("%s:%lli-%lli\n", refCoord->name, (long long) refCoord->start, (long long) refCoord->finish);
+		printf("Exiting...");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -549,10 +546,10 @@ void exportIDMapping(char *filename, ReadSet * reads)
 	FILE *outfile = fopen(filename, "w");
 
 	if (outfile == NULL) {
-		velvetLog("Couldn't open %s, sorry\n", filename);
+		printf("Couldn't open %s, sorry\n", filename);
 		return;
 	} else
-		velvetLog("Writing into file...\n");
+		puts("Writing into file...");
 
 	if (reads->labels == NULL) {
 		fclose(outfile);
@@ -597,7 +594,7 @@ static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * 
 		file = stdin;
 
 	if (file != NULL)
-		velvetLog("Reading Solexa file %s\n", filename);
+		printf("Reading Solexa file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -620,8 +617,8 @@ static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * 
 
 	fclose(file);
 
-	velvetLog("%d sequences found\n", counter);
-	velvetLog("Done\n");
+	printf("%d sequences found\n", counter);
+	puts("Done");
 }
 
 static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
@@ -641,7 +638,7 @@ static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		file = stdin;
 
 	if (file != NULL)
-		velvetLog("Reading Solexa file %s\n", filename);
+		printf("Reading Solexa file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -664,8 +661,8 @@ static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	fclose(file);
 
-	velvetLog("%d sequences found\n", counter);
-	velvetLog("Done\n");
+	printf("%d sequences found\n", counter);
+	puts("Done");
 }
 
 void goToEndOfLine(char *line, FILE * file)
@@ -695,7 +692,7 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		file = stdin;
 
 	if (file != NULL)
-		velvetLog("Reading FastQ file %s\n", filename);
+		printf("Reading FastQ file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -735,8 +732,8 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	}
 
 	fclose(file);
-	velvetLog("%d reads found\n", counter);
-	velvetLog("Done\n");
+	printf("%d reads found.\n", counter);
+	puts("Done");
 }
 
 // Imports sequences from a raw sequence file 
@@ -756,7 +753,7 @@ static void readRawFile(FILE* outfile, char *filename, Category cat, IDnum * seq
 		file = stdin;
 
 	if (file != NULL)
-		velvetLog("Reading raw file %s\n", filename);
+		printf("Reading raw file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -765,7 +762,7 @@ static void readRawFile(FILE* outfile, char *filename, Category cat, IDnum * seq
 		counter++;
 
 		if (strlen(line) >= maxline - 1) {
-			velvetLog("Raw sequence files cannot contain reads longer than %i bp\n", maxline - 1);
+			printf("Raw sequence files cannot contain reads longer than %i bp\n", maxline - 1);
 #ifdef DEBUG
 			abort();
 #endif
@@ -782,8 +779,8 @@ static void readRawFile(FILE* outfile, char *filename, Category cat, IDnum * seq
 	}
 
 	fclose(file);
-	velvetLog("%d reads found\n", counter);
-	velvetLog("Done\n");
+	printf("%d reads found.\n", counter);
+	puts("Done");
 }
 
 // Imports sequences from a zipped rfastq file 
@@ -806,7 +803,7 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 	}
 
 	if (file != NULL)
-		velvetLog("Reading FastQ file %s\n", filename);
+		printf("Reading FastQ file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -842,8 +839,8 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 	}
 
 	gzclose(file);
-	velvetLog("%d reads found.\n", counter);
-	velvetLog("Done\n");
+	printf("%d reads found.\n", counter);
+	puts("Done");
 }
 
 // Imports sequences from a zipped raw file 
@@ -865,7 +862,7 @@ static void readRawGZFile(FILE * outfile, char *filename, Category cat, IDnum *s
 	}
 
 	if (file != NULL)
-		velvetLog("Reading zipped raw sequence file %s\n", filename);
+		printf("Reading zipped raw sequence file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -874,7 +871,7 @@ static void readRawGZFile(FILE * outfile, char *filename, Category cat, IDnum *s
 		counter++;
 
 		if (strlen(line) >= maxline - 1) {
-			velvetLog("Raw sequence files cannot contain reads longer than %i bp\n", maxline - 1);
+			printf("Raw sequence files cannot contain reads longer than %i bp\n", maxline - 1);
 #ifdef DEBUG
 			abort();
 #endif
@@ -893,8 +890,8 @@ static void readRawGZFile(FILE * outfile, char *filename, Category cat, IDnum *s
 	}
 
 	gzclose(file);
-	velvetLog("%d reads found\n", counter);
-	velvetLog("Done\n");
+	printf("%d reads found.\n", counter);
+	puts("Done");
 }
 
 static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTable * refCoords, IDnum counter)
@@ -964,7 +961,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		file = stdin;
 
 	if (file != NULL)
-		velvetLog("Reading FastA file %s;\n", filename);
+		printf("Reading FastA file %s;\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -1012,8 +1009,8 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	if (cat == REFERENCE) 
 		fillReferenceCoordinateTable(filename, refCoords, counter);
 
-	velvetLog("%d sequences found\n", counter);
-	velvetLog("Done\n");
+	printf("%d sequences found\n", counter);
+	puts("Done");
 }
 
 // Imports sequences from a zipped fasta file 
@@ -1037,7 +1034,7 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 	}
 
 	if (file != NULL)
-		velvetLog("Reading zipped FastA file %s;\n", filename);
+		printf("Reading zipped FastA file %s;\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -1083,8 +1080,8 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 		fprintf(outfile, "\n");
 	gzclose(file);
 
-	velvetLog("%d sequences found\n", counter);
-	velvetLog("Done\n");
+	printf("%d sequences found\n", counter);
+	puts("Done");
 }
 
 // Parser for new output
@@ -1107,7 +1104,7 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	}
 
 	if (file != NULL)
-		velvetLog("Reading zipped MAQ file %s\n", filename);
+		printf("Reading zipped MAQ file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -1130,8 +1127,8 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	gzclose(file);
 
-	velvetLog("%d sequences found\n", counter);
-	velvetLog("Done\n");
+	printf("%d sequences found\n", counter);
+	puts("Done");
 }
 
 static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
@@ -1148,8 +1145,8 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	ReferenceCoordinate * refCoord;
 
 	if (cat == REFERENCE) {
-		velvetLog("SAM file %s cannot contain reference sequences.\n", filename);
-		velvetLog("Please check the command line.\n");
+		printf("SAM file %s cannot contain reference sequences.\n", filename);
+		puts("Please check the command line.");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -1158,7 +1155,7 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 
 	FILE *file = (strcmp(filename, "-") != 0)? fopen(filename, "r") : stdin;
 	if (file)
-		velvetLog("Reading SAM file %s\n", filename);
+		printf("Reading SAM file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -1286,8 +1283,7 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	}
 
 	fclose(file);
-	velvetLog("%lu reads found\n", readCount);
-	velvetLog("Done\n");
+	printf("%lu reads found.\nDone\n", readCount);
 }
 
 static int readBAMint32(gzFile file)
@@ -1319,8 +1315,8 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	ReferenceCoordinate * refCoord;
 
 	if (cat == REFERENCE) {
-		velvetLog("BAM file %s cannot contain reference sequences.\n", filename);
-		velvetLog("Please check the command line.\n");
+		printf("BAM file %s cannot contain reference sequences.\n", filename);
+		puts("Please check the command line.");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -1335,7 +1331,7 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	}
 
 	if (file != NULL)
-		velvetLog("Reading BAM file %s\n", filename);
+		printf("Reading BAM file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -1508,8 +1504,7 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	free(buffer);
 
 	gzclose(file);
-	velvetLog("%lu reads found\n", readCount);
-	velvetLog("Done\n");
+	printf("%lu reads found.\nDone\n", readCount);
 }
 
 static void printUsage()
@@ -1778,7 +1773,7 @@ void detachDubiousReads(ReadSet * reads, boolean * dubiousReads)
 		pairID = mateReads[index];
 
 		if (pairID != -1) {
-			//velvetLog("Separating %d and %d\n", index, pairID);
+			//printf("Separating %d and %d\n", index, pairID);
 			mateReads[index] = -1;
 			mateReads[pairID] = -1;
 		}
@@ -1819,10 +1814,10 @@ void exportReadSet(char *filename, ReadSet * reads)
 	FILE *outfile = fopen(filename, "w+");
 
 	if (outfile == NULL) {
-		velvetLog("Couldn't open file, sorry\n");
+		puts("Couldn't open file, sorry");
 		return;
 	} else
-		velvetLog("Writing into readset file: %s\n", filename);
+		printf("Writing into readset file: %s\n", filename);
 
 	for (index = 0; index < reads->readCount; index++) {
 		exportRead(outfile, reads, index);
@@ -1830,7 +1825,7 @@ void exportReadSet(char *filename, ReadSet * reads)
 
 	fclose(outfile);
 
-	velvetLog("Done\n");
+	puts("Done");
 }
 
 ReadSet *importReadSet(char *filename)
@@ -1846,7 +1841,7 @@ ReadSet *importReadSet(char *filename)
 	short int temp_short;
 
 	if (file != NULL)
-		velvetLog("Reading read set file %s;\n", filename);
+		printf("Reading read set file %s;\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
@@ -1858,7 +1853,7 @@ ReadSet *importReadSet(char *filename)
 		if (line[0] == '>')
 			sequenceCount++;
 	fclose(file);
-	velvetLog("%d sequences found\n", sequenceCount);
+	printf("%d sequences found\n", sequenceCount);
 
 	reads->readCount = sequenceCount;
 	
@@ -1880,8 +1875,6 @@ ReadSet *importReadSet(char *filename)
 			sscanf(line, "%*[^\t]\t%*[^\t]\t%hd",
 			       &temp_short);
 			reads->categories[sequenceIndex + 1] = (Category) temp_short;
-			if (reads->categoriesOffsets[temp_short] < 0)
-				reads->categoriesOffsets[temp_short] = sequenceIndex;
 
 			if (sequenceIndex != -1)
 				reads->sequences[sequenceIndex] =
@@ -1895,7 +1888,7 @@ ReadSet *importReadSet(char *filename)
 		}
 	}
 
-	//velvetLog("Sequence %d has length %d\n", sequenceIndex, bpCount);
+	//printf("Sequence %d has length %d\n", sequenceIndex, bpCount);
 	reads->sequences[sequenceIndex] =
 	    mallocOrExit(bpCount + 1, char);
 	fclose(file);
@@ -1910,7 +1903,7 @@ ReadSet *importReadSet(char *filename)
 			}
 			sequenceIndex++;
 			bpCount = 0;
-			//velvetLog("Starting to read sequence %d\n",
+			//printf("Starting to read sequence %d\n",
 			//       sequenceIndex);
 			sequence = reads->sequences[sequenceIndex];
 		} else if (line[0] == 'M') {;
@@ -1926,7 +1919,7 @@ ReadSet *importReadSet(char *filename)
 	sequence[bpCount] = '\0';
 	fclose(file);
 
-	velvetLog("Done\n");
+	puts("Done");
 	return reads;
 
 }
@@ -2025,7 +2018,7 @@ IDnum *getSequenceLengthsFromFile(char *filename, int wordLength) /* SF TODO Thi
 	int lengthOffset = wordLength - 1;
 
 	if (file != NULL)
-		velvetLog("Reading read set file %s;\n", filename);
+		printf("Reading read set file %s;\n", filename);
 	else 
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 

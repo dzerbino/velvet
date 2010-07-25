@@ -36,9 +36,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "globals.h"
 #include "recycleBin.h"
-#include "utility.h"
 
 typedef struct RecycleBin_Node {
 	struct RecycleBin_Node *next;
@@ -56,69 +54,63 @@ struct recycleBin_st {
 	int nodes_per_chunk;
 };
 
-static void initRecycleBin(RecycleBin *recycleBin,
-			   size_t node_size, int nodes_per_chunk)
+RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)
 {
+	register RecycleBin *recycle_bin = malloc(sizeof(RecycleBin));
 	size_t chunckSize, allocSize;
 
+	if (recycle_bin == NULL) {
+		puts("Allocation failed!");
+#ifdef DEBUG 
+		abort();
+#endif 
+		exit(-1);
+	}
+
+	if (node_size < sizeof(RecycleBin_Node)) {
+		puts("Too small elements to create a recycle bin!");
+#ifdef DEBUG 
+		abort();
+#endif 
+		exit(-1);
+	}
 	chunckSize = sizeof(Chunk) + nodes_per_chunk * node_size;
 	allocSize = 1;
 	/* Get nearest power of 2 */
 	while (allocSize < chunckSize)
 		allocSize <<= 1;
 	nodes_per_chunk = (allocSize - sizeof(Chunk)) / node_size;
-	recycleBin->chunk_list = NULL;
-	recycleBin->chunk_pos = nodes_per_chunk;
-	recycleBin->nodes_per_chunk = nodes_per_chunk;
-	recycleBin->node_size = node_size;
-	recycleBin->recycle = NULL;
+	recycle_bin->chunk_list = NULL;
+	recycle_bin->chunk_pos = nodes_per_chunk;
+	recycle_bin->nodes_per_chunk = nodes_per_chunk;
+	recycle_bin->node_size = node_size;
+	recycle_bin->recycle = NULL;
+	return recycle_bin;
 }
 
-RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)
+void destroyRecycleBin(RecycleBin * recycle_bin)
 {
-	RecycleBin *recycleBin;
+	register Chunk *chunk;
 
-	if (node_size < sizeof(RecycleBin_Node)) {
-		velvetLog("Too small elements to create a recycle bin!\n");
-#ifdef DEBUG 
-		abort();
-#endif 
-		exit(-1);
-	}
-	recycleBin = mallocOrExit(1, RecycleBin);
-	initRecycleBin (recycleBin, node_size, nodes_per_chunk);
-
-	return recycleBin;
-}
-
-static void destroyRecycleBinChunks(RecycleBin * recycleBin)
-{
-	while (recycleBin->chunk_list != NULL)
-	{
-		Chunk *chunk;
-
-		chunk = recycleBin->chunk_list;
-		recycleBin->chunk_list = recycleBin->chunk_list->next;
-		free(chunk);
-	}
-}
-
-void destroyRecycleBin(RecycleBin * recycleBin)
-{
-	if (recycleBin == NULL)
+	if (recycle_bin == NULL)
 		return;
 
-	destroyRecycleBinChunks(recycleBin);
-	free(recycleBin);
+	while (recycle_bin->chunk_list != NULL) {
+		chunk = recycle_bin->chunk_list;
+		recycle_bin->chunk_list = recycle_bin->chunk_list->next;
+		free(chunk);
+	}
+	free(recycle_bin);
+	return;
 }
 
 void *allocatePointer(RecycleBin * recycle_bin)
 {
-	RecycleBin_Node *node;
-	Chunk *chunk;
+	register RecycleBin_Node *node;
+	register Chunk *chunk;
 
 	if (recycle_bin == NULL) {
-		velvetLog("Null recycle bin!\n");
+		puts("Null recycle bin!");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -135,7 +127,7 @@ void *allocatePointer(RecycleBin * recycle_bin)
 		chunk = malloc(sizeof(Chunk) + recycle_bin->nodes_per_chunk
 			       * recycle_bin->node_size);
 		if (chunk == NULL) {
-			velvetLog("No more memory for memory chunk!\n");
+			puts("No more memory for memory chunk!");
 #ifdef DEBUG 
 			abort();
 #endif 
@@ -158,7 +150,7 @@ void *allocatePointer(RecycleBin * recycle_bin)
 
 void deallocatePointer(RecycleBin * recycle_bin, void *data)
 {
-	RecycleBin_Node *node = data;
+	register RecycleBin_Node *node = data;
 
 	node->next = recycle_bin->recycle;
 	recycle_bin->recycle = node;
@@ -203,35 +195,3 @@ size_t recycleBinAvailablePointers(RecycleBin * bin)
 
 	return result * bin->nodes_per_chunk;
 }
-
-#ifdef OPENMP
-RecycleBin *newRecycleBinArray(unsigned int n,
-			       size_t node_size, int nodes_per_chunk)
-{
-	RecycleBin *recycleBin;
-	int i;
-
-	recycleBin = mallocOrExit (n + 1, RecycleBin);
-	for (i = 0; i < n; i++)
-		initRecycleBin(recycleBin + i, node_size, nodes_per_chunk);
-	/* Last element marker */
-	recycleBin[n].node_size = 0;
-
-	return recycleBin;
-}
-
-void destroyRecycleBinArray(RecycleBin * recycleBin)
-{
-	int i;
-
-	for (i = 0; recycleBin[i].node_size != 0; i++)
-		destroyRecycleBinChunks(recycleBin + i);
-	free(recycleBin);
-}
-
-RecycleBin *getRecycleBinInArray(RecycleBin *recycleBin,
-				 int	     position)
-{
-	return recycleBin + position;
-}
-#endif

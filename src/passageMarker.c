@@ -138,7 +138,7 @@ void destroyPassageMarker(PassageMarkerI marker)
 	deallocatePassageMarker(twin);
 	deallocatePassageMarker(marker);
 
-	//velvetLog("Done destroying passage marker\n");
+	//puts("Done destroying passage marker");
 }
 
 void destroyAllPassageMarkers()
@@ -194,9 +194,9 @@ void setNextInNode(PassageMarkerI marker, PassageMarkerI next)
 		PassageMarker *nextVal;
 
 		if (markerVal->twinMarker == NULL_IDX) {
-			velvetLog("Dead marker in node %d %d\n",
-				  getNodeID(getNode(marker)),
-				  getPassageMarkerSequenceID(marker));
+			printf("Dead marker in node %d %d\n",
+			       getNodeID(getNode(marker)),
+			       getPassageMarkerSequenceID(marker));
 			abort();
 		}
 		nextVal = PM_FI2P (next);
@@ -530,10 +530,10 @@ boolean isInitial(PassageMarkerI marker)
 
 	markerVal = PM_FI2P (marker);
 	if (markerVal->twinMarker == NULL_IDX) {
-		velvetLog("Unpaired marker seq %ld start %lld node %ld\n",
-			  (long) markerVal->sequenceID, (long long) markerVal->start,
-			  (long) getNodeID(markerVal->node));
-		velvetLog("SNAFU\n");
+		printf("Unpaired marker seq %ld start %lld node %ld\n",
+		       (long) markerVal->sequenceID, (long long) markerVal->start,
+		       (long) getNodeID(markerVal->node));
+		puts("SNAFU");
 		abort();
 	}
 
@@ -648,7 +648,7 @@ PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
 	PassageMarker *markerVal = PM_FI2P (marker);
 	PassageMarker *twinMarkerVal = PM_FI2P (twinMarker);
 
-//      velvetLog("Values %d\t%d\t%d\t%d\t%d\n", seqID, start, finish, startOffset, finishOffset);
+//      printf("Values %d\t%d\t%d\t%d\t%d\n", seqID, start, finish, startOffset, finishOffset);
 
 	markerVal->sequenceID = seqID;
 	markerVal->node = NULL;
@@ -670,11 +670,11 @@ PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
 	setFinishOffset(marker, finishOffset);
 
 	if (getPassageMarkerLength(marker) < 0) {
-		velvetLog("Negative marker %ld %lld %lld %lld\n",
-			  (long) getPassageMarkerSequenceID(marker),
-			  (long long) getPassageMarkerStart(marker),
-			  (long long) getPassageMarkerFinish(marker),
-			  (long long) getPassageMarkerLength(marker));
+		printf("Negative marker %ld %lld %lld %lld\n",
+		       (long) getPassageMarkerSequenceID(marker),
+		       (long long) getPassageMarkerStart(marker),
+		       (long long) getPassageMarkerFinish(marker),
+		       (long long) getPassageMarkerLength(marker));
 		abort();
 	}
 

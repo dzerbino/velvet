@@ -84,7 +84,7 @@ static NodeList *recordNode(Node * node)
 
 static void destroyNodeList(NodeList * nodeList)
 {
-	//velvetLog("Destroy NL  %p > %p > %p\n", nodeList->previous, nodeList, nodeList->next);
+	//printf("Destroy NL  %p > %p > %p\n", nodeList->previous, nodeList, nodeList->next);
 
 	if (nodeList->previous != NULL)
 		nodeList->previous->next = nodeList->next;
@@ -234,7 +234,7 @@ static void integrateDerivativeDistances(Connection * connect,
 	if (!getUniqueness(reference))
 		return;
 
-	//velvetLog("Opposite node %li length %li at %li ± %f\n", getNodeID(reference), getNodeLength(reference), getConnectionDistance(connect), getConnectionVariance(connect));
+	//printf("Opposite node %li length %li at %li ± %f\n", getNodeID(reference), getNodeLength(reference), getConnectionDistance(connect), getConnectionVariance(connect));
 
 	baseDistance = getConnectionDistance(connect);
 	baseVariance = getConnectionVariance(connect);
@@ -264,7 +264,7 @@ static void integrateDerivativeDistances(Connection * connect,
 
 		// Avoid over-projection
 		if (distance < min_distance) {
-			//velvetLog("Node %li not at distance %li± %f (min %li)\n", destinationID, distance, variance, min_distance);
+			//printf("Node %li not at distance %li± %f (min %li)\n", destinationID, distance, variance, min_distance);
 			continue;
 		}
 
@@ -279,10 +279,10 @@ static void integrateDerivativeDistances(Connection * connect,
 					    distance, variance, NULL, NULL,
 					    true);
 
-		//velvetLog("Node %li now at distance %li\n", destinationID, localConnect->distance);
+		//printf("Node %li now at distance %li\n", destinationID, localConnect->distance);
 	}
 
-	//velvetLog("%li secondary distances added\n", counter);
+	//printf("%li secondary distances added\n", counter);
 }
 
 static void markInterestingNodes(Node * node)
@@ -546,7 +546,7 @@ static void recenterNode(Node * node, Coordinate oldLength)
 	    getNodeLength(node) / 2 - BACKTRACK_CUTOFF;
 	MiniConnection *localConnect;
 
-	//velvetLog("Recentering node\n");
+	//puts("Recentering node");
 
 	for (connect = getConnection(node); connect != NULL;
 	     connect = next) {
@@ -554,8 +554,8 @@ static void recenterNode(Node * node, Coordinate oldLength)
 		incrementConnectionDistance(connect, -distance_shift);
 
 		if (getConnectionDistance(connect) < min_distance) {
-			//velvetLog("Unrecording %li\n",
-			//          -getNodeID(getConnectionDestination(connect)));
+			//printf("Unrecording %li\n",
+			//       -getNodeID(getConnectionDestination(connect)));
 			localConnect =
 			    &localScaffold[-getNodeID(getConnectionDestination(connect))
 					   + nodeCount(graph)];
@@ -1191,7 +1191,7 @@ static boolean expandLongNodes(boolean force_jumps)
 
 static void cleanMemory()
 {
-	velvetLog("Cleaning memory\n");
+	puts("Cleaning memory");
 
 	cleanScaffoldMemory();
 
@@ -1211,7 +1211,7 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * reads,
 	if (!readStartsAreActivated(graph))
 		return;
 
-	velvetLog("Starting pebble resolution...\n");
+	puts("Starting pebble resolution...");
 
 	// Prepare graph
 	resetNodeStatus(graph);
@@ -1234,5 +1234,5 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * reads,
 
 	sortGapMarkers(graph);
 
-	velvetLog("Pebble done.\n");
+	puts("Pebble done.");
 }

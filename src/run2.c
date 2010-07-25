@@ -461,9 +461,9 @@ int main(int argc, char **argv)
 		exportUnusedReads(graph, sequences, minContigKmerLength, directory);
 
 	if (estimateCoverage) 
-		velvetLog("Estimated Coverage = %f\n", expectedCoverage);
+		printf("Estimated Coverage = %f\n", expectedCoverage);
 	if (estimateCutoff) 
-		velvetLog("Estimated Coverage cutoff = %f\n", coverageCutoff);
+		printf("Estimated Coverage cutoff = %f\n", coverageCutoff);
 
 	logFinalStats(graph, minContigKmerLength, directory);
 

@@ -24,7 +24,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "globals.h"
 #include "graph.h"
 #include "passageMarker.h"
-#include "utility.h"
 
 void concatenateReadStarts(Node * target, Node * source, Graph * graph)
 {
@@ -248,7 +247,7 @@ void concatenateGraph(Graph * graph)
 	IDnum nodeIndex;
 	Node *node, *twin;
 
-	velvetLog("Concatenation...\n");
+	puts("Concatenation...");
 
 	for (nodeIndex = 1; nodeIndex < nodeCount(graph); nodeIndex++) {
 		node = getNodeInGraph(graph, nodeIndex);
@@ -284,5 +283,5 @@ void concatenateGraph(Graph * graph)
 
 	renumberNodes(graph);
 	sortGapMarkers(graph);
-	velvetLog("Concatenation over!\n");
+	puts("Concatenation over!");
 }

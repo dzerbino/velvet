@@ -23,10 +23,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <string.h>
 #include <ctype.h>
 
-#ifdef OPENMP
-#include <omp.h>
-#endif
-
 #include "globals.h"
 #include "allocArray.h"
 #include "preGraph.h"
@@ -325,7 +321,7 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 	IDnum index;
 	PreMarker * preMarker;
 
-	//velvetLog("Destroying %ld\n and twin %ld\n", getPreNodeID(preNode), getPreNodeID(twin));
+	//printf("Destroying %ld\n and twin %ld\n", getPreNodeID(preNode), getPreNodeID(twin));
 
 	if (ID < 0)
 		ID = -ID;
@@ -333,14 +329,8 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 	preNode = &(preGraph->preNodes[ID]);
 
 	// PreNode preArcs:
-#ifdef OPENMP
-	#pragma omp critical
-#endif
 	while (preNode->preArcLeft != NULL_IDX)
 		destroyPreArc_pg(preNode->preArcLeft, preGraph);
-#ifdef OPENMP
-	#pragma omp critical
-#endif
 	while (preNode->preArcRight != NULL_IDX)
 		destroyPreArc_pg(preNode->preArcRight, preGraph);
 
@@ -916,8 +906,8 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 	PreMarker * preMarker;
 	PreArcI preArc;
 
-	velvetLog("Renumbering preNodes\n");
-	velvetLog("Initial preNode count %d\n", preGraph->preNodeCount);
+	puts("Renumbering preNodes");
+	printf("Initial preNode count %d\n", preGraph->preNodeCount);
 
 	for (preNodeIndex = 1; preNodeIndex <= preNodes; preNodeIndex++) {
 		currentPreNode = &(preGraph->preNodes[preNodeIndex]);
@@ -971,7 +961,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 				     preGraph->preNodeCount +
 				      1, PreNode);
 
-	velvetLog("Destroyed %d preNodes\n", counter);
+	printf("Destroyed %d preNodes\n", counter);
 }
 
 // Allocate memory for an empty preGraph created with sequenceCount different sequences
@@ -1188,10 +1178,10 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 
 	outfile = fopen(filename, "w");
 	if (outfile == NULL) {
-		velvetLog("Couldn't open file, sorry\n");
+		puts("Couldn't open file, sorry");
 		return;
 	} else
-		velvetLog("Writing into pregraph file %s...\n", filename);
+		printf("Writing into pregraph file %s...\n", filename);
 
 	// General data
 	fprintf(outfile, "%ld\t%ld\t%i\t%hi\n", (long) preGraph->preNodeCount,

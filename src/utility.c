@@ -23,7 +23,6 @@ Copyright 2009 John Marshall (jm18@sanger.ac.uk)
 #include <stdarg.h>
 #include <stdio.h>
 #include <errno.h>
-#include <sys/time.h>
 
 #include "globals.h"
 #include "utility.h"
@@ -93,30 +92,4 @@ void exitErrorf(int exitStatus, boolean showErrno, const char *format, ...)
 	abort();
 #endif 
        exit(exitStatus);
-}
-
-void velvetLog(const char *format, ...)
-{
-	static boolean timeIsSet = false;
-	static struct timeval tvStart;
-	struct timeval tvNow;
-	struct timeval tvDiff;
-	va_list args;
-
-	if (!timeIsSet)
-	{
-		gettimeofday(&tvStart, NULL);
-		timeIsSet = true;
-	}
-
-	gettimeofday(&tvNow, NULL);
-	timersub(&tvNow, &tvStart, &tvDiff);
-
-	printf("[%ld.%06ld] ", tvDiff.tv_sec, tvDiff.tv_usec);
-	va_start(args, format);
-	vprintf(format, args);
-	va_end(args);
-#ifdef DEBUG 
-	fflush(stdout);
-#endif
 }

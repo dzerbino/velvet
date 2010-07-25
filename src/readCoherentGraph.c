@@ -28,7 +28,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "graphStats.h"
 #include "concatenatedGraph.h"
 #include "readSet.h"
-#include "utility.h"
 
 #define LONG_NODE_CUTOFF 50
 #define LN2 0.693147
@@ -126,7 +125,7 @@ static void identifyUniqueNodes(boolean(*isUniqueFunction) (Node *))
 	Node *node;
 	IDnum counter = 0;
 
-	velvetLog("Identifying unique nodes\n");
+	puts("Identifying unique nodes");
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -140,7 +139,7 @@ static void identifyUniqueNodes(boolean(*isUniqueFunction) (Node *))
 			counter++;
 	}
 
-	velvetLog("Done, %u unique nodes counted\n", counter);
+	printf("Done, %u unique nodes counted\n", counter);
 }
 
 static boolean uniqueNodesConnect(Node * startingNode)
@@ -468,7 +467,7 @@ static void trimLongReadTips()
 	Node *node;
 	PassageMarkerI marker, next;
 
-	velvetLog("Trimming read tips\n");
+	printf("Trimming read tips\n");
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -517,7 +516,7 @@ void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node * node),
 	expected_coverage = coverage;
 	sequences = reads->tSequences;
 
-	velvetLog("Read coherency...\n");
+	puts("Read coherency...");
 	resetNodeStatus(graph);
 	identifyUniqueNodes(isUnique);
 	trimLongReadTips();
@@ -550,18 +549,18 @@ void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node * node),
 
 	destroyRecycleBin(listMemory);
 
-	velvetLog("Confronted to %i multiple hits and %i null over %i\n",
+	printf("Confronted to %i multiple hits and %i null over %i\n",
 	       multCounter, nullCounter, dbgCounter);
 
-	velvetLog("Read coherency over!\n");
+	puts("Read coherency over!");
 }
 
 void setMultiplicityCutoff(int value)
 {
 	if (value < 0) {
-		velvetLog("Negative long read multiplicity cutoff %i!\n",
+		printf("Negative long read multiplicity cutoff %i!\n",
 		       value);
-		velvetLog("Exiting...\n");
+		puts("Exiting...");
 #ifdef DEBUG 
 		abort();
 #endif 
