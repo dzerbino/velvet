@@ -30,6 +30,7 @@ struct readSet_st {
 	Probability **kmerProbabilities;
 	IDnum *mateReads;
 	Category *categories;
+	IDnum categoriesOffsets[CATEGORIES];
 	IDnum readCount;
 };
 

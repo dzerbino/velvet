@@ -46,6 +46,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 ReadSet *newReadSet()
 {
 	ReadSet *rs = callocOrExit(1, ReadSet);
+	int i;
+	for (i = 0; i < CATEGORIES; i++)
+		rs->categoriesOffsets[i] = -1;
 	return rs;
 }
 
@@ -1877,6 +1880,8 @@ ReadSet *importReadSet(char *filename)
 			sscanf(line, "%*[^\t]\t%*[^\t]\t%hd",
 			       &temp_short);
 			reads->categories[sequenceIndex + 1] = (Category) temp_short;
+			if (reads->categoriesOffsets[temp_short] < 0)
+				reads->categoriesOffsets[temp_short] = sequenceIndex;
 
 			if (sequenceIndex != -1)
 				reads->sequences[sequenceIndex] =

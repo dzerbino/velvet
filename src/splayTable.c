@@ -20,7 +20,13 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 */
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
+#include <sys/time.h>
+
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 #include "globals.h"
 #include "readSet.h"
@@ -33,8 +39,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 struct splayTable_st {
 	SplayTree **table;
+#ifdef OPENMP
+	omp_lock_t *tableLocks;
+#endif
 	KmerOccurenceTable *kmerOccurenceTable;
-	IDnum lastIndex;
 	int WORDLENGTH;
 	boolean double_strand;
 };
@@ -44,9 +52,16 @@ SplayTable *newSplayTable(int WORDLENGTH, boolean double_strand)
 	SplayTable *splayTable = mallocOrExit(1, SplayTable);
 	splayTable->WORDLENGTH = WORDLENGTH;
 	splayTable->table = callocOrExit(CRC_HASH_BUCKETS, SplayTree *);
-	splayTable->lastIndex = 0;
 	splayTable->kmerOccurenceTable = NULL;
 	splayTable->double_strand = double_strand;
+#ifdef OPENMP
+	splayTable->tableLocks = mallocOrExit(CRC_HASH_BUCKETS, omp_lock_t);
+	int i;
+	#pragma omp parallel for
+	for (i = 0; i < CRC_HASH_BUCKETS; i++)
+		omp_init_lock(splayTable->tableLocks + i);
+	initSplayTreeMemory();
+#endif
 	return splayTable;
 }
 
@@ -62,9 +77,44 @@ void destroySplayTable(SplayTable * splayTable)
 	velvetLog("Splay table destroyed\n");
 }
 
-static int hash_kmer(Kmer * kmer)
+static KmerKey hash_kmer(Kmer * kmer)
 {
-	return crc32_v((char *) kmer, KMER_BYTE_SIZE);
+#if KMER_LONGLONGS
+	KmerKey key = kmer->longlongs[0];
+
+#if KMER_LONGLONGS > 1
+	key ^= kmer->longlongs[1];
+#endif
+#if KMER_LONGLONGS > 2
+	key ^= kmer->longlongs[2];
+#endif
+
+	key = (~key) + (key << 21);
+	key = key ^ (key >> 24);
+	key = (key + (key << 3)) + (key << 8);
+	key = key ^ (key >> 14);
+	key = (key + (key << 2)) + (key << 4);
+	key = key ^ (key >> 28);
+	key = key + (key << 31);
+
+	return key % CRC_HASH_BUCKETS;
+#elif KMER_LONGS
+	KmerKey key = kmer->longs[0];
+
+	key += ~(key << 15);
+	key ^= (key >> 10);
+	key += (key << 3);
+	key ^= (key >> 6);
+	key += ~(key << 11);
+	key ^= (key >> 16);
+
+	return key % CRC_HASH_BUCKETS;
+
+#elif KMER_INTS
+	return kmer->ints % CRC_HASH_BUCKETS;
+#elif KMER_CHARS
+	return kmer->chars % CRC_HASH_BUCKETS;
+#endif
 }
 
 static Coordinate getNearestHSPIndex(Coordinate position, IDnum * sequenceIDs, Coordinate sequenceLength) {
@@ -137,6 +187,26 @@ static KmerOccurence * getMostAppropriateHit(Coordinate readCoord, Coordinate re
 	return best;
 }
 
+static inline boolean
+doFindOrInsertOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
+				   Coordinate * position, SplayTable *table)
+{
+#ifdef OPENMP
+	const KmerKey kmerHash = hash_kmer(kmer);
+	boolean ret;
+
+	omp_set_lock(table->tableLocks + kmerHash);
+	ret =  findOrInsertOccurenceInSplayTree(kmer, seqID, position,
+						table->table + kmerHash);
+	omp_unset_lock(table->tableLocks + kmerHash);
+
+	return ret;
+#else
+	return findOrInsertOccurenceInSplayTree(kmer, seqID, position,
+						&table->table[hash_kmer(kmer)]);
+#endif
+}
+
 
 static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
 						 Coordinate * position,
@@ -161,9 +231,7 @@ static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
 	}
 	else if (coords && coords[readIndex]) 
 		// If in buffer zone:
-		return findOrInsertOccurenceInSplayTree(kmer, seqID, position,
-							&table->
-							table[hash_kmer(kmer)]);
+		return doFindOrInsertOccurenceInSplayTree(kmer, seqID, position, table);
 
 	// Look up first in reference sequence k-mers
 	if (table->kmerOccurenceTable 
@@ -184,14 +252,28 @@ static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
 	} 
 
 	// If not, go through the novel k-mers
-	return findOrInsertOccurenceInSplayTree(kmer, seqID, position,
-						&table->
-						table[hash_kmer(kmer)]);
+	return doFindOrInsertOccurenceInSplayTree(kmer, seqID, position, table);
 }
 
-static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightString * tString, SplayTable * table, FILE * file, boolean second_in_pair) 
+/* SF TODO This will be needed somewhere else, we should probably create a
+ * StringBuffer class
+ */
+#define BUFFER_APPEND(buffer, bufferSize, currentSize, line) \
+{ \
+	const int lineSize = strlen(line); \
+	currentSize += lineSize; \
+	while (currentSize > bufferSize) \
+	{ \
+		bufferSize *= 2; \
+		buffer = reallocOrExit (buffer, bufferSize, char); \
+	} \
+	buffer = strcat(buffer, line); \
+}
+
+static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
+			     TightString * tString, SplayTable * table,
+			     FILE * file, boolean second_in_pair, IDnum seqID) 
 {
-	IDnum currentIndex;
 	Coordinate readNucleotideIndex = 0;
 	Coordinate writeNucleotideIndex = 0;
 	Kmer word;
@@ -205,17 +287,27 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 	Coordinate finish = 0;
 	IDnum referenceSequenceID = 0;
 	Nucleotide nucleotide;
+	char *buffer;
+	char lineBuffer[128];
+	int bufferSize = 1024;
+	int currentSize = 1;
 
 	clearKmer(&word);
 	clearKmer(&antiWord);
 
-	table->lastIndex++;
+	buffer = mallocOrExit(bufferSize, char);
+	buffer[0] = '\0';
 
-	currentIndex = table->lastIndex;
-	fprintf(file, "ROADMAP %d\n", currentIndex);
+	sprintf(lineBuffer, "ROADMAP %d\n", seqID);
+	BUFFER_APPEND(buffer, bufferSize, currentSize, lineBuffer);
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
+#ifdef OPENMP
+	#pragma omp critical
+#endif
+		fprintf(file, "%s", buffer);
+		free(buffer);
 		return;
 	}
 
@@ -242,7 +334,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 		reversePushNucleotide(&antiWord, 3 - nucleotide);
 #endif
 
-		sequenceID = currentIndex;
+		sequenceID = seqID;
 		coord = writeNucleotideIndex;
 
 		if (table->double_strand) {
@@ -302,9 +394,10 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 		if (!found) {
 			writeNucleotideIndex++;
 			if (!annotationClosed) {
-				fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+				sprintf(lineBuffer, "%ld\t%lld\t%lld\t%lld\n",
 					(long) referenceSequenceID, (long long) position,
 					(long long) start, (long long) finish);
+				BUFFER_APPEND(buffer, bufferSize, currentSize, lineBuffer);
 			}
 			annotationClosed = true;
 		}
@@ -337,9 +430,10 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 			}
 			// Previous non corresponding annotation
 			else {
-				fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+				sprintf(lineBuffer, "%ld\t%lld\t%lld\t%lld\n",
 					(long) referenceSequenceID, (long long) position,
 					(long long) start, (long long) finish);
+				BUFFER_APPEND(buffer, bufferSize, currentSize, lineBuffer);
 
 				referenceSequenceID = sequenceID;
 				position = writeNucleotideIndex;
@@ -356,10 +450,16 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 	}
 
 	if (!annotationClosed) {
-		fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+		sprintf(lineBuffer, "%ld\t%lld\t%lld\t%lld\n",
 			(long) referenceSequenceID, (long long) position,
 			(long long) start, (long long) finish);
+		BUFFER_APPEND(buffer, bufferSize, currentSize, lineBuffer);
 	}
+#ifdef OPENMP
+	#pragma omp critical
+#endif
+	fprintf(file, "%s", buffer);
+	free(buffer);
 
 	return;
 }
@@ -490,7 +590,10 @@ static void computeClearHSPs(TightString * tString, FILE * seqFile, boolean seco
 }
 
 void inputSequenceIntoSplayTable(TightString * tString,
-				 SplayTable * table, FILE * file, FILE * seqFile, boolean second_in_pair)
+				 SplayTable * table,
+				 FILE * file, FILE * seqFile,
+				 boolean second_in_pair,
+				 IDnum seqID)
 {
 	Coordinate length = getLength(tString);
 	IDnum * sequenceIDs = NULL;
@@ -505,7 +608,7 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	}
 	
 	// Go through read, eventually with annotations
-	printAnnotations(sequenceIDs, coords, tString, table, file, second_in_pair);
+	printAnnotations(sequenceIDs, coords, tString, table, file, second_in_pair, seqID);
 
 	// Clean up
 	if (sequenceIDs) {
@@ -514,8 +617,9 @@ void inputSequenceIntoSplayTable(TightString * tString,
 	}
 }
 
+static
 void inputReferenceIntoSplayTable(TightString * tString,
-				 SplayTable * table, FILE * file)
+				 SplayTable * table, FILE * file, IDnum seqID)
 {
 	IDnum currentIndex;
 	Coordinate readNucleotideIndex = 0;
@@ -527,9 +631,10 @@ void inputReferenceIntoSplayTable(TightString * tString,
 	clearKmer(&word);
 	clearKmer(&antiWord);
 
-	table->lastIndex++;
-
-	currentIndex = table->lastIndex;
+	currentIndex = seqID;
+#ifdef OPENMP
+	#pragma omp critical
+#endif
 	fprintf(file, "ROADMAP %d\n", currentIndex);
 
 	// Neglect any string shorter than WORDLENGTH :
@@ -612,7 +717,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	IDnum kmerCount;
 	IDnum referenceSequenceCount = 0;
 	char line[MAXLINE];
-	boolean second_in_pair = false;
+	struct timeval start, end, diff;
+	boolean second_in_pair;
 
 	if (outfile == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", filename);
@@ -644,11 +750,17 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 					break;
 	}
 
+	gettimeofday(&start, NULL);
 	velvetLog("Inputting sequences...\n");
 	array = reads->tSequences;
+#ifdef OPENMP
+	#pragma omp parallel for
+#endif
 	for (index = 0; index < sequenceCount; index++) {
+		const Category category = reads->categories[index];
+
 		// Prorgess report on screen
-		if (index % 100000 == 0) {
+		if (index % 1000000 == 0) {
 			velvetLog("Inputting sequence %d / %d\n", index,
 			       sequenceCount);
 			fflush(stdout);
@@ -671,20 +783,22 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 			exit(0);
 		}
 
-		// Hashing the reads
-		if (reads->categories[index] == REFERENCE)
-			// Reference reads
-			inputReferenceIntoSplayTable(getTightStringInArray(array, index), table, outfile);
-		else
-			// Normal reads
-			inputSequenceIntoSplayTable(getTightStringInArray(array, index), table, outfile, seqFile, second_in_pair);
-
-		if (reads->categories[index] % 2) 
-			second_in_pair = (second_in_pair? false : true);
+		if (category % 2)
+			second_in_pair = (index - reads->categoriesOffsets[category]) % 2;
 		else 
 			second_in_pair = false;
 
+		// Hashing the reads
+		if (reads->categories[index] == REFERENCE)
+			// Reference reads
+			inputReferenceIntoSplayTable(getTightStringInArray(array, index), table, outfile, index + 1);
+		else
+			// Normal reads
+			inputSequenceIntoSplayTable(getTightStringInArray(array, index), table, outfile, seqFile, second_in_pair, index + 1);
 	}
+	gettimeofday(&end, NULL);
+	timersub(&end, &start, &diff);
+	printf(">>> Sequences loaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
 
 	fclose(outfile);
 	if (seqFile)

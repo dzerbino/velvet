@@ -48,4 +48,10 @@ void filterAndExportSplayTree(FILE * file, SplayTree * T, int minCov,
 			      int maxCov);
 
 void displaySplayTreeMemory();
+
+#ifdef OPENMP
+/* Initialises the per-thread RecycleBin array */
+void initSplayTreeMemory(void);
+#endif
+
 #endif
