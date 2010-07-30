@@ -296,3 +296,7 @@ V 1.0.08
 
 V 1.0.09
 - Strand specific transmission
+
+V 1.0.10
+- Do not map unmapped reads in SAM/BAM file.
+- Crashing parsing bug when mixing long and short reads.

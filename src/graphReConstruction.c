@@ -507,8 +507,22 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 
 	// Neglect any read which will not be short paired
 	if ((!readTracking && category % 2 == 0)
-	    || category / 2 >= CATEGORIES)
+	    || category / 2 >= CATEGORIES) {
+		if (!fgets(line, MAXLINE, *rdmapFile)) {
+			fclose(*rdmapFile);
+			*rdmapFile = NULL;
+		}
+		if (*rdmapFile) {
+			while (line[0] != 'R') {
+				if (!fgets(line, MAXLINE, *rdmapFile)) {
+					fclose(*rdmapFile);
+					*rdmapFile = NULL;
+					break;
+				}
+			}
+		}
 		return;
+	}
 
 	// Get initial annotation
 	if (*rdmapFile) {
@@ -534,8 +548,18 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 	}
 	
 	// Neglect any string shorter than WORDLENGTH :
-	if (getLength(tString) < wordLength)
+	if (getLength(tString) < wordLength) {
+		if (*rdmapFile) {
+			while (line[0] != 'R') {
+				if (!fgets(line, MAXLINE, *rdmapFile)) {
+					fclose(*rdmapFile);
+					*rdmapFile = NULL;
+					break;
+				}
+			}
+		}
 		return;
+	}
 
 	// Verify that all short reads are reasonnably short
 	if (getLength(tString) > USHRT_MAX) {
@@ -755,8 +779,18 @@ static void threadSequenceThroughGraph(TightString * tString,
 	}
 
 	// Neglect any string shorter than WORDLENGTH :
-	if (getLength(tString) < wordLength)
+	if (getLength(tString) < wordLength) {
+		if (*rdmapFile) {
+			while (line[0] != 'R') {
+				if (!fgets(line, MAXLINE, *rdmapFile)) {
+					fclose(*rdmapFile);
+					*rdmapFile = NULL;
+					break;
+				}
+			}
+		}
 		return;
+	}
 
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
@@ -1005,10 +1039,9 @@ static void fillUpGraph(ReadSet * reads,
 	
 	if (referenceMappings) {
 		file = fopen(roadmapFilename, "r");
-		for (readIndex = 0; readIndex < refCount + 1; readIndex++)
-			while(fgets(line, MAXLINE, file))
-				if (line[0] == 'R')
-					break;
+		while(fgets(line, MAXLINE, file))
+			if (line[0] == 'R')
+				break;
 	}
 
 	resetNodeStatus(graph);

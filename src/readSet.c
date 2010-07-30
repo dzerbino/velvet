@@ -1191,6 +1191,9 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 				// Accept flags represented in either decimal or hex:
 				int flagbits = strtol(flag, NULL, 0);
 
+				if (flagbits & 0x4)
+				    strcpy(rname, "");
+
 				const char *qname_pairing = "";
 				if (flagbits & 0x40)
 					qname_pairing = "/1";
@@ -1311,6 +1314,7 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	long long previous_pos = -1;
 	int previous_orientation = 0;
 	boolean previous_paired = false;
+	int previous_flagbits;
 	char ** refNames;
 	ReferenceCoordinate * refCoord;
 
@@ -1452,7 +1456,7 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 					writeFastaSequence(outfile, previous_seq);
 				}
 
-				if ((refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+				if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 					if (refCoord->positive_strand)
 						fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 					else 
@@ -1466,6 +1470,7 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 			previous_rID = rID;
 			previous_pos = pos;
 			previous_orientation = orientation;
+			previous_flagbits = flagbits;
 			velvetifySequence(previous_seq);
 
 			readCount++;
@@ -1492,7 +1497,7 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 			writeFastaSequence(outfile, previous_seq);
 		}
 
-		if ((refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+		if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 			if (refCoord->positive_strand)
 				fprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 			else 
