@@ -1314,7 +1314,7 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	long long previous_pos = -1;
 	int previous_orientation = 0;
 	boolean previous_paired = false;
-	int previous_flagbits;
+	int previous_flagbits = 0;
 	char ** refNames;
 	ReferenceCoordinate * refCoord;
 
