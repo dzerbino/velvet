@@ -60,7 +60,7 @@ colordebug : cleanobj obj/dbg_de
 objdir:
 	mkdir -p obj
 
-obj: zlib objdir $(OBJ)
+obj: zlib cleanobj objdir $(OBJ)
 
 obj_de: override DEF := $(DEF) -D COLOR
 obj_de: zlib cleanobj objdir $(OBJ)
@@ -69,7 +69,7 @@ obj/dbgdir:
 	mkdir -p obj/dbg
 
 obj/dbg: override DEF := $(DEF) -D DEBUG 
-obj/dbg: zlib obj/dbgdir $(OBJDBG)
+obj/dbg: zlib cleanobj obj/dbgdir $(OBJDBG)
 
 obj/dbg_de: override DEF := $(DEF) -D COLOR -D DEBUG
 obj/dbg_de: zlib cleanobj obj/dbgdir $(OBJDBG)
