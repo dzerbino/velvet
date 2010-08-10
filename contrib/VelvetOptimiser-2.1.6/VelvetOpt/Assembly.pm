@@ -30,6 +30,9 @@
 #
 #	Changes for 2.1.2
 #	*Now warns nicely of optimisation function returning undef or 0. Suggests you choose and alternative.
+#
+#	Changes for 2.1.3
+#	*Now prints the velvet calculated insert sizes and standard deviations in the Assembly summaries (both log files and screen).
 
 package VelvetOpt::Assembly;
 
@@ -528,6 +531,16 @@ sub toStringNoV {
     if(defined $self->totalbp1k){
         $tmp .= "Total bases in contigs > 1k: " . $self->totalbp1k(). "\n";
     }
+    if($self->pstringh =~ /Pair/ && defined $self->pstringg && $self->pstringg =~ /-exp_cov/){
+		$tmp .= "Paired Library insert stats:\n";
+		my @x = split /\n/, $self->velvetgout;
+		foreach(@x){
+			chomp;
+			if(/^Paired-end library \d+ has/){
+				$tmp .= "$_\n";
+			}
+		}
+	}
     $tmp .= "**********************************************************\n";
     return $tmp;
 }

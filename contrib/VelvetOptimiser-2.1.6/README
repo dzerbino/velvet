@@ -6,7 +6,7 @@ VelvetOptimiser
 VERSION
 =======
 
-Version 2.1.4
+Version 2.1.6
 
 LICENCE
 =======
@@ -163,6 +163,8 @@ DETAILED OPTIONS
 		-fastq
 		-fasta.gz
 		-fastq.gz
+		-bam
+		-sam
 		-eland
 		-gerald
 
@@ -294,6 +296,14 @@ Changes since Version 2.0:
 2.1.4:
 
 *	Fixed another bug in estExpCov in Utils.pm so it now doesn't count stats with coverage < 2 and contigs of less than 3 * kmer size - 1.
+
+2.1.5:
+
+*	Added support for velveth's new input file types. (bam, sam and raw) and attempted to future proof it..
+
+2.1.6
+
+*	Now prints Velvet calculated insert sizes and standard deviations in assembly summaries, both in the logfile and on screen
 
 TO DO
 =====

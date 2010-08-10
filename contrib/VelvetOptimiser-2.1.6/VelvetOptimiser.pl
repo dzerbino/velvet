@@ -19,7 +19,7 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-#		Version 2.1.4
+#		Version 2.1.6
 
 #
 #   pragmas
@@ -73,7 +73,7 @@ our $num_threads;
 my $current_threads : shared = 0;
 my $opt_func;
 my $opt_func2;
-my $OptVersion = "2.1.4";
+my $OptVersion = "2.1.6";
 my $threadfailed : shared = 0;
 
 #

@@ -17,6 +17,8 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 #
+#		Version 1.1 - 14/07/2010 - Added support for changing input file types
+
 package VelvetOpt::hwrap;
 
 =head1 NAME
@@ -129,24 +131,57 @@ use POSIX qw(strftime);
 
 my $interested = 0;
 
-my $usage = "Incorrect velveth parameter string: Needs to be of the form\n{[-file_format][-read_type] filename}\n";
-$usage .= "Where:\n\tFile format options:
-        -fasta
-        -fastq
-        -fasta.gz
-        -fastq.gz
-        -eland
-        -gerald
+my @Fileformats;
+my @Readtypes;
+my $usage;
+my $inited = 0;
 
-Read type options:
-        -short
-        -shortPaired
-        -short2
-        -shortPaired2
-        -long
-        -longPaired\n\nThere can be more than one filename specified as long as its a different type.\nStopping run\n";
+sub init {
+	#run a velveth to get its help lines..
+	my $response = &_runVelveth(" ");
+	
+	$response =~ m/CATEGORIES = (\d+)/;
+	my $cats = $1;
+	unless($cats){$cats = 2;}
+	
+	$response =~ m/(File format options:(.*)Read type options)/s;
+	my @t = split /\n/, $1;
+	foreach(@t){
+		if(/\s+(-\S+)/){
+			push @Fileformats, $1;
+		}
+	}
+	
+	$response =~ m/(Read type options:(.*)Options:)/s;
+	
+	@t = split /\n/, $1;
+	foreach(@t){
+		if(/\s+(-\S+)/){
+			push @Readtypes, $1;
+		}
+	}
+	
+	for(my $i = 3; $i <= $cats; $i++){
+		push @Readtypes, "-short$i";
+		push @Readtypes, "-shortPaired$i";
+	}
+	
+	$usage = "Incorrect velveth parameter string: Needs to be of the form\n{[-file_format][-read_type] filename}\n";
+	$usage .= "Where:\n\tFile format options:\n";
+	foreach(@Fileformats){
+		$usage .= "\t$_\n";
+	}
+	$usage .= "Read type options:\n";
+	foreach(@Readtypes){
+		$usage .= "\t$_\n";
+	}
+	$usage .= "\nThere can be more than one filename specified as long as its a different type.\nStopping run\n";
+	
+	$inited = 1;
+}
 
 sub _runVelveth {
+	#unless($inited){ &init(); }
     my $cmdline = shift;
     my $output = "";
     print STDERR "About to run velveth!\n" if $interested;
@@ -156,22 +191,16 @@ sub _runVelveth {
 }
 
 sub _checkVHString {
-    
+    unless($inited){ &init(); }
 	my $line = shift;
 	my $cats = shift;
 	
+	
+	
 	my %fileform = ();
     my %readform = ();
-
-    my @Fileformats = qw(-fasta -fastq -fasta.gz -fastq.gz -eland -gerald);
-    my @Readtypes = qw(-short -shortPaired -long -longPaired);
 	
-	for(my $i = 2; $i <= $cats; $i++){
-		push @Readtypes, "-short$i";
-		push @Readtypes, "-shortPaired$i";
-	}
-
-    foreach(@Fileformats){ $fileform{$_} = 1;}
+	foreach(@Fileformats){ $fileform{$_} = 1;}
     foreach(@Readtypes){ $readform{$_} = 1;}
 
     my @l = split /\s+/, $line;
@@ -265,6 +294,7 @@ sub _checkVHString {
 }
 
 sub objectVelveth {
+    unless($inited){ &init(); }
     my $va = shift;
 	my $cats = shift;
     my $cmdline = $va->{pstringh};
@@ -282,6 +312,7 @@ sub objectVelveth {
 }
 
 sub stringVelveth {
+	unless($inited){ &init(); }
     my $cmdline = shift;
 	my $cats = shift;
     if(_checkVHString($cmdline,$cats)){

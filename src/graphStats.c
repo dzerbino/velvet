@@ -1357,6 +1357,8 @@ void exportLongNodeSequences(char *filename, Graph * graph,
 
 		gap = getGap(node, graph);
 		for (position = 0; position < WORDLENGTH; position++) {
+			if (position % 60 == 0 && position > 0)
+				fprintf(outfile, "\n"); 
 			if (gap && position >= getGapFinish(gap))
 				gap = getNextGap(gap);
 

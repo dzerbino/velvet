@@ -18,7 +18,7 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-#		Version 2.1.2
+#		Version 2.1.3
 
 #	Changes for Version 2.0.1
 #	Added Mikael Brandstrom Durling's numCpus and freeMem for the Mac.

@@ -33,34 +33,44 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 static void printUsage()
 {
 	puts("Usage:");
-	puts("./velveth directory hash_length {[-file_format][-read_type] filename} [options]");
+	puts("./velveth directory hash_length {[-file_format][-read_type] filename1 [filename2 ...]} {...} [options]");
 	puts("");
-	puts("\tdirectory\t\t: directory name for output files");
-	printf("\thash_length\t\t: odd integer (if even, it will be decremented) <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
-	puts("\tfilename\t\t: path to sequence file or - for standard input");	
+	puts("\tdirectory\t: directory name for output files");
+	printf("\thash_length\t: odd integer (if even, it will be decremented) <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
+	puts("\tfilename\t: path to sequence file or - for standard input");	
 	puts("");
 	puts("File format options:");
-	puts("\t-fasta");
-	puts("\t-fastq");
-	puts("\t-raw");
-	puts("\t-fasta.gz");
-	puts("\t-fastq.gz");
-	puts("\t-raw.gz");
-	puts("\t-sam");
-	puts("\t-bam");
-	puts("\t-eland");
-	puts("\t-gerald");
+	puts("\t-fasta\t-fastq\t-raw\t-fasta.gz\t-fastq.gz\t-raw.gz\t-sam\t-bam");
 	puts("");
 	puts("Read type options:");
-	puts("\t-short");
-	puts("\t-shortPaired");
-	puts("\t-short2");
-	puts("\t-shortPaired2");
-	puts("\t-long");
-	puts("\t-longPaired");
+	puts("\t-short\t-shortPaired");
+#if CATEGORIES <= 5
+	Category cat; 
+	for (cat = 2; cat <= CATEGORIES; cat++)
+	    printf("\t-short%i\t-shortPaired%i\n", cat, cat);
+#else
+	puts("\t...");
+	printf("\t-short%i\t-shortPaired%i\n", CATEGORIES - 1, CATEGORIES - 1);
+	printf("\t-short%i\t-shortPaired%i\n", CATEGORIES, CATEGORIES);
+#endif
+	puts("\t-long\t-longPaired");
 	puts("");
 	puts("Options:");
 	puts("\t-strand_specific\t: for strand specific transcriptome sequencing data (default: off)");
+	puts("");
+	puts("Synopsis:");
+	puts("");
+	puts("- Short single end reads:");
+	puts("\tvelveth Assem 29 -short -fastq s_1_sequence.txt");
+	puts("");
+	puts("- Paired-end short reads (remember to interleave paired reads):");
+	puts("\tvelveth Assem 31 -shortPaired -fasta interleaved.fna");
+	puts("");
+	puts("- Two channels and some long reads:");
+	puts("\tvelveth Assem 43 -short -fastq unmapped.fna -longPaired -fasta SangerReads.fasta");
+	puts("");
+	puts("- Three channels:");
+	puts("\tvelveth Assem 35 -shortPaired -fasta pe_lib1.fasta -shortPaired2 pe_lib2.fasta -short3 se_lib1.fa");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/Roadmaps");

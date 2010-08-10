@@ -300,3 +300,10 @@ V 1.0.09
 V 1.0.10
 - Do not map unmapped reads in SAM/BAM file.
 - Crashing parsing bug when mixing long and short reads.
+- Updated AssemblyAssembler (now v. 1.2)
+
+V 1.0.11
+- Prettyfied online help message
+- Prettyfied contig output for long k-mer values
+- Corrected AssemblyAssembler shebang
+- Updated VelvetOptimiser
