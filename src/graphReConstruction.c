@@ -508,11 +508,11 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 	// Neglect any read which will not be short paired
 	if ((!readTracking && category % 2 == 0)
 	    || category / 2 >= CATEGORIES) {
-		if (!fgets(line, MAXLINE, *rdmapFile)) {
-			fclose(*rdmapFile);
-			*rdmapFile = NULL;
-		}
 		if (*rdmapFile) {
+			if (!fgets(line, MAXLINE, *rdmapFile)) {
+				fclose(*rdmapFile);
+				*rdmapFile = NULL;
+			}
 			while (line[0] != 'R') {
 				if (!fgets(line, MAXLINE, *rdmapFile)) {
 					fclose(*rdmapFile);
@@ -1037,10 +1037,12 @@ static void fillUpGraph(ReadSet * reads,
 	char line[MAXLINE];
 	boolean second_in_pair = false;
 	
-	file = fopen(roadmapFilename, "r");
-	while(fgets(line, MAXLINE, file))
-		if (line[0] == 'R')
-			break;
+	if (referenceMappings) {
+	    file = fopen(roadmapFilename, "r");
+	    while(fgets(line, MAXLINE, file))
+		    if (line[0] == 'R')
+			    break;
+	}
 
 	resetNodeStatus(graph);
 
@@ -1064,10 +1066,12 @@ static void fillUpGraph(ReadSet * reads,
 
 	createNodeReadStartArrays(graph);
 
-	file = fopen(roadmapFilename, "r");
-	while(fgets(line, MAXLINE, file))
-		if (line[0] == 'R')
-			break;
+	if (referenceMappings) {
+	    file = fopen(roadmapFilename, "r");
+	    while(fgets(line, MAXLINE, file))
+		    if (line[0] == 'R')
+			    break;
+	}
 
 	second_in_pair = false;
 	for (readIndex = 0; readIndex < reads->readCount; readIndex++) {

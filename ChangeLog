@@ -310,5 +310,6 @@ V 1.0.11
 
 V 1.0.12
 - Crashing bug when reconstructing the graph with no reference sequences
+- Avoid reading Roadmap file when unnecessary in graph reconstruction (cf. previous bug fix)
 - VelvetOptimiser update
 - Compiler warning in allocArray

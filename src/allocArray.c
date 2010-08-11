@@ -146,7 +146,7 @@ allocArrayGetElement (AllocArray *array, ArrayIdx idx)
 		const ArrayIdx i = idx - 1;
 		const ArrayIdx blockIdx = i / array->maxElements;
 		const ArrayIdx elementIdx = i % array->maxElements;
-		return array->blocks[blockIdx] + (void *) elementIdx * array->elementSize;
+		return array->blocks[blockIdx] + (size_t) (elementIdx * array->elementSize);
 	}
 	return NULL;
 }
