@@ -1037,12 +1037,10 @@ static void fillUpGraph(ReadSet * reads,
 	char line[MAXLINE];
 	boolean second_in_pair = false;
 	
-	if (referenceMappings) {
-		file = fopen(roadmapFilename, "r");
-		while(fgets(line, MAXLINE, file))
-			if (line[0] == 'R')
-				break;
-	}
+	file = fopen(roadmapFilename, "r");
+	while(fgets(line, MAXLINE, file))
+		if (line[0] == 'R')
+			break;
 
 	resetNodeStatus(graph);
 
@@ -1066,12 +1064,10 @@ static void fillUpGraph(ReadSet * reads,
 
 	createNodeReadStartArrays(graph);
 
-	if (referenceMappings) {
-		file = fopen(roadmapFilename, "r");
-		while(fgets(line, MAXLINE, file))
-			if (line[0] == 'R')
-				break;
-	}
+	file = fopen(roadmapFilename, "r");
+	while(fgets(line, MAXLINE, file))
+		if (line[0] == 'R')
+			break;
 
 	second_in_pair = false;
 	for (readIndex = 0; readIndex < reads->readCount; readIndex++) {

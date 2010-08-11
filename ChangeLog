@@ -307,3 +307,6 @@ V 1.0.11
 - Prettyfied contig output for long k-mer values
 - Corrected AssemblyAssembler shebang
 - Updated VelvetOptimiser
+
+V 1.0.12
+- Crashing bug when reconstructing the graph with no reference sequences
