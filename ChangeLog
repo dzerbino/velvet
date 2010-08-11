@@ -311,3 +311,4 @@ V 1.0.11
 V 1.0.12
 - Crashing bug when reconstructing the graph with no reference sequences
 - VelvetOptimiser update
+- Compiler warning in allocArray
