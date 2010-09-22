@@ -1,12 +1,12 @@
 NAME
 ====
 
-AssemblyAssembler.py
+AssemblyAssembler1.3.py
 
 VERSION
 =======
 
-Version 1.2
+Version 1.3
 
 LICENCE
 =======
@@ -167,6 +167,9 @@ CHANGE LOG
 Version 1.2
 - added check to see make sure user is using Python version 2.5 or above- added feature to allow -cov_cotoff to be implemented in specific kmer range (Per Dieter Best's recommendation)- added switch to trigger use of paired-end reads- added the ability to include raw short reads in the final summary assemblies. Joe Fass found this feature may be useful for whole genome assemblies. 
 
+Version 1.3
+- Included default value ('n') for the -r parameter to make it truly an optional parameter.  Thanks to Anar Khan for pointing this out. 
+ 
 TROUBLESHOOTING
 =======
 

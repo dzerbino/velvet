@@ -368,6 +368,7 @@ static void computeClearHSPs(TightString * tString, FILE * seqFile, boolean seco
 	Coordinate readNucleotideIndex = 0;
 	Kmer word;
 	Kmer antiWord;
+	Kmer polyA;
 	Nucleotide nucleotide;
 	KmerOccurence * hit;
 	char line[MAXLINE];
@@ -379,6 +380,8 @@ static void computeClearHSPs(TightString * tString, FILE * seqFile, boolean seco
 	long long_var;
 	long long longlong_var;
 	int penalty;
+
+	clearKmer(&polyA);
 
 	// Parse file for mapping info
 	while (seqFile && fgets(line, MAXLINE, seqFile)) {
@@ -406,6 +409,17 @@ static void computeClearHSPs(TightString * tString, FILE * seqFile, boolean seco
 	     readNucleotideIndex < table->WORDLENGTH - 1;
 	     readNucleotideIndex++) { 
 		nucleotide = getNucleotide(readNucleotideIndex, tString);
+		pushNucleotide(&word, nucleotide);
+#ifdef COLOR
+		reversePushNucleotide(&antiWord, nucleotide);
+#else
+		reversePushNucleotide(&antiWord, 3 - nucleotide);
+#endif
+	}
+
+	// Kill silly poly-T beginnings
+	while (readNucleotideIndex < getLength(tString) && (compareKmers(&antiWord, &polyA) == 0 || compareKmers(&word, &polyA) == 0)) {
+		nucleotide = getNucleotide(readNucleotideIndex++, tString);
 		pushNucleotide(&word, nucleotide);
 #ifdef COLOR
 		reversePushNucleotide(&antiWord, nucleotide);
@@ -467,7 +481,7 @@ static void computeClearHSPs(TightString * tString, FILE * seqFile, boolean seco
 			coords[readNucleotideIndex] = -1;
 			readNucleotideIndex++;
 
-			for (penalty = 0; penalty < table->WORDLENGTH  - 1 && readNucleotideIndex < getLength(tString); penalty++) {
+			for (penalty = 0; readNucleotideIndex < getLength(tString) && (penalty < table->WORDLENGTH  - 1 || compareKmers(&word, &polyA) == 0 || compareKmers(&antiWord, &polyA) == 0); penalty++) {
 				nucleotide = getNucleotide(readNucleotideIndex, tString);
 				pushNucleotide(&word, nucleotide);
 

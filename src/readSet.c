@@ -698,7 +698,7 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	// Checking if FastQ
 	c = getc(file);
-	if (c != '@') 
+	if (c != EOF && c != '@') 
 		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastQ format", filename);
 	ungetc(c, file);	
 
@@ -809,7 +809,7 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 
 	// Checking if FastQ
 	c = gzgetc(file);
-	if (c != '@') 
+	if (c != EOF && c != '@') 
 		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastQ format", filename);
 	gzungetc(c, file);	
 
@@ -967,7 +967,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	// Checking if FastA
 	c = getc(file);
-	if (c != '>') 
+	if (c != EOF && c != '>') 
 		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastA format", filename);
 	ungetc(c, file);	
 
@@ -1040,7 +1040,7 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 
 	// Checking if FastA
 	c = gzgetc(file);
-	if (c != '>') 
+	if (c != EOF && c != '>') 
 		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastA format", filename);
 	gzungetc(c, file);	
 

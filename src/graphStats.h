@@ -55,7 +55,18 @@ Coordinate maxLength(Graph * graph);
 
 boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 						       double minCov,
-						       ReadSet * reads);
+						       ReadSet * reads,
+						       boolean export,
+						       Coordinate minLength,
+						       char *filename);
+
+void removeLowLongCoverageNodesAndDenounceDubiousReads(Graph * graph,
+						       double minCov,
+						       ReadSet * reads,
+						       boolean * dubious,
+						       boolean export,
+						       Coordinate minLength,
+						       char *filename);
 
 void exportAMOSContigs(char *filename, Graph * graph,
 		       Coordinate cutoff_length, ReadSet * reads);
@@ -141,7 +152,7 @@ void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
 		   int WORDLENGTH, int pairedReadsCount);
 
 void removeLowCoverageNodes(Graph * graph, double minCov);
-void removeHighCoverageNodes(Graph * graph, double maxCov);
+void removeHighCoverageNodes(Graph * graph, double maxCov, boolean export, Coordinate minLength, char * filename);
 
 void removeMissingStrain(Graph * graph, Category cat);
 

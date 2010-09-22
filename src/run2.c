@@ -40,6 +40,8 @@ static void printUsage()
 	puts("\t-amos_file <yes|no>\t\t: export assembly to AMOS file (default: no export)");
 	puts("\t-exp_cov <floating point|auto>\t: expected coverage of unique regions or allow the system to infer it");
 	puts("\t\t(default: no long or paired-end read resolution)");
+	puts("\t-long_cov_cutoff <floating-point>: removal of nodes with low long-read coverage AFTER tour bus");
+	puts("\t\t(default: no removal)");
 	puts("");
 	puts("Advanced options:");
 	puts("\t-ins_length2 <integer>\t\t: expected distance between two paired-end reads in the second short-read dataset (default: no read pairing)");
@@ -55,6 +57,7 @@ static void printUsage()
 	puts("\t-long_mult_cutoff <int>\t\t: minimum number of long reads required to merge contigs (default: 2)");
 	puts("\t-unused_reads <yes|no>\t\t: export unused reads in UnusedReads.fa file (default: no)");
 	puts("\t-alignments <yes|no>\t\t: export a summary of contig alignment to the reference sequences (default: no)");
+	puts("\t-exportFiltered <yes|no>\t: export the long nodes which were eliminated by the coverage filters (default: no)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -70,8 +73,9 @@ int main(int argc, char **argv)
 	PreGraph *preGraph;
 	Graph *graph;
 	char *directory, *graphFilename, *preGraphFilename, *seqFilename,
-	    *roadmapFilename;
+	    *roadmapFilename, *lowCovContigsFilename, *highCovContigsFilename;
 	double coverageCutoff = -1;
+	double longCoverageCutoff = -1;
 	double maxCoverageCutoff = -1;
 	double expectedCoverage = -1;
 	int longMultCutoff = -1;
@@ -99,6 +103,7 @@ int main(int argc, char **argv)
 	int pebbleRounds = 1;
 	long long longlong_var;
 	short int short_var;
+	boolean exportFilteredNodes = false;
 
 	setProgramName("velvetg");
 
@@ -135,6 +140,8 @@ int main(int argc, char **argv)
 	    mallocOrExit(strlen(directory) + 100, char);
 	roadmapFilename = mallocOrExit(strlen(directory) + 100, char);
 	seqFilename = mallocOrExit(strlen(directory) + 100, char);
+	lowCovContigsFilename = mallocOrExit(strlen(directory) + 100, char);
+	highCovContigsFilename = mallocOrExit(strlen(directory) + 100, char);
 	// Argument parsing
 	for (arg_index = 2; arg_index < argc; arg_index++) {
 		arg = argv[arg_index++];
@@ -153,6 +160,8 @@ int main(int argc, char **argv)
 			} else {
 				sscanf(argv[arg_index], "%lf", &coverageCutoff);
 			}
+		} else if (strcmp(arg, "-long_cov_cutoff") == 0) {
+			sscanf(argv[arg_index], "%lf", &longCoverageCutoff);
 		} else if (strcmp(arg, "-exp_cov") == 0) {
 			if (strcmp(argv[arg_index], "auto") == 0) {
 				estimateCoverage = true;
@@ -237,6 +246,9 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-scaffolding") == 0) {
 			scaffolding =
 			    (strcmp(argv[arg_index], "yes") == 0);
+		} else if (strcmp(arg, "-exportFiltered") == 0) {
+			exportFilteredNodes =
+			    (strcmp(argv[arg_index], "yes") == 0);
 		} else if (strcmp(arg, "-amos_file") == 0) {
 			exportAssembly =
 			    (strcmp(argv[arg_index], "yes") == 0);
@@ -309,6 +321,12 @@ int main(int argc, char **argv)
 		strcpy(graphFilename, directory);
 		strcat(graphFilename, "/Graph2");
 	}
+
+	strcpy(lowCovContigsFilename, directory);
+	strcat(lowCovContigsFilename, "/lowCoverageContigs.fa");
+
+	strcpy(highCovContigsFilename, directory);
+	strcat(highCovContigsFilename, "/highCoverageContigs.fa");
 
 	// Graph uploading or creation
 	if ((file = fopen(graphFilename, "r")) != NULL) {
@@ -391,11 +409,28 @@ int main(int argc, char **argv)
 		convertSequences(sequences);
 	}
 
+	if (minContigLength < 2 * getWordLength(graph))
+		minContigKmerLength = getWordLength(graph);
+	else
+		minContigKmerLength = minContigLength - getWordLength(graph) + 1;		
+
 	dubious =
 	    removeLowCoverageNodesAndDenounceDubiousReads(graph,
-							  coverageCutoff,							
-							  sequences);
-	removeHighCoverageNodes(graph, maxCoverageCutoff);
+							  coverageCutoff,
+							  sequences,
+							  exportFilteredNodes,
+							  minContigKmerLength,
+							  lowCovContigsFilename);
+
+	removeLowLongCoverageNodesAndDenounceDubiousReads(graph,
+							  longCoverageCutoff,
+							  sequences,
+							  dubious,
+							  exportFilteredNodes,
+							  minContigKmerLength,
+							  lowCovContigsFilename);
+
+	removeHighCoverageNodes(graph, maxCoverageCutoff, exportFilteredNodes, minContigKmerLength, highCovContigsFilename);
 	clipTipsHard(graph);
 
 	if (expectedCoverage > 0) {
@@ -426,11 +461,6 @@ int main(int argc, char **argv)
 	free(dubious);
 
 	concatenateGraph(graph);
-
-	if (minContigLength < 2 * getWordLength(graph))
-		minContigKmerLength = getWordLength(graph);
-	else
-		minContigKmerLength = minContigLength - getWordLength(graph) + 1;		
 
 	strcpy(graphFilename, directory);
 	strcat(graphFilename, "/contigs.fa");
@@ -472,6 +502,8 @@ int main(int argc, char **argv)
 	free(preGraphFilename);
 	free(seqFilename);
 	free(roadmapFilename);
+	free(lowCovContigsFilename);
+	free(highCovContigsFilename);
 	destroyReadSet(sequences);
 	return 0;
 }

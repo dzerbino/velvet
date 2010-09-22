@@ -1321,17 +1321,66 @@ void removeReferenceMarkers(Graph * graph, IDnum firstStrain)
 	concatenateGraph(graph);
 }
 
+static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
+	TightString *tString;
+	Coordinate position;
+	char nucleotide;
+	int WORDLENGTH = getWordLength(graph);
+	GapMarker *gap;
+	IDnum nodeIndex = getNodeID(node);
+
+	tString = expandNode(node, WORDLENGTH);
+	fprintf(outfile, ">NODE_%ld_length_%lld_cov_%f\n",
+		(long) nodeIndex, (long long) getNodeLength(node),
+		(getVirtualCoverage(node, 0)
+		 + getVirtualCoverage(node, 1)
+		 + readCoverage(node)) /
+		(float) getNodeLength(node));
+
+	gap = getGap(node, graph);
+	for (position = 0; position < WORDLENGTH; position++) {
+		if (position % 60 == 0 && position > 0)
+			fprintf(outfile, "\n"); 
+		if (gap && position >= getGapFinish(gap))
+			gap = getNextGap(gap);
+
+		if (gap == NULL || position < getGapStart(gap)) {
+			nucleotide =
+			    getNucleotideChar(position, tString);
+			fprintf(outfile, "%c", nucleotide);
+		} else
+			fprintf(outfile, "N");
+	}
+
+	gap = getGap(node, graph);
+	for (; position < getLength(tString); position++) {
+		if (position % 60 == 0)
+			fprintf(outfile, "\n");
+
+		if (gap
+		    && position - WORDLENGTH + 1 >=
+		    getGapFinish(gap))
+			gap = getNextGap(gap);
+
+		if (gap == NULL
+		    || position - WORDLENGTH + 1 <
+		    getGapStart(gap)) {
+			nucleotide =
+			    getNucleotideChar(position, tString);
+			fprintf(outfile, "%c", nucleotide);
+		} else
+			fprintf(outfile, "N");
+	}
+	fprintf(outfile, "\n");
+	destroyTightString (tString);
+}
+
 void exportLongNodeSequences(char *filename, Graph * graph,
 			     Coordinate minLength)
 {
 	FILE *outfile = fopen(filename, "w");
 	IDnum nodeIndex;
-	TightString *tString;
-	Coordinate position;
-	char nucleotide;
 	Node *node;
-	int WORDLENGTH = getWordLength(graph);
-	GapMarker *gap;
 	//double sensitivity, specificity;
 
 	if (outfile == NULL) {
@@ -1347,50 +1396,7 @@ void exportLongNodeSequences(char *filename, Graph * graph,
 		if (node == NULL || getNodeLength(node) < minLength)
 			continue;
 
-		tString = expandNode(node, WORDLENGTH);
-		fprintf(outfile, ">NODE_%ld_length_%lld_cov_%f\n",
-			(long) nodeIndex, (long long) getNodeLength(node),
-			(getVirtualCoverage(node, 0)
-			 + getVirtualCoverage(node, 1)
-			 + readCoverage(node)) /
-			(float) getNodeLength(node));
-
-		gap = getGap(node, graph);
-		for (position = 0; position < WORDLENGTH; position++) {
-			if (position % 60 == 0 && position > 0)
-				fprintf(outfile, "\n"); 
-			if (gap && position >= getGapFinish(gap))
-				gap = getNextGap(gap);
-
-			if (gap == NULL || position < getGapStart(gap)) {
-				nucleotide =
-				    getNucleotideChar(position, tString);
-				fprintf(outfile, "%c", nucleotide);
-			} else
-				fprintf(outfile, "N");
-		}
-
-		gap = getGap(node, graph);
-		for (; position < getLength(tString); position++) {
-			if (position % 60 == 0)
-				fprintf(outfile, "\n");
-
-			if (gap
-			    && position - WORDLENGTH + 1 >=
-			    getGapFinish(gap))
-				gap = getNextGap(gap);
-
-			if (gap == NULL
-			    || position - WORDLENGTH + 1 <
-			    getGapStart(gap)) {
-				nucleotide =
-				    getNucleotideChar(position, tString);
-				fprintf(outfile, "%c", nucleotide);
-			} else
-				fprintf(outfile, "N");
-		}
-		fprintf(outfile, "\n");
-		destroyTightString (tString);
+		exportLongNodeSequence(outfile, node, graph);
 	}
 
 	fclose(outfile);
@@ -2102,7 +2108,10 @@ static boolean hasReferenceMarker(Node * node, ReadSet * reads) {
 
 boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 						       double minCov,
-						       ReadSet * reads)
+						       ReadSet * reads,
+						       boolean export,
+						       Coordinate minLength,
+						       char *filename)
 {
 	IDnum index;
 	Node *node;
@@ -2113,11 +2122,24 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 	IDnum maxIndex;
 	IDnum readID;
 	IDnum index2;
+	FILE * outfile = NULL;
 
 	printf("Removing contigs with coverage < %f...\n", minCov);
 		
 	if (denounceReads)
 		res = callocOrExit(sequenceCount(graph), boolean);
+		
+	if (export) {
+		outfile = fopen(filename, "w");
+
+		if (outfile == NULL) {
+			printf("Could not write into %s, sorry\n", filename);
+			return res;
+		} else {
+			printf("Writing contigs into %s...\n", filename);
+		}
+	}
+
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -2166,6 +2188,10 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 					     graph);
 				destroyPassageMarker(marker);
 			}
+
+			if (export && getNodeLength(node) > minLength) 
+				exportLongNodeSequence(outfile, node, graph);
+
 			destroyNode(node, graph);
 		}
 	}
@@ -2219,12 +2245,181 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 					     graph);
 				destroyPassageMarker(marker);
 			}
+
+			if (export && getNodeLength(node) > minLength) 
+				exportLongNodeSequence(outfile, node, graph);
+
+			destroyNode(node, graph);
+		}
+	}
+
+	if (export)
+		fclose(outfile);
+
+	concatenateGraph(graph);
+	return res;
+}
+
+static Coordinate getLongCoverage(Node * node) {
+	PassageMarkerI marker;
+	Coordinate total = 0;
+
+	for (marker = getMarker(node); marker; marker = getNextInNode(marker))
+		total += getPassageMarkerLength(marker);
+	
+	return total;
+}
+
+void removeLowLongCoverageNodesAndDenounceDubiousReads(Graph * graph,
+						       double minCov,
+						       ReadSet * reads,
+						       boolean * res, 
+						       boolean export,
+						       Coordinate minLength,
+						       char *filename)
+{
+	IDnum index;
+	Node *node;
+	boolean denounceReads = readStartsAreActivated(graph);
+	ShortReadMarker *nodeArray, *shortMarker;
+	PassageMarkerI marker;
+	IDnum maxIndex;
+	IDnum readID;
+	IDnum index2;
+	FILE * outfile = NULL;
+
+	if (minCov < 0)
+		return;
+
+	printf("Removing contigs with coverage < %f...\n", minCov);
+		
+	if (export) {
+		outfile = fopen(filename, "a");
+
+		if (outfile == NULL) {
+			printf("Could not write into %s, sorry\n", filename);
+			return;
+		} else {
+			printf("Writing contigs into %s...\n", filename);
+		}
+	}
+
+	for (index = 1; index <= nodeCount(graph); index++) {
+		node = getNodeInGraph(graph, index);
+
+		if (getNodeLength(node) == 0)
+			continue;
+
+		if (getLongCoverage(node) / getNodeLength(node) < minCov 
+		    && !hasReferenceMarker(node, reads)) {
+			if (denounceReads) {
+				nodeArray = getNodeReads(node, graph);
+				maxIndex = getNodeReadCount(node, graph);
+				for (index2 = 0; index2 < maxIndex; index2++) {
+					shortMarker =
+					    getShortReadMarkerAtIndex(nodeArray,
+								      index2);
+					readID = getShortReadMarkerID(shortMarker);
+					//printf("Dubious %d\n", readID);
+					if (readID > 0)
+						res[readID - 1] = true;
+					else
+						res[-readID - 1] = true;
+				}
+
+				nodeArray = getNodeReads(getTwinNode(node), graph);
+				maxIndex =
+				    getNodeReadCount(getTwinNode(node), graph);
+				for (index2 = 0; index2 < maxIndex; index2++) {
+					shortMarker =
+					    getShortReadMarkerAtIndex(nodeArray,
+								      index2);
+					readID = getShortReadMarkerID(shortMarker);
+					//printf("Dubious %d\n", readID);
+					if (readID > 0)
+						res[readID - 1] = true;
+					else
+						res[-readID - 1] = true;
+				}
+			}
+
+			while ((marker = getMarker(node))) {
+				if (!isInitial(marker)
+				    && !isTerminal(marker))
+					disconnectNextPassageMarker
+					    (getPreviousInSequence(marker),
+					     graph);
+				destroyPassageMarker(marker);
+			}
+
+			if (export && getNodeLength(node) > minLength) 
+				exportLongNodeSequence(outfile, node, graph);
+
 			destroyNode(node, graph);
 		}
 	}
 
 	concatenateGraph(graph);
-	return res;
+
+	for (index = 1; index <= nodeCount(graph); index++) {
+		node = getNodeInGraph(graph, index);
+
+		if (getNodeLength(node) == 0)
+			continue;
+
+		if (getLongCoverage(node) / getNodeLength(node) < minCov 
+		    && !terminalReferenceMarker(node, reads)) {
+			if (denounceReads) {
+				nodeArray = getNodeReads(node, graph);
+				maxIndex = getNodeReadCount(node, graph);
+				for (index2 = 0; index2 < maxIndex; index2++) {
+					shortMarker =
+					    getShortReadMarkerAtIndex(nodeArray,
+								      index2);
+					readID = getShortReadMarkerID(shortMarker);
+					//printf("Dubious %d\n", readID);
+					if (readID > 0)
+						res[readID - 1] = true;
+					else
+						res[-readID - 1] = true;
+				}
+
+				nodeArray = getNodeReads(getTwinNode(node), graph);
+				maxIndex =
+				    getNodeReadCount(getTwinNode(node), graph);
+				for (index2 = 0; index2 < maxIndex; index2++) {
+					shortMarker =
+					    getShortReadMarkerAtIndex(nodeArray,
+								      index2);
+					readID = getShortReadMarkerID(shortMarker);
+					//printf("Dubious %d\n", readID);
+					if (readID > 0)
+						res[readID - 1] = true;
+					else
+						res[-readID - 1] = true;
+				}
+			}
+
+			while ((marker = getMarker(node))) {
+				if (!isInitial(marker)
+				    && !isTerminal(marker))
+					disconnectNextPassageMarker
+					    (getPreviousInSequence(marker),
+					     graph);
+				destroyPassageMarker(marker);
+			}
+
+			if (export && getNodeLength(node) > minLength) 
+				exportLongNodeSequence(outfile, node, graph);
+
+			destroyNode(node, graph);
+		}
+	}
+
+	if (export)
+		fclose(outfile);
+
+	concatenateGraph(graph);
 }
 
 void removeLowCoverageNodes(Graph * graph, double minCov)
@@ -2259,16 +2454,28 @@ void removeLowCoverageNodes(Graph * graph, double minCov)
 	concatenateGraph(graph);
 }
 
-void removeHighCoverageNodes(Graph * graph, double maxCov)
+void removeHighCoverageNodes(Graph * graph, double maxCov, boolean export, Coordinate minLength, char *filename)
 {
 	IDnum index;
 	Node *node;
 	PassageMarkerI marker;
+	FILE * outfile = NULL;
 
 	if (maxCov < 0)
 		return;
 
 	printf("Applying an upper coverage cutoff of %f...\n", maxCov);
+		
+	if (export) {
+		outfile = fopen(filename, "w");
+
+		if (outfile == NULL) {
+			printf("Could not write into %s, sorry\n", filename);
+			return;
+		} else {
+			printf("Writing contigs into %s...\n", filename);
+		}
+	}
 
 	for (index = 1; index <= nodeCount(graph); index++) {
 		node = getNodeInGraph(graph, index);
@@ -2284,9 +2491,16 @@ void removeHighCoverageNodes(Graph * graph, double maxCov)
 					     graph);
 				destroyPassageMarker(marker);
 			}
+
+			if (export && getNodeLength(node) > minLength) 
+				exportLongNodeSequence(outfile, node, graph);
+
 			destroyNode(node, graph);
 		}
 	}
+
+	if (export)
+		fclose(outfile);
 
 	concatenateGraph(graph);
 }

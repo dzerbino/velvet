@@ -40,8 +40,8 @@ parDir = os.getcwd()
 print str('============================================== \n')
 ## Retrieve user input
 ptester = [0,0,0,0,0,0,0,0,0]
+increads = str('n')
 print '\nRetrieving your input values \n'
-
 for i in  range(len(sys.argv)):
 	if (sys.argv[i] == '-s'):
 		if(int(sys.argv[i+1])%2 == 1):
@@ -101,7 +101,8 @@ elif(sum(ptester[0:4]) == 4):
 	if(sum(ptester[6:8])==0):
 		print str('Running assemblies with unpaired reads \n')	
 	elif(sum(ptester[6:8])==1):
-		sys.exit('Incorrect command line entry.  Not quite enough information. Please enter both a expected coverage value (or auto) and the expected length of the total sequenced fragment (see Velvet manual)')	
+		if(ptester[7]==0):
+			sys.exit('Incorrect command line entry.  Not quite enough information. Please enter both a expected coverage value (or auto) and the expected length of the total sequenced fragment (see Velvet manual) \n')	
 	elif(sum(ptester[6:8])==2):
 		print str('Will run assemblies with paired reads \n')	
 
@@ -113,7 +114,7 @@ vgcallb = str(velvDir+'/velvetg ./')
 if(sum(ptester[6:8])==2):
 	## use paired reads
 	vgcall = str(vgcallb+' -ins_length '+inslgth+' -exp_cov '+expcov)
-elif(sum(ptester[6:8])==0):
+elif(sum(ptester[6:8])<2):
 	## use un-paired reads
 	vgcall = vgcallb
 if(sum(ptester[4:6])==2):
@@ -309,7 +310,7 @@ for i in range(3):
 	elif(increads==str('y')):
 		os.system(str(velvDir+'/velveth ./ '+str(sumhashes[i])+' -fasta -long '+files+' '+velvethcall+' >> '+parDir+'/FinalDir/GrandVelvetLog.txt'))
 		print 'Running velvetg on k= '+str(sumhashes[i])+' velveth files'
-		if(sum(ptester[6:8])==0):
+		if(sum(ptester[6:8])<2):
 			os.system(str(velvDir+'/velvetg ./ >> '+parDir+'/FinalDir/GrandVelvetLog.txt'))	
 		elif(sum(ptester[6:8])==2):
 			os.system(str(velvDir+'/velvetg ./ -ins_length '+inslgth+' -exp_cov '+expcov+' >> '+parDir+'/FinalDir/GrandVelvetLog.txt'))
@@ -330,7 +331,7 @@ if(increads==str('n')):
 elif(increads==str('y')):
 	os.system(str(velvDir+'/velveth ./ '+str(hashlist[4])+' -fasta -long '+' '.join(contigsSum)+' '+velvethcall+' >> '+parDir+'/FinalDir/GrandVelvetLog.txt'))
 	print 'Running velvetg on k= '+str(hashlist[4])+' velveth files'
-	if(sum(ptester[6:8])==0):
+	if(sum(ptester[6:8])<2):
 		os.system(str(velvDir+'/velvetg ./ >> '+parDir+'/FinalDir/GrandVelvetLog.txt'))	
 	elif(sum(ptester[6:8])==2):
 		os.system(str(velvDir+'/velvetg ./ -ins_length '+inslgth+' -exp_cov '+expcov+' >> '+parDir+'/FinalDir/GrandVelvetLog.txt'))

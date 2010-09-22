@@ -68,3 +68,7 @@ one.
 
 Utility scripts used to prepare Columbus reference sequences.
 
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- select_paired by Konrad Paszkiewicz (K.H.Paszkiewicz@exeter.ac.uk)
+
+Separates paired reads from unpaired read after filtering step
