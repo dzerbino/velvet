@@ -52,14 +52,14 @@ SplayTable *newSplayTable(int WORDLENGTH, boolean double_strand)
 
 void destroySplayTable(SplayTable * splayTable)
 {
-	puts("Destroying splay table");
+	velvetLog("Destroying splay table\n");
 
 	destroyAllSplayTrees();
 	free(splayTable->table);
 	destroyKmerOccurenceTable(splayTable->kmerOccurenceTable);
 	free(splayTable);
 
-	puts("Splay table destroyed");
+	velvetLog("Splay table destroyed\n");
 }
 
 static int hash_kmer(Kmer * kmer)
@@ -631,7 +631,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	if (outfile == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", filename);
 	else
-		printf("Writing into roadmap file %s...\n", filename);
+		velvetLog("Writing into roadmap file %s...\n", filename);
 
 	// Count reference sequences
 	for (index = 0; index < reads->readCount && reads->categories[index] == REFERENCE; index++)
@@ -650,7 +650,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		if (seqFile == NULL)
 			exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", seqFilename);
 		else
-			printf("Reading mapping info from file %s\n", seqFilename);
+			velvetLog("Reading mapping info from file %s\n", seqFilename);
 
 		for (index = 0; index < referenceSequenceCount + 1; index++) 
 			while (fgets(line, MAXLINE, seqFile))
@@ -658,12 +658,12 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 					break;
 	}
 
-	puts("Inputting sequences...");
+	velvetLog("Inputting sequences...\n");
 	array = reads->tSequences;
 	for (index = 0; index < sequenceCount; index++) {
 		// Prorgess report on screen
 		if (index % 100000 == 0) {
-			printf("Inputting sequence %d / %d\n", index,
+			velvetLog("Inputting sequence %d / %d\n", index,
 			       sequenceCount);
 			fflush(stdout);
 		}
@@ -677,8 +677,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		else if (index > 0
 		    && reads->categories[index - 1] != REFERENCE
 		    && reads->categories[index] == REFERENCE) {
-			puts("Reference sequence placed after a non-reference read!");
-			puts(">> Please re-order the filenames in your command line so as to have the reference sequence files before all the others");
+			velvetLog("Reference sequence placed after a non-reference read!\n");
+			velvetLog(">> Please re-order the filenames in your command line so as to have the reference sequence files before all the others\n");
 #ifdef DEBUG 
 			abort();
 #endif 
@@ -707,5 +707,5 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	free(reads->tSequences);
 	reads->tSequences = NULL;
 	destroyReadSet(reads);
-	puts("Done inputting sequences");
+	velvetLog("Done inputting sequences\n");
 }

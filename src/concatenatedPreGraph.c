@@ -40,7 +40,7 @@ static void concatenatePreNodes(IDnum preNodeAID, PreArcI oldPreArc,
 	int wordLength = getWordLength_pg(preGraph);
 	Coordinate totalOffset = 0;
 
-	//printf("Concatenating nodes %li and %li\n", preNodeAID, preNodeBID);
+	//velvetLog("Concatenating nodes %li and %li\n", preNodeAID, preNodeBID);
 
 	while(hasSinglePreArc_pg(preNodeBID, preGraph)
 		       &&
@@ -137,7 +137,7 @@ void concatenatePreGraph_pg(PreGraph * preGraph)
 	PreArcI preArc;
 	PreNode *preNode;
 
-	puts("Concatenation...");
+	velvetLog("Concatenation...\n");
 
 	for (preNodeIndex = 1; preNodeIndex < preNodeCount_pg(preGraph);
 	     preNodeIndex++) {
@@ -176,7 +176,7 @@ void concatenatePreGraph_pg(PreGraph * preGraph)
 	}
 
 	renumberPreNodes_pg(preGraph);
-	puts("Concatenation over!");
+	velvetLog("Concatenation over!\n");
 }
 
 static boolean isEligibleTip(IDnum index, PreGraph * preGraph, Coordinate
@@ -234,7 +234,7 @@ void clipTips_pg(PreGraph * preGraph)
 	Coordinate cutoffLength = getWordLength_pg(preGraph) * 2;
 	IDnum counter = 0;
 
-	puts("Clipping short tips off preGraph");
+	velvetLog("Clipping short tips off preGraph\n");
 
 	while (modified) {
 		modified = false;
@@ -256,6 +256,6 @@ void clipTips_pg(PreGraph * preGraph)
 	}
 
 	concatenatePreGraph_pg(preGraph);
-	printf("%d tips cut off\n", counter);
-	printf("%d nodes left\n", preNodeCount_pg(preGraph));
+	velvetLog("%d tips cut off\n", counter);
+	velvetLog("%d nodes left\n", preNodeCount_pg(preGraph));
 }

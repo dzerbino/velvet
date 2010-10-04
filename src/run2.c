@@ -117,9 +117,9 @@ int main(int argc, char **argv)
 		puts("velvetg - de Bruijn graph construction, error removal and repeat resolution");
 		printf("Version %i.%i.%2.2i\n", VERSION_NUMBER,
 		       RELEASE_NUMBER, UPDATE_NUMBER);
-		puts("\nCopyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)");
+		puts("Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)");
 		puts("This is free software; see the source for copying conditions.  There is NO");
-		puts("warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
+		puts("warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.");
 		puts("Compilation settings:");
 		printf("CATEGORIES = %i\n", CATEGORIES);
 		printf("MAXKMERLENGTH = %i\n", MAXKMERLENGTH);
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
 	for (arg_index = 2; arg_index < argc; arg_index++) {
 		arg = argv[arg_index++];
 		if (arg_index >= argc) {
-			puts("Unusual number of arguments!");
+			velvetLog("Unusual number of arguments!\n");
 			printUsage();
 #ifdef DEBUG 
 			abort();
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 			sscanf(argv[arg_index], "%lli", &longlong_var);
 			insertLength[0] = (Coordinate) longlong_var;
 			if (insertLength[0] < 0) {
-				printf("Invalid insert length: %lli\n",
+				velvetLog("Invalid insert length: %lli\n",
 				       (long long) insertLength[0]);
 #ifdef DEBUG 
 				abort();
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
 			sscanf(argv[arg_index], "%lli", &longlong_var);
 			std_dev[0] = (Coordinate) longlong_var;
 			if (std_dev[0] < 0) {
-				printf("Invalid std deviation: %lli\n",
+				velvetLog("Invalid std deviation: %lli\n",
 				       (long long) std_dev[0]);
 #ifdef DEBUG 
 				abort();
@@ -204,7 +204,7 @@ int main(int argc, char **argv)
 			sscanf(arg, "-ins_length%hi", &short_var);
 			cat = (Category) short_var;
 			if (cat < 1 || cat > CATEGORIES) {
-				printf("Unknown option: %s\n", arg);
+				velvetLog("Unknown option: %s\n", arg);
 #ifdef DEBUG 
 				abort();
 #endif 
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
 			sscanf(argv[arg_index], "%lli", &longlong_var);
 			insertLength[cat - 1] = (Coordinate) longlong_var;
 			if (insertLength[cat - 1] < 0) {
-				printf("Invalid insert length: %lli\n",
+				velvetLog("Invalid insert length: %lli\n",
 				       (long long) insertLength[cat - 1]);
 #ifdef DEBUG 
 				abort();
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 			sscanf(arg, "-ins_length%hi_sd", &short_var);
 			cat = (Category) short_var;
 			if (cat < 1 || cat > CATEGORIES) {
-				printf("Unknown option: %s\n", arg);
+				velvetLog("Unknown option: %s\n", arg);
 #ifdef DEBUG 
 				abort();
 #endif 
@@ -233,7 +233,7 @@ int main(int argc, char **argv)
 			sscanf(argv[arg_index], "%lli", &longlong_var);
 			std_dev[cat - 1] = (Coordinate) longlong_var;
 			if (std_dev[cat - 1] < 0) {
-				printf("Invalid std deviation: %lli\n",
+				velvetLog("Invalid std deviation: %lli\n",
 				       (long long) std_dev[cat - 1]);
 #ifdef DEBUG 
 				abort();
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-accel_bits") == 0) {
 			sscanf(argv[arg_index], "%hi", &accelerationBits);
 			if (accelerationBits < 0) {
-				printf
+				velvetLog
 				    ("Illegal acceleration parameter: %s\n",
 				     argv[arg_index]);
 				printUsage();
@@ -296,7 +296,7 @@ int main(int argc, char **argv)
 			printUsage();
 			return 0;	
 		} else {
-			printf("Unknown option: %s;\n", arg);
+			velvetLog("Unknown option: %s;\n", arg);
 			printUsage();
 			return 1;
 		}
@@ -363,7 +363,7 @@ int main(int argc, char **argv)
 		correctGraph(graph, sequenceLengths, sequences->categories);
 		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else {
-		puts("No Roadmap file to build upon! Please run velveth (see manual)");
+		velvetLog("No Roadmap file to build upon! Please run velveth (see manual)\n");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -399,9 +399,9 @@ int main(int argc, char **argv)
 	}
 
 	if (coverageCutoff < 0) {
-		puts("WARNING: NO COVERAGE CUTOFF PROVIDED");
-		puts("Velvet will probably leave behind many detectable errors");
-		puts("See manual for instructions on how to set the coverage cutoff parameter");
+		velvetLog("WARNING: NO COVERAGE CUTOFF PROVIDED\n");
+		velvetLog("Velvet will probably leave behind many detectable errors\n");
+		velvetLog("See manual for instructions on how to set the coverage cutoff parameter\n");
 	}
 
 	if (sequences == NULL) {
@@ -453,9 +453,9 @@ int main(int argc, char **argv)
 		for ( ;pebbleRounds > 0; pebbleRounds--)
 			exploitShortReadPairs(graph, sequences, dubious, scaffolding);
 	} else {
-		puts("WARNING: NO EXPECTED COVERAGE PROVIDED");
-		puts("Velvet will be unable to resolve any repeats");
-		puts("See manual for instructions on how to set the expected coverage parameter");
+		velvetLog("WARNING: NO EXPECTED COVERAGE PROVIDED\n");
+		velvetLog("Velvet will be unable to resolve any repeats\n");
+		velvetLog("See manual for instructions on how to set the expected coverage parameter\n");
 	}
 
 	free(dubious);
@@ -491,9 +491,9 @@ int main(int argc, char **argv)
 		exportUnusedReads(graph, sequences, minContigKmerLength, directory);
 
 	if (estimateCoverage) 
-		printf("Estimated Coverage = %f\n", expectedCoverage);
+		velvetLog("Estimated Coverage = %f\n", expectedCoverage);
 	if (estimateCutoff) 
-		printf("Estimated Coverage cutoff = %f\n", coverageCutoff);
+		velvetLog("Estimated Coverage cutoff = %f\n", coverageCutoff);
 
 	logFinalStats(graph, minContigKmerLength, directory);
 

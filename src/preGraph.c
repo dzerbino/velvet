@@ -321,7 +321,7 @@ void destroyPreNode_pg(IDnum preNodeID, PreGraph * preGraph)
 	IDnum index;
 	PreMarker * preMarker;
 
-	//printf("Destroying %ld\n and twin %ld\n", getPreNodeID(preNode), getPreNodeID(twin));
+	//velvetLog("Destroying %ld\n and twin %ld\n", getPreNodeID(preNode), getPreNodeID(twin));
 
 	if (ID < 0)
 		ID = -ID;
@@ -542,16 +542,16 @@ static inline Descriptor *mergeDescriptors_pg(Descriptor * descr,
 
 		/*switch ((readCopy & 3)) {
 		   case ADENINE:
-		   printf("A%ld", index);
+		   velvetLog("A%ld", index);
 		   break;
 		   case CYTOSINE:
-		   printf("C%ld", index);
+		   velvetLog("C%ld", index);
 		   break;
 		   case GUANINE:
-		   printf("G%ld", index);
+		   velvetLog("G%ld", index);
 		   break;
 		   case THYMINE:
-		   printf("T%ld", index);
+		   velvetLog("T%ld", index);
 		   break;
 		   } */
 		readCopy >>= 2;
@@ -564,7 +564,7 @@ static inline Descriptor *mergeDescriptors_pg(Descriptor * descr,
 		}
 	}
 
-	//puts("");
+	//velvetLog("\n");
 
 	// Skipping initial k-1 letters in second descriptor
 	readPtr = &(copy[(wordLength - 1) / 4]);
@@ -580,19 +580,19 @@ static inline Descriptor *mergeDescriptors_pg(Descriptor * descr,
 		(*writePtr) += (readCopy & 3) << 6;
 		/*switch ((readCopy & 3)) {
 		   case ADENINE:
-		   printf("A%ld", index);
+		   velvetLog("A%ld", index);
 		   break;
 		   case CYTOSINE:
-		   printf("C%ld", index);
+		   velvetLog("C%ld", index);
 		   break;
 		   case GUANINE:
-		   printf("G%ld", index);
+		   velvetLog("G%ld", index);
 		   break;
 		   case THYMINE:
-		   printf("T%ld", index);
+		   velvetLog("T%ld", index);
 		   break;
 		   default:
-		   printf("?%ld;", index);
+		   velvetLog("?%ld;", index);
 		   } */
 		readCopy >>= 2;
 
@@ -609,7 +609,7 @@ static inline Descriptor *mergeDescriptors_pg(Descriptor * descr,
 		}
 	}
 
-	//puts("");
+	//velvetLog("\n");
 
 	if (writeOffset != 0) {
 		while (writeOffset != 4) {
@@ -659,19 +659,19 @@ static inline Descriptor *mergeDescriptorsH2H_pg(Descriptor * descr,
 		(*writePtr) += (readCopy & 3) << 6;
 		/*switch ((readCopy & 3)) {
 		   case ADENINE:
-		   printf("A(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("A(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case CYTOSINE:
-		   printf("C(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("C(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case GUANINE:
-		   printf("G(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("G(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case THYMINE:
-		   printf("T(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("T(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   default:
-		   printf("?(%ld %i %i);", index, writeOffset, readOffset);
+		   velvetLog("?(%ld %i %i);", index, writeOffset, readOffset);
 		   } */
 		readCopy >>= 2;
 
@@ -683,7 +683,7 @@ static inline Descriptor *mergeDescriptorsH2H_pg(Descriptor * descr,
 		}
 	}
 
-	//puts("");
+	//velvetLog("\n");
 
 	// Going to end of second descriptor 
 	readPtr = &(copy[(sourceLength - 1) / 4]);
@@ -691,7 +691,7 @@ static inline Descriptor *mergeDescriptorsH2H_pg(Descriptor * descr,
 	readOffset = (sourceLength - 1) % 4;
 	readCopy <<= ((3 - readOffset) * 2);
 
-	//printf("Read copy %x\n", readCopy);
+	//velvetLog("Read copy %x\n", readCopy);
 
 	// Going on copying reverse complement of second descriptor
 	for (index = 0; index < sourceLength; index++) {
@@ -705,19 +705,19 @@ static inline Descriptor *mergeDescriptorsH2H_pg(Descriptor * descr,
 #endif
 		/*switch (3 - ((readCopy & 192) >> 6)) {
 		   case ADENINE:
-		   printf("A(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("A(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case CYTOSINE:
-		   printf("C(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("C(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case GUANINE:
-		   printf("G(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("G(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case THYMINE:
-		   printf("T(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("T(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   default:
-		   printf("?(%ld %i %i);", index, writeOffset, readOffset);
+		   velvetLog("?(%ld %i %i);", index, writeOffset, readOffset);
 		   } */
 		readCopy <<= 2;
 
@@ -734,7 +734,7 @@ static inline Descriptor *mergeDescriptorsH2H_pg(Descriptor * descr,
 		}
 	}
 
-	//puts("");
+	//velvetLog("\n");
 
 	if (writeOffset != 0) {
 		while (writeOffset != 4) {
@@ -791,19 +791,19 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 #endif
 		/*switch (3 - ((readCopy & 192) >> 6)) {
 		   case ADENINE:
-		   printf("A(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("A(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case CYTOSINE:
-		   printf("C(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("C(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case GUANINE:
-		   printf("G(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("G(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case THYMINE:
-		   printf("T(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("T(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   default:
-		   printf("?(%ld %i %i);", index, writeOffset, readOffset);
+		   velvetLog("?(%ld %i %i);", index, writeOffset, readOffset);
 		   } */
 		readCopy <<= 2;
 
@@ -820,7 +820,7 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 		}
 	}
 
-	//puts("");
+	//velvetLog("\n");
 
 	// Going on copying second descriptor
 	readPtr = descr;
@@ -835,19 +835,19 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 		(*writePtr) += (readCopy & 3) << 6;
 		/*switch ((readCopy & 3)) {
 		   case ADENINE:
-		   printf("A(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("A(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case CYTOSINE:
-		   printf("C(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("C(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case GUANINE:
-		   printf("G(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("G(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   case THYMINE:
-		   printf("T(%ld %i %i) ", index, writeOffset, readOffset);
+		   velvetLog("T(%ld %i %i) ", index, writeOffset, readOffset);
 		   break;
 		   default:
-		   printf("?(%ld %i %i);", index, writeOffset, readOffset);
+		   velvetLog("?(%ld %i %i);", index, writeOffset, readOffset);
 		   } */
 		readCopy >>= 2;
 
@@ -864,7 +864,7 @@ static inline Descriptor *mergeDescriptorsF2F_pg(Descriptor * descr,
 		}
 	}
 
-	//puts("");
+	//velvetLog("\n");
 
 	if (writeOffset != 0) {
 		while (writeOffset != 4) {
@@ -906,8 +906,8 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 	PreMarker * preMarker;
 	PreArcI preArc;
 
-	puts("Renumbering preNodes");
-	printf("Initial preNode count %d\n", preGraph->preNodeCount);
+	velvetLog("Renumbering preNodes\n");
+	velvetLog("Initial preNode count %d\n", preGraph->preNodeCount);
 
 	for (preNodeIndex = 1; preNodeIndex <= preNodes; preNodeIndex++) {
 		currentPreNode = &(preGraph->preNodes[preNodeIndex]);
@@ -961,7 +961,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 				     preGraph->preNodeCount +
 				      1, PreNode);
 
-	printf("Destroyed %d preNodes\n", counter);
+	velvetLog("Destroyed %d preNodes\n", counter);
 }
 
 // Allocate memory for an empty preGraph created with sequenceCount different sequences
@@ -1006,7 +1006,7 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 		while (!isalpha(letter))
 			letter = getc(file);
 
-		//printf("%c", letter);
+		//velvetLog("%c", letter);
 		switch (letter) {
 		case 'A':
 			nucleotide = ADENINE;
@@ -1029,7 +1029,7 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 		pushNucleotide(initialKmer, nucleotide);
 	}
 
-	//printf(" ");
+	//velvetLog(" ");
 
 	return res;
 }
@@ -1178,10 +1178,10 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 
 	outfile = fopen(filename, "w");
 	if (outfile == NULL) {
-		puts("Couldn't open file, sorry");
+		velvetLog("Couldn't open file, sorry\n");
 		return;
 	} else
-		printf("Writing into pregraph file %s...\n", filename);
+		velvetLog("Writing into pregraph file %s...\n", filename);
 
 	// General data
 	fprintf(outfile, "%ld\t%ld\t%i\t%hi\n", (long) preGraph->preNodeCount,

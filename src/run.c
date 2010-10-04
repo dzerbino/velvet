@@ -90,16 +90,16 @@ int main(int argc, char **argv)
 	setProgramName("velveth");
 
 	if (argc < 4) {
-		puts("velveth - simple hashing program");
-		printf("Version %i.%i.%2.2i\n", VERSION_NUMBER,
+		velvetLog("velveth - simple hashing program\n");
+		velvetLog("Version %i.%i.%2.2i\n", VERSION_NUMBER,
 		       RELEASE_NUMBER, UPDATE_NUMBER);
-		puts("\nCopyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)");
-		puts("This is free software; see the source for copying conditions.  There is NO");
-		puts("warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
-		puts("Compilation settings:");
-		printf("CATEGORIES = %i\n", CATEGORIES);
-		printf("MAXKMERLENGTH = %i\n", MAXKMERLENGTH);
-		puts("");
+		velvetLog("\nCopyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)\n");
+		velvetLog("This is free software; see the source for copying conditions.  There is NO\n");
+		velvetLog("warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
+		velvetLog("Compilation settings:\n");
+		velvetLog("CATEGORIES = %i\n", CATEGORIES);
+		velvetLog("MAXKMERLENGTH = %i\n", MAXKMERLENGTH);
+		velvetLog("\n");
 		printUsage();
 		return 0;
 	}
@@ -112,18 +112,18 @@ int main(int argc, char **argv)
 	hashLength = atoi(argv[2]);
 
 	if (hashLength > MAXKMERLENGTH) {
-		printf
+		velvetLog
 		    ("Velvet can't handle k-mers as long as %i! We'll stick to %i if you don't mind.\n",
 		     hashLength, MAXKMERLENGTH);
 		hashLength = MAXKMERLENGTH;
 	} else if (hashLength <= 0) {
-		printf("Invalid hash length: %s\n", argv[2]);
+		velvetLog("Invalid hash length: %s\n", argv[2]);
 		printUsage();
 		return 0;
 	} 
 
 	if (hashLength % 2 == 0) {
-		printf
+		velvetLog
 		    ("Velvet can't work with even length k-mers, such as %i. We'll use %i instead, if you don't mind.\n",
 		     hashLength, hashLength - 1);
 		hashLength--;
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
 	splayTable = newSplayTable(hashLength, double_strand);
 
 	allSequences = importReadSet(seqFilename);
-	printf("%i sequences in total.\n", allSequences->readCount);
+	velvetLog("%i sequences in total.\n", allSequences->readCount);
 
 	strcpy(filename, directory);
 	strcat(filename, "/Roadmaps");

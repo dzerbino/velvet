@@ -24,6 +24,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "globals.h"
 #include "recycleBin.h"
 #include "kmer.h"
+#include "utility.h"
 
 #define CHUNKSIZE 10000
 
@@ -317,40 +318,40 @@ void printTree(SplayTree * T)
 int test(int argc, char **argv)
 {
 	SplayTree *T = newSplayTree();
-	puts("Hello, world");
+	velvetLog("Hello, world\n");
 	Kmer k;
 
-	puts("---TREE---");
+	velvetLog("---TREE---\n");
 	printTree(T);
 	clearKmer(&k);
 	pushNucleotide(&k, 1);
 	insertIntoTree(&k, &T);
-	puts("---TREE---");
+	velvetLog("---TREE---\n");
 	printTree(T);
 	clearKmer(&k);
 	pushNucleotide(&k, 3);
 	insertIntoTree(&k, &T);
-	puts("---TREE---");
+	velvetLog("---TREE---\n");
 	printTree(T);
 	clearKmer(&k);
 	pushNucleotide(&k, 13);
 	insertIntoTree(&k, &T);
-	puts("---TREE---");
+	velvetLog("---TREE---\n");
 	printTree(T);
 	clearKmer(&k);
 	pushNucleotide(&k, 5);
 	insertIntoTree(&k, &T);
-	puts("---TREE---");
+	velvetLog("---TREE---\n");
 	printTree(T);
 	clearKmer(&k);
 	pushNucleotide(&k, 7);
 	insertIntoTree(&k, &T);
-	puts("---TREE---");
+	velvetLog("---TREE---\n");
 	printTree(T);
 	clearKmer(&k);
 	pushNucleotide(&k, 2);
 	insertIntoTree(&k, &T);
-	puts("---TREE---");
+	velvetLog("---TREE---\n");
 	printTree(T);
 
 	destroySplayTree(T);
@@ -417,7 +418,7 @@ void filterAndExportSplayTree(FILE * file, SplayTree * T, int minCov,
 
 void displaySplayTreeMemory()
 {
-	printf("TREE MEMORY %lli allocated %lli free\n",
+	velvetLog("TREE MEMORY %lli allocated %lli free\n",
 	       (long long) RecycleBin_memory_usage(treeMemory),
 	       (long long) recycleBinFreeSpace(treeMemory));
 }

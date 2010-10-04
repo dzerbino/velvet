@@ -160,7 +160,7 @@ Arc *createArc(Node * originNode, Node * destinationNode, Graph * graph)
 	if (originNode == NULL || destinationNode == NULL)
 		return NULL;
 
-//      printf("Connecting nodes %i -> %i\n", originNode->ID, destinationNode->ID);
+//      velvetLog("Connecting nodes %i -> %i\n", originNode->ID, destinationNode->ID);
 
 	arc = getArcBetweenNodes(originNode, destinationNode, graph);
 
@@ -238,7 +238,7 @@ void createAnalogousArc(Node * originNode, Node * destinationNode,
 	if (originNode == NULL || destinationNode == NULL)
 		return;
 
-//      printf("Connecting nodes %i -> %i\n", originNode->ID, destinationNode->ID);
+//      velvetLog("Connecting nodes %i -> %i\n", originNode->ID, destinationNode->ID);
 
 	arc = getArcBetweenNodes(originNode, destinationNode, graph);
 
@@ -373,7 +373,7 @@ void destroyArc(Arc * arc, Graph * graph)
 	origin = twinArc->destination->twinNode;
 	destination = arc->destination->twinNode;
 
-	//printf("Destroying arc %p\n", arc);
+	//velvetLog("Destroying arc %p\n", arc);
 
 	// Removing arc from list
 	if (origin->arc == arc) {
@@ -466,7 +466,7 @@ void destroyNode(Node * node, Graph * graph)
 	IDnum ID = node->ID;
 	IDnum index;
 
-	//printf("Destroying %d\n and twin %d\n", getNodeID(node), getNodeID(twin));
+	//velvetLog("Destroying %d\n and twin %d\n", getNodeID(node), getNodeID(twin));
 
 	if (ID < 0)
 		ID = -ID;
@@ -613,13 +613,13 @@ void displayGraph(Graph * graph)
 	Node *currentNode;
 	IDnum nodeIndex;
 
-	printf("%d sequences\n", graph->sequenceCount);
-	printf("%d*2 nodes\n", graph->nodeCount);
+	velvetLog("%d sequences\n", graph->sequenceCount);
+	velvetLog("%d*2 nodes\n", graph->nodeCount);
 
 	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
 		currentNode = graph->nodes[nodeIndex];
-		printf("%s\n", readNode(currentNode));
-		printf("%s\n", readNode(currentNode->twinNode));
+		velvetLog("%s\n", readNode(currentNode));
+		velvetLog("%s\n", readNode(currentNode->twinNode));
 	}
 }
 
@@ -767,7 +767,7 @@ void appendNodeSequence(Node * node, TightString * sequence,
 	Coordinate i;
 	Nucleotide nucleotide;
 
-	//printf("Getting sequence from node %d of length %d (%d)\n", getNodeID(node), getNodeLength(node), getLength(nodeLabel));
+	//velvetLog("Getting sequence from node %d of length %d (%d)\n", getNodeID(node), getNodeLength(node), getLength(nodeLabel));
 
 	for (i = 0; i < getNodeLength(node); i++) {
 		nucleotide =
@@ -1211,8 +1211,8 @@ void renumberNodes(Graph * graph)
 	IDnum nodes = graph->nodeCount;
 	IDnum newIndex;
 
-	puts("Renumbering nodes");
-	printf("Initial node count %d\n", graph->nodeCount);
+	velvetLog("Renumbering nodes\n");
+	velvetLog("Initial node count %d\n", graph->nodeCount);
 
 	for (nodeIndex = 1; nodeIndex <= nodes; nodeIndex++) {
 		currentNode = getNodeInGraph(graph, nodeIndex);
@@ -1289,7 +1289,7 @@ void renumberNodes(Graph * graph)
 					    graph->nodeCount +
 					     1, GapMarker *);
 
-	printf("Removed %d null nodes\n", counter);
+	velvetLog("Removed %d null nodes\n", counter);
 }
 
 void splitNodeDescriptor(Node * source, Node * target, Coordinate offset)
@@ -1380,7 +1380,7 @@ void checkPassageMarkersStatus(Graph * graph)
 		for (marker = node->marker; marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
 			if (getPassageMarkerStatus(marker)) {
-				printf("TRUE marker %s\n",
+				velvetLog("TRUE marker %s\n",
 				       readPassageMarker(marker));
 #ifdef DEBUG 
 				abort();
@@ -1393,7 +1393,7 @@ void checkPassageMarkersStatus(Graph * graph)
 						  getNode(getNextInSequence
 							  (marker)),
 						  graph) == NULL) {
-				printf
+				velvetLog
 				    ("Missing arc %d -> %d (for %d)\n",
 				     getNodeID(node),
 				     getNodeID(getNode
@@ -1408,7 +1408,7 @@ void checkPassageMarkersStatus(Graph * graph)
 					       (getPreviousInSequence
 						(marker)), node,
 					       graph) == NULL) {
-				printf
+				velvetLog
 				    ("Missing arc %d -> %d (for %d)\n",
 				     getNodeID(getNode
 					       (getNextInSequence
@@ -1736,7 +1736,7 @@ void clipNodeLength(Node * node, Coordinate startClip,
 	Nucleotide nucleotide;
 
 	if (finalLength < 0) {
-		puts("Can't clip node that much!!");
+		velvetLog("Can't clip node that much!!\n");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -1744,7 +1744,7 @@ void clipNodeLength(Node * node, Coordinate startClip,
 	}
 
 	if (getNodeLength(node) == 0) {
-		puts("Short enough as is");
+		velvetLog("Short enough as is\n");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -1787,7 +1787,7 @@ void activateArcLookupTable(Graph * graph)
 	IDnum twinOriginID, destinationID, hash;
 	Arc **table;
 
-	puts("Activating arc lookup table");
+	velvetLog("Activating arc lookup table\n");
 
 	graph->arcLookupTable = callocOrExit(6 * nodes + 1, Arc *);
 
@@ -1812,7 +1812,7 @@ void activateArcLookupTable(Graph * graph)
 		}
 	}
 
-	puts("Done activating arc lookup table");
+	velvetLog("Done activating arc lookup table\n");
 }
 
 void deactivateArcLookupTable(Graph * graph)
@@ -2136,10 +2136,10 @@ void exportGraph(char *filename, Graph * graph, TightString * sequences)
 
 	outfile = fopen(filename, "w");
 	if (outfile == NULL) {
-		puts("Couldn't open file, sorry");
+		velvetLog("Couldn't open file, sorry\n");
 		return;
 	} else
-		printf("Writing into graph file %s...\n", filename);
+		velvetLog("Writing into graph file %s...\n", filename);
 
 	// General data
 	fprintf(outfile, "%d\t%d\t%i\t%i\n", graph->nodeCount,
@@ -2232,7 +2232,7 @@ Graph *importGraph(char *filename)
 	if (file == NULL) 
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	printf("Reading graph file %s\n", filename);
+	velvetLog("Reading graph file %s\n", filename);
 
 	// First  line
 	if (!fgets(line, maxline, file))
@@ -2246,7 +2246,7 @@ Graph *importGraph(char *filename)
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
 
-	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
+	velvetLog("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
 	       (long) sequenceCount);
 
 	if (nodeCounter == 0)
@@ -2369,7 +2369,7 @@ Graph *importGraph(char *filename)
 			finish = (Coordinate) longlong_var3;
 			finishOffset = (Coordinate) longlong_var4;
 			if (sCount != 5) {
-				printf
+				velvetLog
 				    ("ERROR: reading in graph - only %d items read for line '%s'",
 				     sCount, line);
 #ifdef DEBUG 
@@ -2421,10 +2421,10 @@ Graph *importGraph(char *filename)
 		}
 	}
 
-	//printf("New graph has %d nodes\n", graph->nodeCount);
+	//velvetLog("New graph has %d nodes\n", graph->nodeCount);
 
 	fclose(file);
-	//puts("Done, exiting");
+	//velvetLog("Done, exiting\n");
 	return graph;
 }
 
@@ -2457,7 +2457,7 @@ Graph *importSimplifiedGraph(char *filename)
 	if (file == NULL) 
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	printf("Reading graph file %s\n", filename);
+	velvetLog("Reading graph file %s\n", filename);
 
 	// First  line
 	if (!fgets(line, maxline, file))
@@ -2470,7 +2470,7 @@ Graph *importSimplifiedGraph(char *filename)
 	graph->double_stranded = (boolean) short_var;
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
-	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
+	velvetLog("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
 	       (long) sequenceCount);
 
 	if (nodeCounter == 0)
@@ -2594,7 +2594,7 @@ Graph *importSimplifiedGraph(char *filename)
 			finish = (Coordinate) longlong_var3;
 			finishOffset = (Coordinate) longlong_var4;
 			if (sCount != 5) {
-				printf
+				velvetLog
 				    ("ERROR: reading in graph - only %d items read for line '%s'",
 				     sCount, line);
 #ifdef DEBUG 
@@ -2652,10 +2652,10 @@ Graph *importSimplifiedGraph(char *filename)
 		}
 	}
 
-	//printf("New graph has %d nodes\n", graph->nodeCount);
+	//velvetLog("New graph has %d nodes\n", graph->nodeCount);
 
 	fclose(file);
-	//puts("Done, exiting");
+	//velvetLog("Done, exiting\n");
 	renumberNodes(graph);
 	return graph;
 }
@@ -2682,7 +2682,7 @@ Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 	if (file == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
 
-	printf("Reading pre-graph file %s\n", preGraphFilename);
+	velvetLog("Reading pre-graph file %s\n", preGraphFilename);
 
 	// First  line
 	if (!fgets(line, maxline, file))
@@ -2697,7 +2697,7 @@ Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 	graph->double_stranded = *double_strand;
 	resetWordFilter(wordLength);
 	allocateNodeSpace(graph, nodeCounter);
-	printf("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
+	velvetLog("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
 	       (long) sequenceCount);
 
 	// Read nodes
@@ -2869,10 +2869,10 @@ void exportDOTGraph(char *filename, Graph * graph)
 
 	FILE *outfile = fopen(filename, "w");
 	if (outfile == NULL) {
-		puts("Couldn't open file, sorry");
+		velvetLog("Couldn't open file, sorry\n");
 		return;
 	} else
-		puts("Writing into file...");
+		velvetLog("Writing into file...\n");
 
 	fprintf(outfile, "digraph G {\n");
 	fprintf(outfile, "\tRANKDIR=LR\n");
@@ -3987,14 +3987,14 @@ int getWordLength(Graph * graph)
 
 void displayArcMemory()
 {
-	printf("ARC MEMORY %lld allocated %lld free\n",
+	velvetLog("ARC MEMORY %lld allocated %lld free\n",
 	       (long long) RecycleBin_memory_usage(arcMemory),
 	       (long long) recycleBinFreeSpace(arcMemory));
 }
 
 void displayNodeMemory()
 {
-	printf("NODE MEMORY %lld allocated %lld free\n",
+	velvetLog("NODE MEMORY %lld allocated %lld free\n",
 	       (long long) RecycleBin_memory_usage(nodeMemory),
 	       (long long) recycleBinFreeSpace(nodeMemory));
 }
@@ -4067,7 +4067,7 @@ void checkNodeReads(IDnum index, Graph * graph)
 		abort();
 
 	//if (arrayLength > 10000)
-	//      printf("Array length %d %d\n", arrayLength, index);
+	//      velvetLog("Array length %d %d\n", arrayLength, index);
 
 	for (i = 1; i < arrayLength; i++) {
 		if (array[i].readID <= array[i - 1].readID)

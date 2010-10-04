@@ -325,7 +325,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", preGraphFilename);
 
 	// Count kmers
-	printf("Scanning pre-graph file %s for k-mers\n",
+	velvetLog("Scanning pre-graph file %s for k-mers\n",
 	       preGraphFilename);
 
 	// First  line
@@ -348,7 +348,7 @@ static KmerOccurenceTable *referenceGraphKmers(char *preGraphFilename,
 			break;
 	}
 
-	printf("%li kmers found\n", (long) kmerCount);
+	velvetLog("%li kmers found\n", (long) kmerCount);
 
 	for(nodeMaskIndex = 0; nodeMaskIndex < nodeMaskCount; nodeMaskIndex++) {
 		kmerCount -= nodeMasks[nodeMaskIndex].finish -
@@ -563,9 +563,9 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 
 	// Verify that all short reads are reasonnably short
 	if (getLength(tString) > USHRT_MAX) {
-		printf("Short read of length %lli, longer than limit %i\n",
+		velvetLog("Short read of length %lli, longer than limit %i\n",
 		       (long long) getLength(tString), SHRT_MAX);
-		puts("You should better declare this sequence as long, because it genuinely is!");
+		velvetLog("You should better declare this sequence as long, because it genuinely is!\n");
 		exit(1);
 	}
 	// Allocate memory for the read pairs
@@ -1078,7 +1078,7 @@ static void fillUpGraph(ReadSet * reads,
 		category = reads->categories[readIndex];
 	
 		if (readIndex % 100000 == 0)
-			printf("Threading through reads %d / %d\n",
+			velvetLog("Threading through reads %d / %d\n",
 			       readIndex, reads->readCount);
 
 		threadSequenceThroughGraph(getTightStringInArray(reads->tSequences, readIndex),

@@ -36,7 +36,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "globals.h"
 #include "recycleBin.h"
+#include "utility.h"
 
 typedef struct RecycleBin_Node {
 	struct RecycleBin_Node *next;
@@ -60,7 +62,7 @@ RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)
 	size_t chunckSize, allocSize;
 
 	if (recycle_bin == NULL) {
-		puts("Allocation failed!");
+		velvetLog("Allocation failed!\n");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -68,7 +70,7 @@ RecycleBin *newRecycleBin(size_t node_size, int nodes_per_chunk)
 	}
 
 	if (node_size < sizeof(RecycleBin_Node)) {
-		puts("Too small elements to create a recycle bin!");
+		velvetLog("Too small elements to create a recycle bin!\n");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -110,7 +112,7 @@ void *allocatePointer(RecycleBin * recycle_bin)
 	register Chunk *chunk;
 
 	if (recycle_bin == NULL) {
-		puts("Null recycle bin!");
+		velvetLog("Null recycle bin!\n");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -127,7 +129,7 @@ void *allocatePointer(RecycleBin * recycle_bin)
 		chunk = malloc(sizeof(Chunk) + recycle_bin->nodes_per_chunk
 			       * recycle_bin->node_size);
 		if (chunk == NULL) {
-			puts("No more memory for memory chunk!");
+			velvetLog("No more memory for memory chunk!\n");
 #ifdef DEBUG 
 			abort();
 #endif 

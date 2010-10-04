@@ -138,7 +138,7 @@ void destroyPassageMarker(PassageMarkerI marker)
 	deallocatePassageMarker(twin);
 	deallocatePassageMarker(marker);
 
-	//puts("Done destroying passage marker");
+	//velvetLog("Done destroying passage marker\n");
 }
 
 void destroyAllPassageMarkers()
@@ -194,7 +194,7 @@ void setNextInNode(PassageMarkerI marker, PassageMarkerI next)
 		PassageMarker *nextVal;
 
 		if (markerVal->twinMarker == NULL_IDX) {
-			printf("Dead marker in node %d %d\n",
+			velvetLog("Dead marker in node %d %d\n",
 			       getNodeID(getNode(marker)),
 			       getPassageMarkerSequenceID(marker));
 			abort();
@@ -530,10 +530,10 @@ boolean isInitial(PassageMarkerI marker)
 
 	markerVal = PM_FI2P (marker);
 	if (markerVal->twinMarker == NULL_IDX) {
-		printf("Unpaired marker seq %ld start %lld node %ld\n",
+		velvetLog("Unpaired marker seq %ld start %lld node %ld\n",
 		       (long) markerVal->sequenceID, (long long) markerVal->start,
 		       (long) getNodeID(markerVal->node));
-		puts("SNAFU");
+		velvetLog("SNAFU\n");
 		abort();
 	}
 
@@ -648,7 +648,7 @@ PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
 	PassageMarker *markerVal = PM_FI2P (marker);
 	PassageMarker *twinMarkerVal = PM_FI2P (twinMarker);
 
-//      printf("Values %d\t%d\t%d\t%d\t%d\n", seqID, start, finish, startOffset, finishOffset);
+//      velvetLog("Values %d\t%d\t%d\t%d\t%d\n", seqID, start, finish, startOffset, finishOffset);
 
 	markerVal->sequenceID = seqID;
 	markerVal->node = NULL;
@@ -670,7 +670,7 @@ PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
 	setFinishOffset(marker, finishOffset);
 
 	if (getPassageMarkerLength(marker) < 0) {
-		printf("Negative marker %ld %lld %lld %lld\n",
+		velvetLog("Negative marker %ld %lld %lld %lld\n",
 		       (long) getPassageMarkerSequenceID(marker),
 		       (long long) getPassageMarkerStart(marker),
 		       (long long) getPassageMarkerFinish(marker),

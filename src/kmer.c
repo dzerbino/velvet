@@ -384,19 +384,19 @@ void printKmer(Kmer * kmer) {
 	int i;
 
 #if KMER_CHARS
-	printf("%hx\t", kmer->chars);
+	velvetLog("%hx\t", kmer->chars);
 #endif
 #if KMER_INTS
-	printf("%x\t", kmer->ints);
+	velvetLog("%x\t", kmer->ints);
 #endif
 #if KMER_LONGS
-	printf("%x\t", kmer->longs);
+	velvetLog("%x\t", kmer->longs);
 #endif
 #if KMER_LONGLONGS
 	for (i = KMER_LONGLONGS - 1; i >= 0; i--)
-		printf("%llx\t", (long long) kmer->longlongs[i]);
+		velvetLog("%llx\t", (long long) kmer->longlongs[i]);
 #endif
-	puts("");
+	velvetLog("\n");
 }
 
 #if 0
@@ -410,43 +410,43 @@ void testKmers(int argc, char** argv) {
 	
 	resetWordFilter(MAXKMERLENGTH);
 	resetKeyFilter(32 > 2 * MAXKMERLENGTH? 2 * MAXKMERLENGTH: 32);
-	printf("FORMATS %u %u %u %u\n", KMER_CHARS, KMER_INTS, KMER_LONGS, KMER_LONGLONGS);
-	printf("Long long k-mer index %i\n", longLongKmerFilterIndex);
-	printf("Long long key index %i\n", longLongKeyFilterIndex);
-	printf("FILTERS %hx %x %lx %llx\n", (short) charLeftFilter, (int) intLeftFilter, (long) longLeftFilter, (long long) longLongLeftFilter);
-	printf("FILTERS %hx %x %lx %llx\n", (short) charWordFilter, (int) intWordFilter, (long) longWordFilter, (long long) longLongWordFilter);
+	velvetLog("FORMATS %u %u %u %u\n", KMER_CHARS, KMER_INTS, KMER_LONGS, KMER_LONGLONGS);
+	velvetLog("Long long k-mer index %i\n", longLongKmerFilterIndex);
+	velvetLog("Long long key index %i\n", longLongKeyFilterIndex);
+	velvetLog("FILTERS %hx %x %lx %llx\n", (short) charLeftFilter, (int) intLeftFilter, (long) longLeftFilter, (long long) longLongLeftFilter);
+	velvetLog("FILTERS %hx %x %lx %llx\n", (short) charWordFilter, (int) intWordFilter, (long) longWordFilter, (long long) longLongWordFilter);
 	printKmer(&kmer);
-	puts("Clear");
+	velvetLog("Clear\n");
 	clearKmer(&kmer);
 	printKmer(&kmer);
 
-	puts("Fill up");
+	velvetLog("Fill up\n");
 	for (i = 0; i < MAXKMERLENGTH; i++) {
 		pushNucleotide(&kmer, ((i + 1)  % 4));
 		printKmer(&kmer);
 	}
 
-	puts("Shift right");
+	velvetLog("Shift right\n");
 	for (i = 0; i < MAXKMERLENGTH; i++) {
 		popNucleotide(&kmer);
 		printKmer(&kmer);
-		printf("%llx\n", (long long) getKmerKey(&kmer));
+		velvetLog("%llx\n", (long long) getKmerKey(&kmer));
 	}
 
-	puts("Reverse complement");
+	velvetLog("Reverse complement\n");
 	resetWordFilter(9);
 	resetKeyFilter(18);
 	clearKmer(&kmer);
 	for (i = 0; i < MAXKMERLENGTH; i++) {
 		reversePushNucleotide(&kmer, ((i + 1)  % 4));
 		printKmer(&kmer);
-		printf("%llx\n", (long long) getKmerKey(&kmer));
+		velvetLog("%llx\n", (long long) getKmerKey(&kmer));
 	}
 
-	puts("Copy");
+	velvetLog("Copy\n");
 	copyKmers(k2, &kmer);
 	printKmer(k2); 	
-	printf("%i\n", compareKmers(k2, &kmer)); 
+	velvetLog("%i\n", compareKmers(k2, &kmer)); 
 
 }
 #endif

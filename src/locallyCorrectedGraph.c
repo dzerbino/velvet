@@ -86,10 +86,10 @@ static boolean isPreviousToNode(Node * previous, Node * target)
 	Node *previousNode = NULL;
 	Time targetTime = getNodeTime(target);
 
-	//printf("Testing if %li is previous to %li\n", getNodeID(previous), getNodeID(target));
+	//velvetLog("Testing if %li is previous to %li\n", getNodeID(previous), getNodeID(target));
 
 	while (true) {
-		//printf("CCC %li %f\n", getNodeID(currentNode), getNodeTime(currentNode));
+		//velvetLog("CCC %li %f\n", getNodeID(currentNode), getNodeTime(currentNode));
 
 		if (currentNode == previous)
 			return true;
@@ -99,7 +99,7 @@ static boolean isPreviousToNode(Node * previous, Node * target)
 
 		if (getNodeID(currentNode) > nodeCount(graph)
 		    || getNodeID(currentNode) < -nodeCount(graph)) {
-			printf("Node ID??? %d %d\n",
+			velvetLog("Node ID??? %d %d\n",
 			       getNodeID(currentNode),
 			       getNodeID(previousNode));
 		}
@@ -119,7 +119,7 @@ extractSequence(PassageMarkerI path, TightString * sequence)
 	Coordinate seqLength = 0;
 	Coordinate writeIndex = 0;
 
-	//printf("Extracting sequence %li ... ", pathLength);
+	//velvetLog("Extracting sequence %li ... ", pathLength);
 
 	//Measure length
 	for (marker = getNextInSequence(path); !isTerminal(marker);
@@ -244,10 +244,10 @@ static void comparePaths_local(Node * destination, Node * origin)
 	fastNode = destination;
 	slowNode = origin;
 
-	//puts("Looking into separate paths");
+	//velvetLog("Looking into separate paths\n");
 
 	while (fastNode != slowNode) {
-		//printf("Fast node %li Slow node %li\n", getNodeID(fastNode), getNodeID(slowNode));
+		//velvetLog("Fast node %li Slow node %li\n", getNodeID(fastNode), getNodeID(slowNode));
 
 		if (getNodeTime(fastNode) > getNodeTime(slowNode)) {
 			fastLength++;
@@ -274,7 +274,7 @@ static void comparePaths_local(Node * destination, Node * origin)
 
 		if (slowLength > MAXNODELENGTH
 		    || fastLength > MAXNODELENGTH) {
-			//printf("Paths too fragmented %li %li\n", slowLength, fastLength);
+			//velvetLog("Paths too fragmented %li %li\n", slowLength, fastLength);
 			return;
 		}
 	}
@@ -317,17 +317,17 @@ static void comparePaths_local(Node * destination, Node * origin)
 	//Extract sequences
 	if (!extractSequence(fastPath, fastSequence)
 	    || !extractSequence(slowPath, slowSequence)) {
-		//puts("Paths too long");
+		//velvetLog("Paths too long\n");
 		destroyPaths();
 		return;
 	}
 	//Compare sequences
 	if (compareSequences(fastSequence, slowSequence)) {
-		//puts("Correcting discrepancy");
+		//velvetLog("Correcting discrepancy\n");
 		cleanUpRedundancy_local();
 		return;
 	}
-	//puts("\tFinished comparing paths, changes made");
+	//velvetLog("\tFinished comparing paths, changes made\n");
 	destroyPaths();
 }
 
@@ -338,7 +338,7 @@ static void tourBusArc_local(Node * origin, Arc * arc, Time originTime)
 	IDnum nodeIndex = getNodeID(destination) + nodeCount(graph);
 	Node *oldPrevious = previous[nodeIndex];
 
-	//printf("Trying arc from %li -> %li\n", getNodeID(origin), getNodeID(destination)); 
+	//velvetLog("Trying arc from %li -> %li\n", getNodeID(origin), getNodeID(destination)); 
 
 	if (oldPrevious == origin)
 		return;
@@ -350,14 +350,14 @@ static void tourBusArc_local(Node * origin, Arc * arc, Time originTime)
 	destinationTime = times[nodeIndex];
 
 	if (destinationTime == -1) {
-		//puts("New destination");
+		//velvetLog("New destination\n");
 		setNodeTime(destination, totalTime);
 		dheapNodes[nodeIndex] =
 		    insertNodeIntoDHeap(dheap, totalTime, destination);
 		previous[nodeIndex] = origin;
 		return;
 	} else if (destinationTime > totalTime) {
-		//printf("Previously visited from slower node %li\n", getNodeID(getNodePrevious(destination))); 
+		//velvetLog("Previously visited from slower node %li\n", getNodeID(getNodePrevious(destination))); 
 		if (dheapNodes[nodeIndex] == NULL) {
 			return;
 		}
@@ -369,7 +369,7 @@ static void tourBusArc_local(Node * origin, Arc * arc, Time originTime)
 		comparePaths_local(destination, oldPrevious);
 		return;
 	} else {
-		//printf("Previously visited by faster node %li\n", getNodeID(getNodePrevious(destination))); 
+		//velvetLog("Previously visited by faster node %li\n", getNodeID(getNodePrevious(destination))); 
 		comparePaths_local(destination, origin);
 	}
 }
@@ -380,7 +380,7 @@ static void tourBusNode_local(Node * node)
 	Node *destination;
 	Time nodeTime = getNodeTime(node);
 
-	//printf("Node %li %f %i %p\n", getNodeID(node),
+	//velvetLog("Node %li %f %i %p\n", getNodeID(node),
 	//       times[getNodeID(node) + nodeCount(graph)], simpleArcCount(node),
 	//       node);
 
@@ -427,7 +427,7 @@ static void clipTipsVeryHardLocally()
 	Node *current, *twin;
 	boolean modified = true;
 
-	//puts("Clipping short tips off graph HARD");
+	//velvetLog("Clipping short tips off graph HARD\n");
 
 	while (modified) {
 		modified = false;
@@ -443,13 +443,13 @@ static void clipTipsVeryHardLocally()
 			if (getUniqueness(current))
 				continue;
 
-			//printf("Checking node HARD %li %i\n", getNodeID(current), simpleArcCount(current));
+			//velvetLog("Checking node HARD %li %i\n", getNodeID(current), simpleArcCount(current));
 
 			twin = getTwinNode(current);
 
 			if (isLocalDeadEnd(current)
 			    || isLocalTwinDeadEnd(current)) {
-				//printf("Found tip at node %li\n", getNodeID(current));
+				//velvetLog("Found tip at node %li\n", getNodeID(current));
 				handicapNode(current);
 				modified = true;
 			}
@@ -462,7 +462,7 @@ static void tourBus_local(Node * startingPoint)
 	Node *currentNode = startingPoint;
 	IDnum nodeID = getNodeID(startingPoint) + nodeCount(graph);
 
-	//printf("Tour bus from node %li...\n", getNodeID(startingPoint));
+	//velvetLog("Tour bus from node %li...\n", getNodeID(startingPoint));
 
 	times[nodeID] = 0;
 	previous[nodeID] = currentNode;
@@ -486,7 +486,7 @@ void prepareGraphForLocalCorrections(Graph * argGraph)
 	SELF_LOOP_CUTOFF = WORDLENGTH;
 	// Done with global params
 
-	printf("Preparing to correct graph with cutoff %f\n",
+	velvetLog("Preparing to correct graph with cutoff %f\n",
 	       MAXDIVERGENCE);
 
 	// Allocating memory
@@ -518,7 +518,7 @@ void correctGraphLocally(Node * argStart)
 	NodeList *nodeList;
 
 	start = argStart;
-	//printf("Correcting graph from node %li\n", getNodeID(start));
+	//velvetLog("Correcting graph from node %li\n", getNodeID(start));
 
 	clipTipsVeryHardLocally();
 
@@ -536,7 +536,7 @@ void correctGraphLocally(Node * argStart)
 
 void deactivateLocalCorrectionSettings()
 {
-	puts("Deactivating local correction settings");
+	velvetLog("Deactivating local correction settings\n");
 	IDnum index;
 
 	for (index = 0; index <= MAXREADLENGTH; index++) {

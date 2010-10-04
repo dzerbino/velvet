@@ -320,3 +320,6 @@ V 1.0.13
 - Updated AssemblyAssembler script
 - Long read coverage cutoff
 - Reporting of contigs filtered out by the coverage cutoffs
+
+V 1.0.14
+- Reintroduced timed stdout messages
