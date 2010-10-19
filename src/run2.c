@@ -58,6 +58,8 @@ static void printUsage()
 	puts("\t-unused_reads <yes|no>\t\t: export unused reads in UnusedReads.fa file (default: no)");
 	puts("\t-alignments <yes|no>\t\t: export a summary of contig alignment to the reference sequences (default: no)");
 	puts("\t-exportFiltered <yes|no>\t: export the long nodes which were eliminated by the coverage filters (default: no)");
+	puts("\t-clean <yes|no>\t\t: remove all the intermediary files which are useless for recalculation (default : no)");
+	puts("\t-very_clean <yes|no>\t\t: remove all the intermediary files (no recalculation possible) (default: no)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -104,6 +106,7 @@ int main(int argc, char **argv)
 	long long longlong_var;
 	short int short_var;
 	boolean exportFilteredNodes = false;
+	int clean = 0;
 
 	setProgramName("velvetg");
 
@@ -287,6 +290,12 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-long_mult_cutoff") == 0) {
 			sscanf(argv[arg_index], "%i", &longMultCutoff);
 			setMultiplicityCutoff(longMultCutoff);
+		} else if (strcmp(arg, "-clean") == 0) {
+			if (strcmp(argv[arg_index], "yes") == 0)
+				clean = 1;
+		} else if (strcmp(arg, "-very_clean") == 0) {
+			if (strcmp(argv[arg_index], "yes") == 0)
+				clean = 2;
 		} else if (strcmp(arg, "-unused_reads") == 0) {
 			unusedReads =
 			    (strcmp(argv[arg_index], "yes") == 0);
@@ -477,9 +486,11 @@ int main(int argc, char **argv)
 	strcat(graphFilename, "/stats.txt");
 	displayGeneralStatistics(graph, graphFilename, sequences);
 
-	strcpy(graphFilename, directory);
-	strcat(graphFilename, "/LastGraph");
-	exportGraph(graphFilename, graph, sequences->tSequences);
+	if (clean == 0) {
+		strcpy(graphFilename, directory);
+		strcat(graphFilename, "/LastGraph");
+		exportGraph(graphFilename, graph, sequences->tSequences);
+	}
 
 	if (exportAssembly) {
 		strcpy(graphFilename, directory);
@@ -496,6 +507,30 @@ int main(int argc, char **argv)
 		velvetLog("Estimated Coverage cutoff = %f\n", coverageCutoff);
 
 	logFinalStats(graph, minContigKmerLength, directory);
+
+	if (clean > 0) {
+		strcpy(graphFilename, directory);
+		strcat(graphFilename, "/Roadmaps");
+		remove(graphFilename);	
+
+		strcpy(graphFilename, directory);
+		strcat(graphFilename, "/Sequences");
+		remove(graphFilename);	
+
+		strcpy(graphFilename, directory);
+		strcat(graphFilename, "/LastGraph");
+		remove(graphFilename);	
+	} 
+
+	if (clean > 1) {
+		strcpy(graphFilename, directory);
+		strcat(graphFilename, "/Graph2.txt");
+		remove(graphFilename);	
+
+		strcpy(graphFilename, directory);
+		strcat(graphFilename, "/Graph.txt");
+		remove(graphFilename);	
+	}
 
 	destroyGraph(graph);
 	free(graphFilename);

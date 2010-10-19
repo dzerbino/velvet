@@ -23,6 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <limits.h>
 
 #include "globals.h"
 #include "tightString.h"
@@ -1891,9 +1892,9 @@ ReadSet *importReadSet(char *filename)
 		} else {
 			bpCount += (Coordinate) strlen(line) - 1;
 
-			if (bpCount > SHRT_MAX) {
+			if (sizeof(ShortLength) == 16 && bpCount > SHRT_MAX) {
 				velvetLog("Read %li of length %lli, longer than limit %i\n",
-				       (long) sequenceIndex + 1, (long long) getLength(tString), SHRT_MAX);
+				       (long) sequenceIndex + 1, (long long) bpCount, SHRT_MAX);
 				velvetLog("You should modify ShortLength to int32_t in globals.h (around) line 84, recompile and re-run\n");
 				exit(1);
 			}
