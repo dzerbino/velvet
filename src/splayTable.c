@@ -212,7 +212,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 	table->lastIndex++;
 
 	currentIndex = table->lastIndex;
-	fprintf(file, "ROADMAP %d\n", currentIndex);
+	velvetFprintf(file, "ROADMAP %d\n", currentIndex);
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
@@ -302,7 +302,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 		if (!found) {
 			writeNucleotideIndex++;
 			if (!annotationClosed) {
-				fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+				velvetFprintf(file, "%ld\t%lld\t%lld\t%lld\n",
 					(long) referenceSequenceID, (long long) position,
 					(long long) start, (long long) finish);
 			}
@@ -337,7 +337,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 			}
 			// Previous non corresponding annotation
 			else {
-				fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+				velvetFprintf(file, "%ld\t%lld\t%lld\t%lld\n",
 					(long) referenceSequenceID, (long long) position,
 					(long long) start, (long long) finish);
 
@@ -356,7 +356,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 	}
 
 	if (!annotationClosed) {
-		fprintf(file, "%ld\t%lld\t%lld\t%lld\n",
+		velvetFprintf(file, "%ld\t%lld\t%lld\t%lld\n",
 			(long) referenceSequenceID, (long long) position,
 			(long long) start, (long long) finish);
 	}
@@ -544,7 +544,7 @@ void inputReferenceIntoSplayTable(TightString * tString,
 	table->lastIndex++;
 
 	currentIndex = table->lastIndex;
-	fprintf(file, "ROADMAP %d\n", currentIndex);
+	velvetFprintf(file, "ROADMAP %d\n", currentIndex);
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
@@ -637,7 +637,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	for (index = 0; index < reads->readCount && reads->categories[index] == REFERENCE; index++)
 		referenceSequenceCount++;
 
-	fprintf(outfile, "%ld\t%ld\t%i\t%hi\n", (long) sequenceCount, (long) referenceSequenceCount, table->WORDLENGTH, (short) table->double_strand);
+	velvetFprintf(outfile, "%ld\t%ld\t%i\t%hi\n", (long) sequenceCount, (long) referenceSequenceCount, table->WORDLENGTH, (short) table->double_strand);
 
 	if (reads->tSequences == NULL)
 		convertSequences(reads);

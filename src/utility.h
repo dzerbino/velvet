@@ -27,6 +27,8 @@ Copyright 2009 John Marshall (jm18@sanger.ac.uk)
 #define ATTRIBUTE(list)
 #endif
 
+#include <stdio.h>
+
 // Wrappers for malloc(), calloc(), and realloc() that always succeed.
 // These functions print an error message and exit on failure, rather than
 // requiring the calling function to check for NULL.  The arguments contain
@@ -49,9 +51,13 @@ void setProgramName(const char *name);
 // and optionally appending a perror-style description of errno), and calls
 // exit() with the specified exit status.
 void exitErrorf(int exitStatus, boolean showErrno, const char *format, ...)
-	ATTRIBUTE((format(printf, 3, 4), noreturn));
+       ATTRIBUTE((format(printf, 3, 4), noreturn));
 
 // Velvet-specific logging utility
 void velvetLog(const char *format, ...)
 	ATTRIBUTE((format(printf, 1, 2)));
+
+// fprintf wrapper which exits upon failure (e.g. disk full)
+void velvetFprintf(FILE * file, const char * format, ...)
+	ATTRIBUTE((format(printf, 2, 3)));
 #endif

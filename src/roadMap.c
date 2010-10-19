@@ -35,7 +35,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #endif
 
 union positionPtr {
-	IDnum coord;
+	ShortLength coord;
 	IDnum nodeID;
 }  ATTRIBUTE_PACKED;
 

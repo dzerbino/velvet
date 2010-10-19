@@ -1122,10 +1122,10 @@ static void exportPreNode_pg(FILE * outfile, PreNode * preNode, IDnum ID,
 	if (preNode == NULL)
 		return;
 
-	fprintf(outfile, "NODE\t%ld\t%lld\n", (long) ID, (long long) preNode->length);
+	velvetFprintf(outfile, "NODE\t%ld\t%lld\n", (long) ID, (long long) preNode->length);
 
 	if (preNode->length == 0) {
-		fprintf(outfile, "\n");
+		velvetFprintf(outfile, "\n");
 		return;
 	}
 
@@ -1135,31 +1135,31 @@ static void exportPreNode_pg(FILE * outfile, PreNode * preNode, IDnum ID,
 						 index);
 		switch (nucleotide) {
 		case ADENINE:
-			fprintf(outfile, "A");
+			velvetFprintf(outfile, "A");
 			break;
 		case CYTOSINE:
-			fprintf(outfile, "C");
+			velvetFprintf(outfile, "C");
 			break;
 		case GUANINE:
-			fprintf(outfile, "G");
+			velvetFprintf(outfile, "G");
 			break;
 		case THYMINE:
-			fprintf(outfile, "T");
+			velvetFprintf(outfile, "T");
 			break;
 		}
 	}
 
-	fprintf(outfile, "\n");
+	velvetFprintf(outfile, "\n");
 }
 
 static void exportPreMarker(FILE * outfile, PreMarker* preMarker) {
-	fprintf(outfile, "%li\t%lli\t%lli\t%lli\n", (long) preMarker->preNodeID, (long long) preMarker->preNodeStart, (long long) preMarker->referenceStart, (long long) preMarker->length);
+	velvetFprintf(outfile, "%li\t%lli\t%lli\t%lli\n", (long) preMarker->preNodeID, (long long) preMarker->preNodeStart, (long long) preMarker->referenceStart, (long long) preMarker->length);
 }
 
 static void exportPreReference_pg(FILE * outfile, IDnum index, PreGraph * preGraph) {
 	PreMarker * preMarker;
 
-	fprintf(outfile, "SEQ\t%li\n", (long) index);
+	velvetFprintf(outfile, "SEQ\t%li\n", (long) index);
 
 	for (preMarker = preGraph->referenceStarts[index]; preMarker; preMarker=preMarker->next) 
 		exportPreMarker(outfile, preMarker);
@@ -1184,7 +1184,7 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 		velvetLog("Writing into pregraph file %s...\n", filename);
 
 	// General data
-	fprintf(outfile, "%ld\t%ld\t%i\t%hi\n", (long) preGraph->preNodeCount,
+	velvetFprintf(outfile, "%ld\t%ld\t%i\t%hi\n", (long) preGraph->preNodeCount,
 		(long) preGraph->sequenceCount, preGraph->wordLength, (short) preGraph->double_strand);
 
 	// PreNode info

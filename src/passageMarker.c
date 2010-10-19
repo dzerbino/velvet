@@ -183,6 +183,10 @@ void setNextInNode(PassageMarkerI marker, PassageMarkerI next)
 {
 	PassageMarker *markerVal;
 
+	// DEBUG
+	if (next == marker || next == getTwinMarker(marker))
+		abort();
+
 	if (marker == NULL_IDX)
 		return;
 
@@ -699,13 +703,13 @@ void exportMarker(FILE * outfile, PassageMarkerI marker,
 		current = markerVal->twinMarker;
 	}
 
-	fprintf(outfile, "SEQ\t%d\n", PM_FI2P (current)->sequenceID);
+	velvetFprintf(outfile, "SEQ\t%d\n", PM_FI2P (current)->sequenceID);
 	for (; current != NULL_IDX; current = PM_FI2P (current)->nextInSequence) {
-		fprintf(outfile, "%ld\t%lld\t%lld\t%lld\t%lld",
+		velvetFprintf(outfile, "%ld\t%lld\t%lld\t%lld\t%lld",
 			(long) getNodeID(PM_FI2P (current)->node), (long long) getStartOffset(current),
 			(long long) getPassageMarkerStart(current),
 			(long long) getPassageMarkerFinish(current),
 			(long long) getFinishOffset(current));
-		fprintf(outfile, "\n");
+		velvetFprintf(outfile, "\n");
 	}
 }

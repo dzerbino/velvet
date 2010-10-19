@@ -112,7 +112,7 @@ void velvetLog(const char *format, ...)
   gettimeofday(&tvNow, NULL);
   timersub(&tvNow, &tvStart, &tvDiff);
 
-  printf("[%ld.%06ld] ", tvDiff.tv_sec, tvDiff.tv_usec);
+  printf("[%ld.%06ld] ", (long) tvDiff.tv_sec, (long) tvDiff.tv_usec);
   va_start(args, format);
   vprintf(format, args);
   va_end(args);
@@ -120,4 +120,22 @@ void velvetLog(const char *format, ...)
 #ifdef DEBUG 
   fflush(stdout);
 #endif
+}
+
+void velvetFprintf(FILE * file, const char * format, ...) 
+{
+	va_list args;
+
+	va_start(args, format);
+	if (vfprintf(file, format, args) < 0) {
+		if (programName)
+		       fprintf(stderr, "%s: ", programName);
+		fprintf(stderr, "Could not write into file\n");
+		va_end(args);
+#ifdef DEBUG 
+		abort();
+#endif 
+		exit(EXIT_FAILURE);
+	}
+	va_end(args);
 }

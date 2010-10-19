@@ -809,7 +809,7 @@ static void printShortCounts(FILE * outfile, Node * node, Graph * graph, ReadSet
 
 	if (!readStartsAreActivated(graph)) {
 		for (cat = 0; cat < CATEGORIES; cat++)
-			fprintf(outfile, "\tN/A");
+			velvetFprintf(outfile, "\tN/A");
 		return;
 	}
 
@@ -827,7 +827,7 @@ static void printShortCounts(FILE * outfile, Node * node, Graph * graph, ReadSet
 	}
 
 	for (cat = 0; cat < CATEGORIES; cat++)
-		fprintf(outfile, "\t%li", (long) counts[cat]);
+		velvetFprintf(outfile, "\t%li", (long) counts[cat]);
 }
 
 void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads)
@@ -844,53 +844,53 @@ void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads)
 	} else
 		velvetLog("Writing into stats file %s...\n", filename);
 
-	fprintf(outfile, "ID\tlgth\tout\tin\tlong_cov");
+	velvetFprintf(outfile, "ID\tlgth\tout\tin\tlong_cov");
 
 	for (cat = 0; cat < CATEGORIES; cat++) {
-		fprintf(outfile, "\tshort%i_cov", (int) (cat + 1));
-		fprintf(outfile, "\tshort%i_Ocov", (int) (cat + 1));
+		velvetFprintf(outfile, "\tshort%i_cov", (int) (cat + 1));
+		velvetFprintf(outfile, "\tshort%i_Ocov", (int) (cat + 1));
 	}
 
-	fprintf(outfile, "\tlong_nb");
+	velvetFprintf(outfile, "\tlong_nb");
 	for (cat = 0; cat < CATEGORIES; cat++) {
-		fprintf(outfile, "\tshort%i_nb", (int) (cat + 1));
+		velvetFprintf(outfile, "\tshort%i_nb", (int) (cat + 1));
 	}
 
-	fprintf(outfile, "\n");
+	velvetFprintf(outfile, "\n");
 
 	for (nodeIndex = 1; nodeIndex <= nodeCount(graph); nodeIndex++) {
 		node = getNodeInGraph(graph, nodeIndex);
 		if (node == NULL)
 			continue;
-		fprintf
+		velvetFprintf
 		    (outfile, "%ld\t%lld\t%i\t%i",
 		     (long) getNodeID(node), (long long) getNodeLength(node), arcCount(node),
 		     arcCount(getTwinNode(node)));
 
 		if (getNodeLength(node) > 0) {
-			fprintf(outfile, "\t%f",
+			velvetFprintf(outfile, "\t%f",
 				readCoverage(node) /
 				(double) getNodeLength(node));
 			for (cat = 0; cat < CATEGORIES; cat++) {
-				fprintf(outfile, "\t%f",
+				velvetFprintf(outfile, "\t%f",
 					getVirtualCoverage(node,
 							   cat) /
 					(double) getNodeLength(node));
-				fprintf(outfile, "\t%f",
+				velvetFprintf(outfile, "\t%f",
 					getOriginalVirtualCoverage(node,
 								   cat) /
 					(double) getNodeLength(node));
 			}
 		} else {
-			fprintf(outfile, "\tInf");
+			velvetFprintf(outfile, "\tInf");
 			for (cat = 0; cat < CATEGORIES; cat++)
-				fprintf(outfile, "\tInf\tInf");
+				velvetFprintf(outfile, "\tInf\tInf");
 		}
 
-		fprintf(outfile, "\t%li", (long) markerCount(node));
+		velvetFprintf(outfile, "\t%li", (long) markerCount(node));
 		printShortCounts(outfile, node, graph, reads); 
 
-		fprintf(outfile, "\n");
+		velvetFprintf(outfile, "\n");
 	}
 
 	fclose(outfile);
@@ -985,7 +985,7 @@ void displayStrainOnlySequences(Graph * graph, IDnum firstStrain,
 			readID =
 			    getPassageMarkerSequenceID(getMarker(node));
 			readCoord = getPassageMarkerStart(getMarker(node));
-			fprintf(outfile, "> UNIQUE SEQUENCE %ld; %lld\n",
+			velvetFprintf(outfile, "> UNIQUE SEQUENCE %ld; %lld\n",
 				(long) readID, (long long) readCoord);
 
 			start = 0;
@@ -993,7 +993,7 @@ void displayStrainOnlySequences(Graph * graph, IDnum firstStrain,
 				finish = start + 60;
 				readTightStringFragment(tString, start,
 							finish, str);
-				fprintf(outfile, "%s\n", str);
+				velvetFprintf(outfile, "%s\n", str);
 				start = finish;
 			}
 		}
@@ -1245,8 +1245,8 @@ void exportArcSequence(Arc * arc, FILE * outfile, int WORDLENGTH,
 	appendNodeSequence(getDestination(arc), output,
 			   getNodeLength(getOrigin(arc)));
 	str = readTightString(output);
-	fprintf(outfile, "> ARC from NODE %d", getNodeID(getOrigin(arc)));
-	fprintf(outfile, "%s\n", str);
+	velvetFprintf(outfile, "> ARC from NODE %d", getNodeID(getOrigin(arc)));
+	velvetFprintf(outfile, "%s\n", str);
 	destroyTightString(output);
 	free(str);
 }
@@ -1330,7 +1330,7 @@ static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
 	IDnum nodeIndex = getNodeID(node);
 
 	tString = expandNode(node, WORDLENGTH);
-	fprintf(outfile, ">NODE_%ld_length_%lld_cov_%f\n",
+	velvetFprintf(outfile, ">NODE_%ld_length_%lld_cov_%f\n",
 		(long) nodeIndex, (long long) getNodeLength(node),
 		(getVirtualCoverage(node, 0)
 		 + getVirtualCoverage(node, 1)
@@ -1340,22 +1340,22 @@ static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
 	gap = getGap(node, graph);
 	for (position = 0; position < WORDLENGTH; position++) {
 		if (position % 60 == 0 && position > 0)
-			fprintf(outfile, "\n"); 
+			velvetFprintf(outfile, "\n"); 
 		if (gap && position >= getGapFinish(gap))
 			gap = getNextGap(gap);
 
 		if (gap == NULL || position < getGapStart(gap)) {
 			nucleotide =
 			    getNucleotideChar(position, tString);
-			fprintf(outfile, "%c", nucleotide);
+			velvetFprintf(outfile, "%c", nucleotide);
 		} else
-			fprintf(outfile, "N");
+			velvetFprintf(outfile, "N");
 	}
 
 	gap = getGap(node, graph);
 	for (; position < getLength(tString); position++) {
 		if (position % 60 == 0)
-			fprintf(outfile, "\n");
+			velvetFprintf(outfile, "\n");
 
 		if (gap
 		    && position - WORDLENGTH + 1 >=
@@ -1367,11 +1367,11 @@ static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
 		    getGapStart(gap)) {
 			nucleotide =
 			    getNucleotideChar(position, tString);
-			fprintf(outfile, "%c", nucleotide);
+			velvetFprintf(outfile, "%c", nucleotide);
 		} else
-			fprintf(outfile, "N");
+			velvetFprintf(outfile, "N");
 	}
-	fprintf(outfile, "\n");
+	velvetFprintf(outfile, "\n");
 	destroyTightString (tString);
 }
 
@@ -1428,7 +1428,7 @@ void exportMediumNodeSequences(char* filename, Graph * graph, Coordinate minLeng
 		compareSequences(tString, sequences[0], &sensitivity,
 				 &specificity, WORDLENGTH);
 
-		fprintf(outfile,
+		velvetFprintf(outfile,
 			"> MEDIUM NODE %d, Sensitivity = %f, Specificity = %f\n",
 			nodeIndex, sensitivity, specificity);
 		velvetLog
@@ -1440,7 +1440,7 @@ void exportMediumNodeSequences(char* filename, Graph * graph, Coordinate minLeng
 			finish = start + 60;
 			readTightStringFragment(tString, start,
 						finish, str);
-			fprintf(outfile, "%s\n", str);
+			velvetFprintf(outfile, "%s\n", str);
 			start = finish;
 		}
 
@@ -1587,7 +1587,7 @@ double estimated_cov(Graph * graph, char * directory)
 		sumLength += getNodeLength(node);
 		if (sumLength >= halfTotalLength) {
 			velvetLog("Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
-			fprintf(logFile, "Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
+			velvetFprintf(logFile, "Median coverage depth = %f\n", getTotalCoverage(node) / (double) getNodeLength(node));
 			free(nodeArray);
 			fclose(logFile);
 			free(logFilename);
@@ -2531,13 +2531,13 @@ static void exportAMOSLib(FILE * outfile, Graph * graph, Category cat)
 	if (distance == -1)
 		return;
 
-	fprintf(outfile, "{LIB\n");
-	fprintf(outfile, "iid:%d\n", (int) (cat + 1));
-	fprintf(outfile, "{DST\n");
-	fprintf(outfile, "mea:%lld\n", (long long) distance);
-	fprintf(outfile, "std:%lld\n", (long long) sqrt(variance));
-	fprintf(outfile, "}\n");
-	fprintf(outfile, "}\n");
+	velvetFprintf(outfile, "{LIB\n");
+	velvetFprintf(outfile, "iid:%d\n", (int) (cat + 1));
+	velvetFprintf(outfile, "{DST\n");
+	velvetFprintf(outfile, "mea:%lld\n", (long long) distance);
+	velvetFprintf(outfile, "std:%lld\n", (long long) sqrt(variance));
+	velvetFprintf(outfile, "}\n");
+	velvetFprintf(outfile, "}\n");
 }
 
 static void exportAMOSMarker(FILE * outfile, PassageMarkerI marker,
@@ -2573,15 +2573,15 @@ static void exportAMOSMarker(FILE * outfile, PassageMarkerI marker,
 	else
 		sequenceStart += wordShift;
 
-	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%d\n", getAbsolutePassMarkerSeqID(marker));
+	velvetFprintf(outfile, "{TLE\n");
+	velvetFprintf(outfile, "src:%d\n", getAbsolutePassMarkerSeqID(marker));
 	if (getStartOffset(marker) > start)
-		fprintf(outfile, "off:%lld\n",
+		velvetFprintf(outfile, "off:%lld\n",
 			(long long) (getStartOffset(marker) - start));
 	else
-		fprintf(outfile, "off:0\n");
-	fprintf(outfile, "clr:%lld,%lld\n", (long long) sequenceStart, (long long) sequenceFinish);
-	fprintf(outfile, "}\n");
+		velvetFprintf(outfile, "off:0\n");
+	velvetFprintf(outfile, "clr:%lld,%lld\n", (long long) sequenceStart, (long long) sequenceFinish);
+	velvetFprintf(outfile, "}\n");
 }
 
 static void exportAMOSShortMarker(FILE * outfile, ShortReadMarker * marker,
@@ -2600,11 +2600,11 @@ static void exportAMOSShortMarker(FILE * outfile, ShortReadMarker * marker,
 	if (offset >= finish || offset + getLength(sequence) < start)
 		return;
 
-	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%d\n", getShortReadMarkerID(marker));
-	fprintf(outfile, "off:%lld\n", (long long) (offset - start));
-	fprintf(outfile, "clr:0,%lld\n", (long long) getLength(sequence));
-	fprintf(outfile, "}\n");
+	velvetFprintf(outfile, "{TLE\n");
+	velvetFprintf(outfile, "src:%d\n", getShortReadMarkerID(marker));
+	velvetFprintf(outfile, "off:%lld\n", (long long) (offset - start));
+	velvetFprintf(outfile, "clr:0,%lld\n", (long long) getLength(sequence));
+	velvetFprintf(outfile, "}\n");
 }
 
 static void exportAMOSReverseShortMarker(FILE * outfile,
@@ -2628,11 +2628,11 @@ static void exportAMOSReverseShortMarker(FILE * outfile,
 	if (offset >= finish || offset + getLength(sequence) < start)
 		return;
 
-	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "src:%d\n", getShortReadMarkerID(marker));
-	fprintf(outfile, "off:%lld\n", (long long) (offset - start));
-	fprintf(outfile, "clr:%lld,0\n", (long long) getLength(sequence));
-	fprintf(outfile, "}\n");
+	velvetFprintf(outfile, "{TLE\n");
+	velvetFprintf(outfile, "src:%d\n", getShortReadMarkerID(marker));
+	velvetFprintf(outfile, "off:%lld\n", (long long) (offset - start));
+	velvetFprintf(outfile, "clr:%lld,0\n", (long long) getLength(sequence));
+	velvetFprintf(outfile, "}\n");
 }
 
 static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
@@ -2650,25 +2650,25 @@ static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
 					  getWordLength(graph));
 	Coordinate length = contigFinish - contigStart + wordShift;
 
-	fprintf(outfile, "{CTG\n");
-	fprintf(outfile, "iid:%d\n", iid);
-	fprintf(outfile, "eid:%d-%d\n", getNodeID(node), internalIndex);
+	velvetFprintf(outfile, "{CTG\n");
+	velvetFprintf(outfile, "iid:%d\n", iid);
+	velvetFprintf(outfile, "eid:%d-%d\n", getNodeID(node), internalIndex);
 
-	fprintf(outfile, "seq:\n");
+	velvetFprintf(outfile, "seq:\n");
 	for (start = 0; start <= length; start += 60) {
 		strncpy(str, &(string[start]), 60);
 		str[60] = '\0';
-		fprintf(outfile, "%s\n", str);
+		velvetFprintf(outfile, "%s\n", str);
 	}
-	fprintf(outfile, ".\n");
+	velvetFprintf(outfile, ".\n");
 
-	fprintf(outfile, "qlt:\n");
+	velvetFprintf(outfile, "qlt:\n");
 	for (start = 0; start <= length; start += 60) {
 		strncpy(str, &(string[start]), 60);
 		str[60] = '\0';
-		fprintf(outfile, "%s\n", str);
+		velvetFprintf(outfile, "%s\n", str);
 	}
-	fprintf(outfile, ".\n");
+	velvetFprintf(outfile, ".\n");
 
 	free(string);
 
@@ -2702,7 +2702,7 @@ static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
 		}
 	}
 
-	fprintf(outfile, "}\n");
+	velvetFprintf(outfile, "}\n");
 }
 
 static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
@@ -2732,26 +2732,26 @@ static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
 
 	start = 0;
 
-	fprintf(outfile, "{SCF\n");
-	fprintf(outfile, "eid:%d\n", getNodeID(node));
+	velvetFprintf(outfile, "{SCF\n");
+	velvetFprintf(outfile, "eid:%d\n", getNodeID(node));
 	for (gap = getGap(node, graph); gap; gap = getNextGap(gap)) {
 		finish = getGapStart(gap);
-		fprintf(outfile, "{TLE\n");
-		fprintf(outfile, "off:%lld\n", (long long) start);
-		fprintf(outfile, "clr:0,%lld\n",
+		velvetFprintf(outfile, "{TLE\n");
+		velvetFprintf(outfile, "off:%lld\n", (long long) start);
+		velvetFprintf(outfile, "clr:0,%lld\n",
 			(long long) (finish - start + (long long) wordShift));
-		fprintf(outfile, "src:%d\n", contigIndex++);
-		fprintf(outfile, "}\n");
+		velvetFprintf(outfile, "src:%d\n", contigIndex++);
+		velvetFprintf(outfile, "}\n");
 		start = getGapFinish(gap);
 	}
 	finish = getNodeLength(node);
-	fprintf(outfile, "{TLE\n");
-	fprintf(outfile, "off:%lld\n", (long long) start);
-	fprintf(outfile, "clr:0,%lld\n", (long long) (finish - start));
-	fprintf(outfile, "src:%d\n", contigIndex++);
-	fprintf(outfile, "}\n");
+	velvetFprintf(outfile, "{TLE\n");
+	velvetFprintf(outfile, "off:%lld\n", (long long) start);
+	velvetFprintf(outfile, "clr:0,%lld\n", (long long) (finish - start));
+	velvetFprintf(outfile, "src:%d\n", contigIndex++);
+	velvetFprintf(outfile, "}\n");
 
-	fprintf(outfile, "}\n");
+	velvetFprintf(outfile, "}\n");
 }
 
 static void exportAMOSRead(FILE * outfile, TightString * tString,
@@ -2760,33 +2760,33 @@ static void exportAMOSRead(FILE * outfile, TightString * tString,
 	Coordinate start, finish;
 	char str[100];
 
-	fprintf(outfile, "{RED\n");
-	fprintf(outfile, "iid:%d\n", index);
-	fprintf(outfile, "eid:%d\n", index);
+	velvetFprintf(outfile, "{RED\n");
+	velvetFprintf(outfile, "iid:%d\n", index);
+	velvetFprintf(outfile, "eid:%d\n", index);
 	if (frg_index > 0)
-		fprintf(outfile, "frg:%d\n", frg_index);
+		velvetFprintf(outfile, "frg:%d\n", frg_index);
 
-	fprintf(outfile, "seq:\n");
+	velvetFprintf(outfile, "seq:\n");
 	start = 0;
 	while (start <= getLength(tString)) {
 		finish = start + 60;
 		readTightStringFragment(tString, start, finish, str);
-		fprintf(outfile, "%s\n", str);
+		velvetFprintf(outfile, "%s\n", str);
 		start = finish;
 	}
-	fprintf(outfile, ".\n");
+	velvetFprintf(outfile, ".\n");
 
-	fprintf(outfile, "qlt:\n");
+	velvetFprintf(outfile, "qlt:\n");
 	start = 0;
 	while (start <= getLength(tString)) {
 		finish = start + 60;
 		readTightStringFragment(tString, start, finish, str);
-		fprintf(outfile, "%s\n", str);
+		velvetFprintf(outfile, "%s\n", str);
 		start = finish;
 	}
-	fprintf(outfile, ".\n");
+	velvetFprintf(outfile, ".\n");
 
-	fprintf(outfile, "}\n");
+	velvetFprintf(outfile, "}\n");
 }
 
 void exportAMOSContigs(char *filename, Graph * graph,
@@ -2811,15 +2811,15 @@ void exportAMOSContigs(char *filename, Graph * graph,
 		if (reads->categories[index - 1] % 2 != 0 &&
 		    getInsertLength(graph,
 				    reads->categories[index - 1]) >= 0) {
-			fprintf(outfile, "{FRG\n");
-			fprintf(outfile, "lib:%d\n",
+			velvetFprintf(outfile, "{FRG\n");
+			velvetFprintf(outfile, "lib:%d\n",
 				(int) ((reads->categories[index - 1] / 2) + 1));
-			fprintf(outfile, "rds:%d,%d\n", index,
+			velvetFprintf(outfile, "rds:%d,%d\n", index,
 				index + 1);
-			fprintf(outfile, "eid:%d\n", index);
-			fprintf(outfile, "iid:%d\n", index);
-			fprintf(outfile, "typ:I\n");
-			fprintf(outfile, "}\n");
+			velvetFprintf(outfile, "eid:%d\n", index);
+			velvetFprintf(outfile, "iid:%d\n", index);
+			velvetFprintf(outfile, "typ:I\n");
+			velvetFprintf(outfile, "}\n");
 			index++;
 		}
 	}
@@ -3074,8 +3074,8 @@ void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *director
 	     (long long) totalAssemblyLength(graph), (long) usedReads(graph, minContigKmerLength),
 	     (long) sequenceCount(graph));
 
-	fprintf(logFile, "%s", statsLine);
-	fprintf(stdout, "%s", statsLine);
+	velvetFprintf(logFile, "%s", statsLine);
+	velvetFprintf(stdout, "%s", statsLine);
 
 	fclose(logFile);
 	free(logFilename);
@@ -3245,7 +3245,7 @@ static void initializeReferenceMapping(ReferenceMapping * refMap, PassageMarkerI
 	refMap->refFinish = getPassageMarkerFinish(marker);
 }
 
-static void fprintfReferenceMapping(FILE * file, ReferenceMapping * mapping, ReferenceCoord * refCoords, int wordLength) {
+static void velvetFprintfReferenceMapping(FILE * file, ReferenceMapping * mapping, ReferenceCoord * refCoords, int wordLength) {
 	ReferenceCoord * refCoord;
 	Coordinate start, finish;
 
@@ -3272,7 +3272,7 @@ static void fprintfReferenceMapping(FILE * file, ReferenceMapping * mapping, Ref
 		}
 	}
 		
-	fprintf(file, "%lli\t%lli\t%s\t%lli\t%lli\n",
+	velvetFprintf(file, "%lli\t%lli\t%s\t%lli\t%lli\n",
 		(long long) mapping->start + 1, (long long) mapping->finish + wordLength - 1, 
 		refCoord->name, (long long) start, (long long) finish);
 }
@@ -3289,7 +3289,7 @@ static void exportLongNodeMapping(FILE * outfile, Node * node, ReadSet * reads, 
 			referenceCount++;
 
 	// Header
-	fprintf(outfile, ">contig_%li\n", (long) getNodeID(node));
+	velvetFprintf(outfile, ">contig_%li\n", (long) getNodeID(node));
 
 	// Create table
 	referenceMappings = callocOrExit(referenceCount, ReferenceMapping);	
@@ -3305,7 +3305,7 @@ static void exportLongNodeMapping(FILE * outfile, Node * node, ReadSet * reads, 
 
 	// Print table
 	for (index = 0; index < referenceCount; index++)
-		fprintfReferenceMapping(outfile, &referenceMappings[index], refCoords, wordLength);
+		velvetFprintfReferenceMapping(outfile, &referenceMappings[index], refCoords, wordLength);
 
 	// Clean table
 	free(referenceMappings);

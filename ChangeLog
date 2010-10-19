@@ -323,3 +323,10 @@ V 1.0.13
 
 V 1.0.14
 - Reintroduced timed stdout messages
+- Extended explanation of k-mer lengths in manual
+- Catch failures in writing to files
+- Permission exceptions 
+- Pointer arithmetic warning
+- Casting warning
+- Infinite loop with read coherency
+- Out of bounds bug for very long reads

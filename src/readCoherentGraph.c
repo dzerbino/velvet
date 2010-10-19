@@ -299,11 +299,18 @@ static boolean uniqueNodesConnect(Node * startingNode)
 static boolean goesToNode(PassageMarkerI marker, Node * node)
 {
 	PassageMarkerI current;
+	Node * start = getNode(marker);
+	Node * twinStart = getTwinNode(start);
+	Node * currentNode;
 
 	for (current = marker; current != NULL_IDX;
-	     current = getNextInSequence(current))
-		if (getNode(current) == node)
+	     current = getNextInSequence(current)) {
+		currentNode = getNode(current);
+		if (currentNode == start || currentNode == twinStart)
+			return false;
+		else if (getNode(current) == node)
 			return true;
+	}
 
 	return false;
 }

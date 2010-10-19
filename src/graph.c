@@ -1830,11 +1830,11 @@ static void exportNode(FILE * outfile, Node * node, void *withSequence)
 	if (node == NULL)
 		return;
 
-	fprintf(outfile, "NODE\t%ld\t%lld", (long) node->ID, (long long) node->length);
+	velvetFprintf(outfile, "NODE\t%ld\t%lld", (long) node->ID, (long long) node->length);
 	for (cat = 0; cat < CATEGORIES; cat++)
-		fprintf(outfile, "\t%lld\t%lld", (long long) node->virtualCoverage[cat],
+		velvetFprintf(outfile, "\t%lld\t%lld", (long long) node->virtualCoverage[cat],
 			(long long) node->originalVirtualCoverage[cat]);
-	fprintf(outfile, "\n");
+	velvetFprintf(outfile, "\n");
 
 	if (withSequence == NULL)
 		return;
@@ -1844,20 +1844,20 @@ static void exportNode(FILE * outfile, Node * node, void *withSequence)
 		    getNucleotideInDescriptor(node->descriptor, index);
 		switch (nucleotide) {
 		case ADENINE:
-			fprintf(outfile, "A");
+			velvetFprintf(outfile, "A");
 			break;
 		case CYTOSINE:
-			fprintf(outfile, "C");
+			velvetFprintf(outfile, "C");
 			break;
 		case GUANINE:
-			fprintf(outfile, "G");
+			velvetFprintf(outfile, "G");
 			break;
 		case THYMINE:
-			fprintf(outfile, "T");
+			velvetFprintf(outfile, "T");
 			break;
 		}
 	}
-	fprintf(outfile, "\n");
+	velvetFprintf(outfile, "\n");
 
 	for (index = 0; index < node->length; index++) {
 		nucleotide =
@@ -1865,20 +1865,20 @@ static void exportNode(FILE * outfile, Node * node, void *withSequence)
 					      index);
 		switch (nucleotide) {
 		case ADENINE:
-			fprintf(outfile, "A");
+			velvetFprintf(outfile, "A");
 			break;
 		case CYTOSINE:
-			fprintf(outfile, "C");
+			velvetFprintf(outfile, "C");
 			break;
 		case GUANINE:
-			fprintf(outfile, "G");
+			velvetFprintf(outfile, "G");
 			break;
 		case THYMINE:
-			fprintf(outfile, "T");
+			velvetFprintf(outfile, "T");
 			break;
 		}
 	}
-	fprintf(outfile, "\n");
+	velvetFprintf(outfile, "\n");
 }
 
 static void exportArc(FILE * outfile, Arc * arc)
@@ -1903,7 +1903,7 @@ static void exportArc(FILE * outfile, Arc * arc)
 	if (originID == destinationID && originID < 0)
 		return;
 
-	fprintf(outfile, "ARC\t%d\t%d\t%d\n", originID, destinationID,
+	velvetFprintf(outfile, "ARC\t%d\t%d\t%d\n", originID, destinationID,
 		arc->multiplicity);
 }
 
@@ -2142,7 +2142,7 @@ void exportGraph(char *filename, Graph * graph, TightString * sequences)
 		velvetLog("Writing into graph file %s...\n", filename);
 
 	// General data
-	fprintf(outfile, "%d\t%d\t%i\t%i\n", graph->nodeCount,
+	velvetFprintf(outfile, "%d\t%d\t%i\t%i\n", graph->nodeCount,
 		graph->sequenceCount, graph->wordLength, (int) graph->double_stranded);
 
 	// Node info
@@ -2185,13 +2185,13 @@ void exportGraph(char *filename, Graph * graph, TightString * sequences)
 			if (readCount == 0)
 				continue;
 
-			fprintf(outfile, "NR\t%d\t%d\n",
+			velvetFprintf(outfile, "NR\t%d\t%d\n",
 				index - graph->nodeCount, readCount);
 
 			reads = graph->nodeReads[index];
 			for (readIndex = 0; readIndex < readCount;
 			     readIndex++)
-				fprintf(outfile, "%ld\t%lld\t%d\n",
+				velvetFprintf(outfile, "%ld\t%lld\t%d\n",
 					(long) reads[readIndex].readID,
 					(long long) reads[readIndex].position,
 					(int) reads[readIndex].offset);
@@ -2830,7 +2830,7 @@ void DOTNode(Node * node, FILE * outfile)
 	if (ID < 0)
 		return;
 
-	fprintf(outfile, "\t%d [label=\"<left>|%d|<right>\"]\n", ID, ID);
+	velvetFprintf(outfile, "\t%d [label=\"<left>|%d|<right>\"]\n", ID, ID);
 
 	for (arc = node->arc; arc != NULL; arc = arc->next) {
 		otherNode = arc->destination;
@@ -2839,10 +2839,10 @@ void DOTNode(Node * node, FILE * outfile)
 		}
 
 		if (otherNode->ID > 0)
-			fprintf(outfile, "\t%d:right -> %d:left\n", ID,
+			velvetFprintf(outfile, "\t%d:right -> %d:left\n", ID,
 				otherNode->ID);
 		else
-			fprintf(outfile, "\t%d:right -> %d:right\n", ID,
+			velvetFprintf(outfile, "\t%d:right -> %d:right\n", ID,
 				-otherNode->ID);
 	}
 
@@ -2853,10 +2853,10 @@ void DOTNode(Node * node, FILE * outfile)
 		}
 
 		if (otherNode->ID > 0)
-			fprintf(outfile, "\t%d:left -> %d:left\n", ID,
+			velvetFprintf(outfile, "\t%d:left -> %d:left\n", ID,
 				otherNode->ID);
 		else
-			fprintf(outfile, "\t%d:left -> %d:right\n", ID,
+			velvetFprintf(outfile, "\t%d:left -> %d:right\n", ID,
 				-otherNode->ID);
 	}
 }
@@ -2874,16 +2874,16 @@ void exportDOTGraph(char *filename, Graph * graph)
 	} else
 		velvetLog("Writing into file...\n");
 
-	fprintf(outfile, "digraph G {\n");
-	fprintf(outfile, "\tRANKDIR=LR\n");
-	fprintf(outfile, "\tnode [shape=record]\n");
+	velvetFprintf(outfile, "digraph G {\n");
+	velvetFprintf(outfile, "\tRANKDIR=LR\n");
+	velvetFprintf(outfile, "\tnode [shape=record]\n");
 
 	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
 		currentNode = getNodeInGraph(graph, nodeIndex);
 		DOTNode(currentNode, outfile);
 	}
 
-	fprintf(outfile, "}\n");
+	velvetFprintf(outfile, "}\n");
 	fclose(outfile);
 }
 

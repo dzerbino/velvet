@@ -497,7 +497,7 @@ After running Velvet you will find a number of files in the output directory:
 
 This fasta file contains the sequences of the contigs longer than $2k$, where $k$ is the word-length used in velveth. If you have specified a $min\_contig\_lgth$ threshold, then the contigs shorter than that value are omitted.
 
-Note that the length and coverage information provided in the header of each contig should therefore be understood in k-mers and in k-mer coverage (cf. \ref{sec:kmercov}) respectively.
+Note that the length and coverage information provided in the header of each contig should therefore be understood in k-mers and in k-mer coverage (cf. \ref{sec:kmercov}) respectively. E.g. for a 500bp contig and a k-mer length of 21, the length in the header will be 480.
 
 The N's in the sequence correspond to gaps between scaffolded contigs. The number of N's corresponds to the estimated length of the gap. For reasons of compatibility with the archives, any gap shorter than 10bp is represented by a sequence of 10 N's.
 

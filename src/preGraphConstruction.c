@@ -370,8 +370,6 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				tooShort = true;
 				break;
 			}
-			//if (sequenceIndex == 481)
-			//	velvetLog("%c", c);      
 			switch (c) {
 			case 'A':
 				pushNucleotide(&initialKmer, ADENINE);
@@ -392,8 +390,6 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				abort();
 			}
 		}
-		//if (sequenceIndex == 481)
-		//	velvetLog("\n");
 
 		if (tooShort) {
 			//velvetLog("Skipping short read.. %d\n", sequenceIndex);
