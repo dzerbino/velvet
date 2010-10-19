@@ -330,3 +330,4 @@ V 1.0.14
 - Casting warning
 - Infinite loop with read coherency
 - Out of bounds bug for very long reads
+- -clean and -very_clean options
