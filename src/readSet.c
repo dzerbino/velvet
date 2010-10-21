@@ -1892,7 +1892,7 @@ ReadSet *importReadSet(char *filename)
 		} else {
 			bpCount += (Coordinate) strlen(line) - 1;
 
-			if (sizeof(ShortLength) == 16 && bpCount > SHRT_MAX) {
+			if (sizeof(ShortLength) == sizeof(int16_t) && bpCount > SHRT_MAX) {
 				velvetLog("Read %li of length %lli, longer than limit %i\n",
 				       (long) sequenceIndex + 1, (long long) bpCount, SHRT_MAX);
 				velvetLog("You should modify ShortLength to int32_t in globals.h (around) line 84, recompile and re-run\n");
