@@ -110,11 +110,11 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 
 		for (annotIndex = 0; annotIndex < lastAnnotIndex;
 		     annotIndex++) {
-			if (getAnnotSequenceID(annot) > 0) {
-				markerCounters[getAnnotSequenceID(annot)]
+			if (getAnnotSequenceID(annot, rdmaps) > 0) {
+				markerCounters[getAnnotSequenceID(annot, rdmaps)]
 				    += 2;
 			} else {
-				markerCounters[-getAnnotSequenceID(annot)]
+				markerCounters[-getAnnotSequenceID(annot, rdmaps)]
 				    += 2;
 			}
 			totalCount += 2;
@@ -147,7 +147,7 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 
 		for (annotIndex = 0; annotIndex < lastAnnotIndex;
 		     annotIndex++) {
-			sequenceIndex2 = getAnnotSequenceID(annot);
+			sequenceIndex2 = getAnnotSequenceID(annot, rdmaps);
 			if (sequenceIndex2 > 0) {
 				newMarker =
 				    insMarkers[sequenceIndex2] +
@@ -259,7 +259,7 @@ countPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 
 static void convertInsertionMarkers(InsertionMarker * insertionMarkers,
 				    InsertionMarker * veryLastMarker,
-				    IDnum * chains)
+				    IDnum * chains, RoadMapArray * rdmaps)
 {
 	InsertionMarker *marker;
 	Annotation *annot;
@@ -267,13 +267,13 @@ static void convertInsertionMarkers(InsertionMarker * insertionMarkers,
 	for (marker = insertionMarkers; marker != veryLastMarker; marker++) {
 		annot = marker->annot;
 
-		if (getAnnotSequenceID(annot) > 0) {
+		if (getAnnotSequenceID(annot, rdmaps) > 0) {
 			if (marker->isStart) {
 				if (getStartID(annot) == 0)
 					setStartID(annot,
 						   chains
 						   [getAnnotSequenceID
-						    (annot)]);
+						    (annot, rdmaps)]);
 				else
 					setStartID(annot,
 						   getStartID(annot) + 1);
@@ -286,7 +286,7 @@ static void convertInsertionMarkers(InsertionMarker * insertionMarkers,
 					setFinishID(annot,
 						    -chains
 						    [-getAnnotSequenceID
-						     (annot)]);
+						     (annot, rdmaps)]);
 				else
 					setFinishID(annot,
 						    -getFinishID(annot) -
@@ -756,6 +756,14 @@ cleanUpMemory(PreGraph * preGraph, RoadMapArray * rdmaps, IDnum * chains)
 	free(chains);
 }
 
+// Cleaning up reordering array
+void cleanUpIndexOrder(RoadMapArray * rdmapArray) {
+	if (rdmapArray->indexOrder) {
+		free(rdmapArray->indexOrder);
+		rdmapArray->indexOrder = NULL;
+	}
+}
+
 // The full monty, wrapped up in one function
 PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 {
@@ -784,7 +792,9 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 		       sequenceFilename, WORDLENGTH);
 
 	velvetLog("Adjusting marker info...\n");
-	convertInsertionMarkers(insertionMarkers, veryLastMarker, chains);
+	convertInsertionMarkers(insertionMarkers, veryLastMarker, chains, rdmapArray);
+
+	cleanUpIndexOrder(rdmapArray);
 
 	velvetLog("Connecting preNodes\n");
 	connectPreNodes(rdmapArray, preGraph, chains);

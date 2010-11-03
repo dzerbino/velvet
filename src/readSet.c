@@ -151,7 +151,7 @@ static void addReferenceCoordinate(ReferenceCoordinateTable * table, char * name
 		velvetLog("Overlapping reference coordinates:\n");
 		velvetLog("%s:%lli-%lli\n", name, (long long) start, (long long) finish);
 		velvetLog("%s:%lli-%lli\n", refCoord->name, (long long) refCoord->start, (long long) refCoord->finish);
-		velvetLog("Exiting...");
+		velvetLog("Exiting...\n");
 #ifdef DEBUG 
 		abort();
 #endif 
@@ -1735,31 +1735,65 @@ void createReadPairingArray(ReadSet* reads) {
 	reads->mateReads = mateReads;
 }
 
-boolean pairUpReads(ReadSet * reads, Category cat)
+int pairedCategories(ReadSet * reads)
 {
-	int phase = 0;
+	boolean pairedCat[CATEGORIES + 1];
+	int pairedCatCount = 0;
 	IDnum index;
-	boolean found = false;
+
+	for (index = 0; index <= CATEGORIES; index++)
+		pairedCat[index] = 0;
 
 	for (index = 0; index < reads->readCount; index++) {
-		if (reads->categories[index] != cat) {
-			if (phase == 1) {
-				reads->mateReads[index - 1] = -1;
-				reads->categories[index - 1]--;
-				phase = 0;
-			}
-		} else if (phase == 0) {
-			found = true;
-			reads->mateReads[index] = index + 1;
-			phase = 1;
-		} else {
-			found = true;
-			reads->mateReads[index] = index - 1;
-			phase = 0;
-		}
+		if (reads->categories[index] % 2 && !pairedCat[reads->categories[index] / 2]) {
+			pairedCat[reads->categories[index] / 2] = true;
+			if (pairedCatCount++ == CATEGORIES)
+				break;
+		} 	
 	}
 
-	return found;
+	return pairedCatCount;
+}
+
+boolean isSecondInPair(ReadSet * reads, IDnum index)
+{
+	return reads->secondInPair[index / 8] & (1 << (index & 7));
+}
+
+
+static void computeSecondInPair(ReadSet * reads)
+{
+	IDnum index;
+	Category currentCat = 0;
+	Category previousCat = 0;
+	int phase = 0;
+
+	if (reads->secondInPair)
+		free (reads->secondInPair);
+	reads->secondInPair = callocOrExit((reads->readCount + 7) / 8, char);
+
+	for (index = 0; index < reads->readCount; index++)
+	{
+		currentCat = reads->categories[index];
+		if (currentCat & 1)
+		{
+			if (previousCat == currentCat)
+			{
+				if (phase == 0)
+				{
+					phase = 1;
+				}
+				else
+				{
+					reads->secondInPair[index / 8] |= (1 << (index & 7));
+					phase = 0;
+				}
+			}
+			else
+				phase = 0;
+		}
+		previousCat = currentCat;
+	}
 }
 
 void detachDubiousReads(ReadSet * reads, boolean * dubiousReads)
@@ -1773,16 +1807,16 @@ void detachDubiousReads(ReadSet * reads, boolean * dubiousReads)
 		return;
 
 	for (index = 0; index < sequenceCount; index++) {
-		if (!dubiousReads[index])
+		if (!dubiousReads[index] || reads->categories[index] % 2 == 0 )
 			continue;
 
-		pairID = mateReads[index];
+		if (isSecondInPair(reads, index))
+		    pairID = index - 1;
+		else
+		    pairID = index + 1;
 
-		if (pairID != -1) {
-			//velvetLog("Separating %d and %d\n", index, pairID);
-			mateReads[index] = -1;
-			mateReads[pairID] = -1;
-		}
+		reads->categories[index] = (reads->categories[index] % 2) * 2;
+		reads->categories[pairID] = (reads->categories[pairID] % 2) * 2;
 	}
 }
 
@@ -1931,6 +1965,7 @@ ReadSet *importReadSet(char *filename)
 
 	sequence[bpCount] = '\0';
 	fclose(file);
+	computeSecondInPair(reads);
 
 	velvetLog("Done\n");
 	return reads;

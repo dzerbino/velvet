@@ -67,9 +67,12 @@ Coordinate getFinish(Annotation * annot)
 	return annot->finish.coord;
 }
 
-IDnum getAnnotSequenceID(Annotation * annot)
+IDnum getAnnotSequenceID(Annotation * annot, RoadMapArray * rdmaps)
 {
-	return annot->sequenceID;
+	if (rdmaps && rdmaps->indexOrder)
+		return rdmaps->indexOrder[annot->sequenceID];
+	else
+		return annot->sequenceID;
 }
 
 Coordinate getStart(Annotation * annot)
@@ -90,6 +93,32 @@ Coordinate getAnnotationLength(Annotation * annot)
 	return annot->length;
 }
 
+//////////////////////////////////////////////////////////////
+// Index conversion table
+//////////////////////////////////////////////////////////////
+
+typedef struct indexConversion_st {
+	IDnum initialIndex;
+	IDnum actualIndex;
+} IndexConversion;
+
+#ifdef OPENMP
+static int compareIndexConversions(const void * A, const void * B) {
+	IndexConversion * rdmapA = (IndexConversion *) A; 
+	IndexConversion * rdmapB = (IndexConversion *) B; 
+	IDnum diff = rdmapA->actualIndex - rdmapB->actualIndex;
+
+	if (diff > 0) 
+		return 1;
+	else if (diff == 0)
+		return 0;
+	else 
+		return -1;
+}
+#endif
+
+//////////////////////////////////////////////////////////////
+
 // Imports roadmap from the appropriate file format
 // Memory allocated within the function
 RoadMapArray *importRoadMapArray(char *filename)
@@ -97,9 +126,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 	FILE *file;
 	const int maxline = 100;
 	char *line = mallocOrExit(maxline, char);
-	RoadMap *array;
 	RoadMap *rdmap = NULL;
-	IDnum rdmapIndex = 0;
 	IDnum seqID;
 	Coordinate position, start, finish;
 	Annotation *nextAnnotation;
@@ -109,6 +136,10 @@ RoadMapArray *importRoadMapArray(char *filename)
 	short short_var;
 	long long_var, long_var2;
 	long long longlong_var, longlong_var2, longlong_var3;
+#ifdef OPENMP
+	IndexConversion * indexConversionTable, * currentIndexConversionEntry;
+	IDnum counter = 1;
+#endif
 
 	velvetLog("Reading roadmap file %s\n", filename);
 
@@ -120,8 +151,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 	resetWordFilter(result->WORDLENGTH);
 	result->length = sequenceCount;
 	result->referenceCount = long_var2;
-	array = mallocOrExit(sequenceCount, RoadMap);
-	result->array = array;
+	result->array = callocOrExit(sequenceCount, RoadMap);
 	result->double_strand = (boolean) short_var;
 
 	while (fgets(line, maxline, file) != NULL)
@@ -134,12 +164,23 @@ RoadMapArray *importRoadMapArray(char *filename)
 
 	file = fopen(filename, "r");
 
+#ifdef OPENMP
+	indexConversionTable = callocOrExit(sequenceCount, IndexConversion);
+	currentIndexConversionEntry = indexConversionTable;
+#endif
+
+	rdmap = result->array - 1;
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
 	while (fgets(line, maxline, file) != NULL) {
 		if (line[0] == 'R') {
-			rdmap = getRoadMapInArray(result, rdmapIndex++);
-			rdmap->annotationCount = 0;
+#ifdef OPENMP
+		    	sscanf(line, "%*s %ld\n", &long_var);
+			currentIndexConversionEntry->initialIndex = counter++;
+			currentIndexConversionEntry->actualIndex = (IDnum) long_var; 
+			currentIndexConversionEntry++;
+#endif
+			rdmap++;
 		} else {
 			sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
 			       &longlong_var, &longlong_var2, &longlong_var3);
@@ -157,109 +198,68 @@ RoadMapArray *importRoadMapArray(char *filename)
 			else
 				nextAnnotation->length = start - finish;
 
-
 			rdmap->annotationCount++;
 			nextAnnotation++;
 		}
 	}
+	velvetLog("%d roadmaps read\n", sequenceCount);
 
-	velvetLog("%li roadmaps reads\n", (long) rdmapIndex);
+#ifdef OPENMP
+	// Sort the index conversion table 
+	qsort(indexConversionTable, sequenceCount, sizeof(IndexConversion), compareIndexConversions);
+
+	// Record the order of the sequence indices
+	result->indexOrder = callocOrExit(sequenceCount, IDnum);
+	for (counter = 0; counter < sequenceCount; counter++)
+		result->indexOrder[counter] = indexConversionTable[counter].initialIndex;
+	free(indexConversionTable);
+#endif
 
 	fclose(file);
 	free(line);
 	return result;
 }
 
-// Imports roadmap from the appropriate file format
+// Imports annotations from the appropriate file format
 // Memory allocated within the function
-RoadMapArray *importReferenceRoadMapArray(char *filename, IDnum referenceCount)
+Annotation *importAnnotations(FILE *file, IDnum * readIndex, IDnum * annotationCount)
 {
-	FILE *file;
-	const int maxline = 100;
-	char *line = mallocOrExit(maxline, char);
-	RoadMap *array;
-	RoadMap *rdmap = NULL;
-	IDnum rdmapIndex = 0;
-	IDnum seqID;
-	Coordinate position, start, finish, length;
-	Coordinate positionOffset = 0;
-	Annotation *nextAnnotation;
-	RoadMapArray *result = mallocOrExit(1, RoadMapArray);
-	IDnum sequenceCount;
-	IDnum annotationCount = 0;
-	short short_var;
-	long long_var, long_var2;
+	char line[MAXLINE];
+	long long_var;
 	long long longlong_var, longlong_var2, longlong_var3;
+	IDnum arraySize = 8; 
+	Annotation * annotations = callocOrExit(arraySize, Annotation);
+	Annotation * nextAnnotation = annotations;
 
-	velvetLog("Reading roadmap file %s\n", filename);
+	// Read data and fill array
+	nextAnnotation = annotations;
+	sscanf(line, "%*s %ld\n", &long_var);
+	*readIndex = (IDnum) long_var - 1;
+	while(fgets(line, MAXLINE, file) && line[0] != 'R') {
+		sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
+		       &longlong_var, &longlong_var2, &longlong_var3);
+		nextAnnotation->sequenceID = (IDnum) long_var;
+		nextAnnotation->position = (Coordinate) longlong_var;
+		nextAnnotation->start.coord = (Coordinate) longlong_var2;
+		nextAnnotation->finish.coord = (Coordinate) longlong_var3;
 
-	file = fopen(filename, "r");
-	if (!fgets(line, maxline, file))
-		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
-	sscanf(line, "%ld\t%ld\t%i\t%hi\n", &long_var, &long_var2, &(result->WORDLENGTH), &short_var);
-	sequenceCount = (IDnum) long_var;
-	resetWordFilter(result->WORDLENGTH);
-	result->length = sequenceCount;
-	result->referenceCount = long_var2;
-	array = mallocOrExit(sequenceCount, RoadMap);
-	result->array = array;
-	result->double_strand = (boolean) short_var;
+		if (nextAnnotation->sequenceID > 0)
+			nextAnnotation->length = nextAnnotation->finish.coord - nextAnnotation->start.coord;
+		else
+			nextAnnotation->length = nextAnnotation->start.coord - nextAnnotation->finish.coord;
 
-	while (fgets(line, maxline, file) != NULL) {
-		if (line[0] != 'R') {
-			sscanf(line, "%ld\t%*d\t%*d\t%*d\n", &long_var);
-			seqID = long_var;
-			if (seqID < referenceCount && seqID > -referenceCount)
-				annotationCount++;
+		nextAnnotation++;	
+		(*annotationCount)++;
+
+		// Realloc memory if necessary
+		if (*annotationCount == arraySize) {
+			arraySize *= 2;
+			annotations = reallocOrExit(annotations, arraySize, Annotation);
 		}
 	}
 
-	result->annotations = callocOrExit(annotationCount, Annotation);
-	nextAnnotation = result->annotations;
-	fclose(file);
-
-	file = fopen(filename, "r");
-
-	if (!fgets(line, maxline, file))
-		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
-	while (fgets(line, maxline, file) != NULL) {
-		if (line[0] == 'R') {
-			rdmap = getRoadMapInArray(result, rdmapIndex++);
-			rdmap->annotationCount = 0;
-			positionOffset = 0;
-		} else {
-			sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
-			       &longlong_var, &longlong_var2, &longlong_var3);
-			seqID = (IDnum) long_var;
-			position = (Coordinate) longlong_var;
-			start = (Coordinate) longlong_var2;
-			finish = (Coordinate) longlong_var3;
-			if (seqID > 0)
-				length = finish - start;
-			else
-				length = start - finish;
-
-
-			if (seqID < referenceCount && seqID > -referenceCount) {
-				nextAnnotation->sequenceID = seqID;
-				nextAnnotation->position = position + positionOffset;
-				nextAnnotation->start.coord = start;
-				nextAnnotation->finish.coord = finish;
-				nextAnnotation->length = length;			
-
-				rdmap->annotationCount++;
-				nextAnnotation++;
-			}
-
-			positionOffset += length;
-		}
-	}
-
-	velvetLog("%li roadmaps reads\n", (long) rdmapIndex);
-
-	fclose(file);
-	free(line);
-	return result;
+	annotations = reallocOrExit(annotations, *annotationCount, Annotation);
+	return annotations;
 }
 
 RoadMap *getRoadMapInArray(RoadMapArray * array, IDnum index)

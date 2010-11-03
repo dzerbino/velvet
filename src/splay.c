@@ -21,6 +21,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef OPENMP
+#include <omp.h>
+#endif
+
 #include "globals.h"
 #include "recycleBin.h"
 #include "kmer.h"
@@ -41,22 +45,49 @@ struct splayNode_st {
 typedef struct splayNode_st SplayNode;
 typedef struct splayNode_st SplayTree;
 
+
+#ifdef OPENMP
+void initSplayTreeMemory(void)
+{
+	int n;
+
+	n = omp_get_max_threads();
+	#pragma omp critical
+	if (treeMemory == NULL)
+		treeMemory = newRecycleBinArray(n, sizeof(SplayNode), CHUNKSIZE);
+}
+#endif
+
 static SplayNode *allocateSplayNode()
 {
+#ifdef OPENMP
+#if DEBUG
+	if (treeMemory == NULL)
+	{
+		velvetLog("The memory for splay trees seems uninitialised, "
+			  "this is probably a bug, aborting.\n");
+		abort();
+	}
+#endif
+	return allocatePointer(getRecycleBinInArray(treeMemory,
+						    omp_get_thread_num()));
+#else
 	if (treeMemory == NULL)
 		treeMemory = newRecycleBin(sizeof(SplayNode), CHUNKSIZE);
 
-	return (SplayNode *) allocatePointer(treeMemory);
-}
-
-static void deallocateSplayNode(SplayNode * node)
-{
-	deallocatePointer(treeMemory, node);
+	return allocatePointer(treeMemory);
+#endif
 }
 
 SplayTree *newSplayTree()
 {
 	return NULL;
+}
+
+#ifndef OPENMP
+static void deallocateSplayNode(SplayNode * node)
+{
+	deallocatePointer(treeMemory, node);
 }
 
 void destroySplayTree(SplayTree * T)
@@ -68,10 +99,15 @@ void destroySplayTree(SplayTree * T)
 	destroySplayTree(T->right);
 	deallocateSplayNode(T);
 }
+#endif
 
 void destroyAllSplayTrees()
 {
+#ifdef OPENMP
+	destroyRecycleBinArray(treeMemory);
+#else
 	destroyRecycleBin(treeMemory);
+#endif
 	treeMemory = NULL;
 }
 
@@ -354,7 +390,9 @@ int test(int argc, char **argv)
 	velvetLog("---TREE---\n");
 	printTree(T);
 
+#ifndef OPENMP
 	destroySplayTree(T);
+#endif
 
 	return 1;
 }
