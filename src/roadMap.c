@@ -220,48 +220,6 @@ RoadMapArray *importRoadMapArray(char *filename)
 	return result;
 }
 
-// Imports annotations from the appropriate file format
-// Memory allocated within the function
-Annotation *importAnnotations(FILE *file, IDnum * readIndex, IDnum * annotationCount)
-{
-	char line[MAXLINE];
-	long long_var;
-	long long longlong_var, longlong_var2, longlong_var3;
-	IDnum arraySize = 8; 
-	Annotation * annotations = callocOrExit(arraySize, Annotation);
-	Annotation * nextAnnotation = annotations;
-
-	// Read data and fill array
-	nextAnnotation = annotations;
-	sscanf(line, "%*s %ld\n", &long_var);
-	*readIndex = (IDnum) long_var - 1;
-	while(fgets(line, MAXLINE, file) && line[0] != 'R') {
-		sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
-		       &longlong_var, &longlong_var2, &longlong_var3);
-		nextAnnotation->sequenceID = (IDnum) long_var;
-		nextAnnotation->position = (Coordinate) longlong_var;
-		nextAnnotation->start.coord = (Coordinate) longlong_var2;
-		nextAnnotation->finish.coord = (Coordinate) longlong_var3;
-
-		if (nextAnnotation->sequenceID > 0)
-			nextAnnotation->length = nextAnnotation->finish.coord - nextAnnotation->start.coord;
-		else
-			nextAnnotation->length = nextAnnotation->start.coord - nextAnnotation->finish.coord;
-
-		nextAnnotation++;	
-		(*annotationCount)++;
-
-		// Realloc memory if necessary
-		if (*annotationCount == arraySize) {
-			arraySize *= 2;
-			annotations = reallocOrExit(annotations, arraySize, Annotation);
-		}
-	}
-
-	annotations = reallocOrExit(annotations, *annotationCount, Annotation);
-	return annotations;
-}
-
 RoadMap *getRoadMapInArray(RoadMapArray * array, IDnum index)
 {
 	return &(array->array[index]);
