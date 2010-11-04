@@ -260,6 +260,14 @@ Annotation *getNextAnnotation(Annotation * annot)
 	return annot + 1;
 }
 
+// Cleaning up reordering array
+void cleanUpIndexOrder(RoadMapArray * rdmapArray) {
+	if (rdmapArray->indexOrder) {
+		free(rdmapArray->indexOrder);
+		rdmapArray->indexOrder = NULL;
+	}
+}
+
 void destroyRoadMapArray(RoadMapArray * rdmaps) {
 	free(rdmaps->array);
 	free(rdmaps->annotations);

@@ -756,14 +756,6 @@ cleanUpMemory(PreGraph * preGraph, RoadMapArray * rdmaps, IDnum * chains)
 	free(chains);
 }
 
-// Cleaning up reordering array
-void cleanUpIndexOrder(RoadMapArray * rdmapArray) {
-	if (rdmapArray->indexOrder) {
-		free(rdmapArray->indexOrder);
-		rdmapArray->indexOrder = NULL;
-	}
-}
-
 // The full monty, wrapped up in one function
 PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 {
