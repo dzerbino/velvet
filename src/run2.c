@@ -449,6 +449,7 @@ int main(int argc, char **argv)
 				  sequences);
 
 		// Paired end resolution
+		createReadPairingArray(sequences);
 		pebbleRounds += pairedCategories(sequences);
 		detachDubiousReads(sequences, dubious);
 		activateGapMarkers(graph);

@@ -98,7 +98,7 @@ typedef uint32_t ArrayIdx;
 
 // Atomic word
 typedef struct kmer_st Kmer;
-typedef int64_t KmerKey;
+typedef uint64_t KmerKey;
 
 // Just a sequence string, but with just two bits per character
 typedef struct tString_st TightString;
