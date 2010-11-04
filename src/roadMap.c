@@ -70,7 +70,11 @@ Coordinate getFinish(Annotation * annot)
 IDnum getAnnotSequenceID(Annotation * annot, RoadMapArray * rdmaps)
 {
 	if (rdmaps && rdmaps->indexOrder)
-		return rdmaps->indexOrder[annot->sequenceID];
+	{
+		if (annot->sequenceID < 0)
+			return -rdmaps->indexOrder[-annot->sequenceID - 1];
+		return rdmaps->indexOrder[annot->sequenceID - 1];
+	}
 	else
 		return annot->sequenceID;
 }
@@ -97,12 +101,12 @@ Coordinate getAnnotationLength(Annotation * annot)
 // Index conversion table
 //////////////////////////////////////////////////////////////
 
+#ifdef OPENMP
 typedef struct indexConversion_st {
 	IDnum initialIndex;
 	IDnum actualIndex;
 } IndexConversion;
 
-#ifdef OPENMP
 static int compareIndexConversions(const void * A, const void * B) {
 	IndexConversion * rdmapA = (IndexConversion *) A; 
 	IndexConversion * rdmapB = (IndexConversion *) B; 
