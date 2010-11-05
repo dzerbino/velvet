@@ -67,16 +67,9 @@ Coordinate getFinish(Annotation * annot)
 	return annot->finish.coord;
 }
 
-IDnum getAnnotSequenceID(Annotation * annot, RoadMapArray * rdmaps)
+IDnum getAnnotSequenceID(Annotation * annot)
 {
-	if (rdmaps && rdmaps->indexOrder)
-	{
-		if (annot->sequenceID < 0)
-			return -rdmaps->indexOrder[-annot->sequenceID];
-		return rdmaps->indexOrder[annot->sequenceID];
-	}
-	else
-		return annot->sequenceID;
+	return annot->sequenceID;
 }
 
 Coordinate getStart(Annotation * annot)
@@ -101,26 +94,6 @@ Coordinate getAnnotationLength(Annotation * annot)
 // Index conversion table
 //////////////////////////////////////////////////////////////
 
-#ifdef OPENMP
-typedef struct indexConversion_st {
-	IDnum initialIndex;
-	IDnum actualIndex;
-} IndexConversion;
-
-static int compareIndexConversions(const void * A, const void * B) {
-	IndexConversion * rdmapA = (IndexConversion *) A; 
-	IndexConversion * rdmapB = (IndexConversion *) B; 
-	IDnum diff = rdmapA->actualIndex - rdmapB->actualIndex;
-
-	if (diff > 0) 
-		return 1;
-	else if (diff == 0)
-		return 0;
-	else 
-		return -1;
-}
-#endif
-
 //////////////////////////////////////////////////////////////
 
 // Imports roadmap from the appropriate file format
@@ -141,8 +114,8 @@ RoadMapArray *importRoadMapArray(char *filename)
 	long long_var, long_var2;
 	long long longlong_var, longlong_var2, longlong_var3;
 #ifdef OPENMP
-	IndexConversion * indexConversionTable, * currentIndexConversionEntry;
-	IDnum counter = 1;
+	Coordinate *annotationOffset;
+	IDnum thisSeqID = 0;
 #endif
 
 	velvetLog("Reading roadmap file %s\n", filename);
@@ -158,9 +131,26 @@ RoadMapArray *importRoadMapArray(char *filename)
 	result->array = callocOrExit(sequenceCount, RoadMap);
 	result->double_strand = (boolean) short_var;
 
+#ifdef OPENMP
+	annotationOffset = callocOrExit(sequenceCount + 1, Coordinate);
+#endif
 	while (fgets(line, maxline, file) != NULL)
+	{
 		if (line[0] != 'R')
+		{
 			annotationCount++;
+#ifdef OPENMP
+			annotationOffset[thisSeqID]++;
+#endif
+		}
+#ifdef OPENMP
+		else
+		{
+		    	sscanf(line, "%*s %ld\n", &long_var);
+			thisSeqID = (IDnum) long_var;
+		}
+#endif
+	}
 
 	result->annotations = callocOrExit(annotationCount, Annotation);
 	nextAnnotation = result->annotations;
@@ -169,8 +159,9 @@ RoadMapArray *importRoadMapArray(char *filename)
 	file = fopen(filename, "r");
 
 #ifdef OPENMP
-	indexConversionTable = callocOrExit(sequenceCount, IndexConversion);
-	currentIndexConversionEntry = indexConversionTable;
+	// Cumulative sum
+	for (seqID = 1; seqID <= sequenceCount; seqID++)
+		annotationOffset[seqID] += annotationOffset[seqID - 1];
 #endif
 
 	rdmap = result->array - 1;
@@ -180,11 +171,12 @@ RoadMapArray *importRoadMapArray(char *filename)
 		if (line[0] == 'R') {
 #ifdef OPENMP
 		    	sscanf(line, "%*s %ld\n", &long_var);
-			currentIndexConversionEntry->initialIndex = counter++;
-			currentIndexConversionEntry->actualIndex = (IDnum) long_var; 
-			currentIndexConversionEntry++;
-#endif
+			thisSeqID = (IDnum) long_var;
+			nextAnnotation = result->annotations + annotationOffset[thisSeqID - 1];
+			rdmap = result->array + thisSeqID - 1;
+#else
 			rdmap++;
+#endif
 		} else {
 			sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
 			       &longlong_var, &longlong_var2, &longlong_var3);
@@ -209,14 +201,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 	velvetLog("%d roadmaps read\n", sequenceCount);
 
 #ifdef OPENMP
-	// Sort the index conversion table 
-	qsort(indexConversionTable, sequenceCount, sizeof(IndexConversion), compareIndexConversions);
-
-	// Record the order of the sequence indices
-	result->indexOrder = callocOrExit(sequenceCount + 1, IDnum);
-	for (counter = 0; counter < sequenceCount; counter++)
-		result->indexOrder[counter + 1] = indexConversionTable[counter].initialIndex;
-	free(indexConversionTable);
+	free(annotationOffset);
 #endif
 
 	fclose(file);
@@ -258,14 +243,6 @@ void incrementAnnotationCoordinates(Annotation * annot)
 Annotation *getNextAnnotation(Annotation * annot)
 {
 	return annot + 1;
-}
-
-// Cleaning up reordering array
-void cleanUpIndexOrder(RoadMapArray * rdmapArray) {
-	if (rdmapArray->indexOrder) {
-		free(rdmapArray->indexOrder);
-		rdmapArray->indexOrder = NULL;
-	}
 }
 
 void destroyRoadMapArray(RoadMapArray * rdmaps) {
