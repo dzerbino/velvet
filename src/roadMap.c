@@ -72,8 +72,8 @@ IDnum getAnnotSequenceID(Annotation * annot, RoadMapArray * rdmaps)
 	if (rdmaps && rdmaps->indexOrder)
 	{
 		if (annot->sequenceID < 0)
-			return -rdmaps->indexOrder[-annot->sequenceID - 1];
-		return rdmaps->indexOrder[annot->sequenceID - 1];
+			return -rdmaps->indexOrder[-annot->sequenceID];
+		return rdmaps->indexOrder[annot->sequenceID];
 	}
 	else
 		return annot->sequenceID;
@@ -213,9 +213,9 @@ RoadMapArray *importRoadMapArray(char *filename)
 	qsort(indexConversionTable, sequenceCount, sizeof(IndexConversion), compareIndexConversions);
 
 	// Record the order of the sequence indices
-	result->indexOrder = callocOrExit(sequenceCount, IDnum);
+	result->indexOrder = callocOrExit(sequenceCount + 1, IDnum);
 	for (counter = 0; counter < sequenceCount; counter++)
-		result->indexOrder[counter] = indexConversionTable[counter].initialIndex;
+		result->indexOrder[counter + 1] = indexConversionTable[counter].initialIndex;
 	free(indexConversionTable);
 #endif
 

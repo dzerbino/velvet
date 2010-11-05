@@ -486,7 +486,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 
 	clearKmer(&polyA);
 
-#ifdef OMP
+#ifdef OPENMP
 	#pragma omp critical
 	{
 #endif
@@ -522,7 +522,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 			}
 		}
 	}
-#ifdef OMP
+#ifdef OPENMP
 	}
 #endif
 
