@@ -1728,11 +1728,46 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 void createReadPairingArray(ReadSet* reads) {
 	IDnum index;
 	IDnum *mateReads = mallocOrExit(reads->readCount, IDnum);
+	Category cat = 0;
+	int phase = 0;
 
 	for (index = 0; index < reads->readCount; index++) 
 		mateReads[index] = -1;
 
 	reads->mateReads = mateReads;
+
+	for (index = 0; index < reads->readCount; index++)
+	{
+		if (cat & 1)
+		{
+			if (reads->categories[index] != cat)
+			{
+				if (phase == 1)
+				{
+					reads->mateReads[index - 1] = -1;
+					reads->categories[index - 1]--;
+					phase = 0;
+				}
+				cat = reads->categories[index];
+			}
+			else if (phase == 0)
+			{
+				reads->mateReads[index] = index + 1;
+				phase = 1;
+			}
+			else
+			{
+				reads->mateReads[index] = index - 1;
+				phase = 0;
+			}
+		}
+		else if (reads->categories[index] != cat)
+		{
+			reads->mateReads[index] = index + 1;
+			phase = 1;
+			cat = reads->categories[index];
+		}
+	}
 }
 
 int pairedCategories(ReadSet * reads)
@@ -1745,7 +1780,7 @@ int pairedCategories(ReadSet * reads)
 		pairedCat[index] = 0;
 
 	for (index = 0; index < reads->readCount; index++) {
-		if (reads->categories[index] % 2 && !pairedCat[reads->categories[index] / 2]) {
+		if (reads->categories[index] & 1 && !pairedCat[reads->categories[index] / 2]) {
 			pairedCat[reads->categories[index] / 2] = true;
 			if (pairedCatCount++ == CATEGORIES)
 				break;
