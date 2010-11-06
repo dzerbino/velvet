@@ -30,6 +30,7 @@ struct readSet_st {
 	Probability **kmerProbabilities;
 	IDnum *mateReads;
 	Category *categories;
+	unsigned char *secondInPair;
 	IDnum readCount;
 };
 
@@ -62,7 +63,8 @@ void logInstructions(int argc, char **argv, char *directory);
 
 // Read pairing info
 void createReadPairingArray(ReadSet* reads);
-boolean pairUpReads(ReadSet * reads, Category cat);
+int pairedCategories(ReadSet * reads);
+boolean isSecondInPair(ReadSet * reads, IDnum index);
 void detachDubiousReads(ReadSet * reads, boolean * dubiousReads);
 
 void destroyReadSet(ReadSet * reads);

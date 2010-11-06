@@ -448,15 +448,9 @@ int main(int argc, char **argv)
 		readCoherentGraph(graph, isUniqueSolexa, expectedCoverage,
 				  sequences);
 
-		// Paired ends module
+		// Paired end resolution
 		createReadPairingArray(sequences);
-		for (cat = 0; cat < CATEGORIES; cat++) 
-			if(pairUpReads(sequences, 2 * cat + 1))
-				pebbleRounds++;
-
-		if (pairUpReads(sequences, LONG_PAIRED))
-			pebbleRounds++;
-
+		pebbleRounds += pairedCategories(sequences);
 		detachDubiousReads(sequences, dubious);
 		activateGapMarkers(graph);
 		for ( ;pebbleRounds > 0; pebbleRounds--)
