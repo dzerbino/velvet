@@ -138,12 +138,38 @@ static RecycleBin *smallNodeListMemory = NULL;
 
 #define BLOCKSIZE 1000
 
+#ifdef OPENMP
+static void initSmallNodeListMemory(void)
+{
+	int n = omp_get_max_threads();
+
+#pragma omp critical
+	{
+		if (smallNodeListMemory == NULL)
+			smallNodeListMemory = newRecycleBinArray(n, sizeof(SmallNodeList), BLOCKSIZE);
+	}
+}
+#endif
+
 static SmallNodeList *allocateSmallNodeList()
 {
+#ifdef OPENMP
+#if DEBUG
+	if (smallNodeListMemory == NULL)
+	{
+		velvetLog("The memory for small nodes seems uninitialised, "
+				"this is probably a bug, aborting.\n");
+		abort();
+	}
+#endif
+	return allocatePointer(getRecycleBinInArray(smallNodeListMemory,
+				omp_get_thread_num()));
+#else
 	if (smallNodeListMemory == NULL)
 		smallNodeListMemory = newRecycleBin(sizeof(SmallNodeList), BLOCKSIZE);
 
 	return allocatePointer(smallNodeListMemory);
+#endif
 }
 
 static void deallocateSmallNodeList(SmallNodeList * smallNodeList)
@@ -1049,6 +1075,7 @@ static void fillUpGraph(ReadSet * reads,
 	resetNodeStatus(graph);
 
 #ifdef OPENMP
+	initSmallNodeListMemory();
 	createNodeLocks(graph);
 	createOwnerThreads(graph);
 	#pragma omp parallel for
