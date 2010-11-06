@@ -1725,7 +1725,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 	fclose(outfile);
 }
 
-void createReadPairingArray(ReadSet* reads) {
+void createReadPairingArray(ReadSet* reads)
+{
 	IDnum index;
 	IDnum *mateReads = mallocOrExit(reads->readCount, IDnum);
 	Category cat = 0;
@@ -1738,8 +1739,10 @@ void createReadPairingArray(ReadSet* reads) {
 
 	for (index = 0; index < reads->readCount; index++)
 	{
+		// Paired category
 		if (cat & 1)
 		{
+			// Leaving the paired category
 			if (reads->categories[index] != cat)
 			{
 				if (phase == 1)
@@ -1749,6 +1752,12 @@ void createReadPairingArray(ReadSet* reads) {
 					phase = 0;
 				}
 				cat = reads->categories[index];
+				// Into another paired category
+				if (cat & 1)
+				{
+					reads->mateReads[index] = index + 1;
+					phase = 1;
+				}
 			}
 			else if (phase == 0)
 			{
@@ -1761,11 +1770,16 @@ void createReadPairingArray(ReadSet* reads) {
 				phase = 0;
 			}
 		}
+		// Leaving an unpaired category
 		else if (reads->categories[index] != cat)
 		{
-			reads->mateReads[index] = index + 1;
-			phase = 1;
 			cat = reads->categories[index];
+			// Into a paired category
+			if (cat & 1)
+			{
+				reads->mateReads[index] = index + 1;
+				phase = 1;
+			}
 		}
 	}
 }
@@ -1850,8 +1864,8 @@ void detachDubiousReads(ReadSet * reads, boolean * dubiousReads)
 		else
 		    pairID = index + 1;
 
-		reads->categories[index] = (reads->categories[index] % 2) * 2;
-		reads->categories[pairID] = (reads->categories[pairID] % 2) * 2;
+		reads->categories[index] = (reads->categories[index] / 2) * 2;
+		reads->categories[pairID] = (reads->categories[pairID] / 2) * 2;
 	}
 }
 
