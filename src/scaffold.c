@@ -22,6 +22,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <sys/time.h>
 
 #include "globals.h"
 #include "graph.h"
@@ -676,6 +677,10 @@ static void createConnection(IDnum nodeID, IDnum node2ID,
 {
 	Connection *connect = findConnection(nodeID, node2ID);
 
+	/* SF TODO I think that we can lock at the scaffold level:
+	 * locks the scaffolds of both nodes, find and update the connection or
+	 * create it, unlock.  This would avoid any critical section.
+	 */
 #ifdef OPENMP
 	#pragma omp critical
 	{
@@ -967,10 +972,13 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 {
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
+	struct timeval start, end, diff;
+
 	scaffold = callocOrExit(2 * nodes + 1, Connection *);
 
 	velvetLog("Computing direct node to node mappings\n");
 
+	gettimeofday(&start, NULL);
 #ifdef OPENMP
 	#pragma omp parallel for
 #endif 
@@ -981,6 +989,9 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 		projectFromNode(nodeID, readNodes, readNodeCounts,
 				readPairs, cats, dubious, lengths);
 	}
+	gettimeofday(&end, NULL);
+	timersub(&end, &start, &diff);
+	velvetLog(" === Nodes Scaffolded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
 
 	return scaffold;
 }
