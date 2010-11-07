@@ -183,15 +183,19 @@ static void deallocateSmallNodeList(SmallNodeList * smallNodeList)
 #endif
 }
 
-static void memorizeNode(Node * node, SmallNodeList ** nodePile)
+static inline void memorizeNode(Node * node, SmallNodeList ** nodePile)
 {
 	SmallNodeList *list = allocateSmallNodeList();
 	list->node = node;
 	list->next = *nodePile;
 	*nodePile = list;
+#ifndef OPENMP
+	setSingleNodeStatus(node, true);
+#endif
 }
 
-static boolean nodeMemorized(Node * node, SmallNodeList * nodePile) {
+static inline boolean nodeMemorized(Node * node, SmallNodeList * nodePile) {
+#ifdef OPENMP
 	SmallNodeList * list;
 
 	for (list = nodePile; list; list = list->next)
@@ -199,6 +203,9 @@ static boolean nodeMemorized(Node * node, SmallNodeList * nodePile) {
 			return true;
 
 	return false;
+#else
+	return getNodeStatus(node);
+#endif
 }
 
 static void unlockMemorizedNodes(SmallNodeList ** nodePile)
@@ -210,6 +217,8 @@ static void unlockMemorizedNodes(SmallNodeList ** nodePile)
 		*nodePile = list->next;
 #ifdef OPENMP
 		unLockNode(list->node);
+#else
+		setSingleNodeStatus (list->node, false);
 #endif
 		deallocateSmallNodeList(list);
 	}
@@ -647,7 +656,7 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 	if (!readStartsAreActivated(graph))
 		activateReadStarts(graph);
 
-	// Fill in the initial word : 
+	// Fill in the initial word :
 	for (readNucleotideIndex = 0;
 	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++) {
 		nucleotide = getNucleotide(readNucleotideIndex, tString);
@@ -681,10 +690,7 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 		}
 
 		// Search for reference mapping
-		if (annotCount < annotationCount
-			&& uniqueIndex >= getPosition(annotation)
-			&& getAnnotSequenceID(annotation) <= refCount
-			&& getAnnotSequenceID(annotation) >= -refCount)
+		if (annotCount < annotationCount && uniqueIndex >= getPosition(annotation))
 		{
 			refID = getAnnotSequenceID(annotation);
 			if (refID > 0)
@@ -760,7 +766,6 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 #endif
 			if (!nodeMemorized(node, nodePile)) {
 				incrementReadStartCount(node, graph);
-				setSingleNodeStatus(node, true);
 				memorizeNode(node, &nodePile);
 			}
 		}
