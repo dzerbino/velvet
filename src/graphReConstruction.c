@@ -23,6 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <sys/time.h>
 
 #ifdef OPENMP
 #include <omp.h>
@@ -1024,6 +1025,7 @@ static void fillUpGraph(ReadSet * reads,
 	IDnum annotationCount = 0;
 	boolean second_in_pair = false;
 	Coordinate *annotationOffset;
+	struct timeval start, end, diff;
 	
 	if (referenceMappings)
 	{
@@ -1036,6 +1038,7 @@ static void fillUpGraph(ReadSet * reads,
 
 	resetNodeStatus(graph);
 
+	gettimeofday(&start, NULL);
 #ifdef OPENMP
 	initSmallNodeListMemory();
 	createNodeLocks(graph);
@@ -1066,7 +1069,11 @@ static void fillUpGraph(ReadSet * reads,
 						second_in_pair);
 	}
 	createNodeReadStartArrays(graph);
+	gettimeofday(&end, NULL);
+	timersub(&end, &start, &diff);
+	velvetLog(" === Ghost-Threaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
 
+	gettimeofday(&start, NULL);
 #ifdef OPENMP
 	#pragma omp parallel for
 #endif
@@ -1092,6 +1099,10 @@ static void fillUpGraph(ReadSet * reads,
 					   referenceMappings, referenceMappingCount,
 					   refCount, annotations, annotationCount, second_in_pair);
 	}
+	gettimeofday(&end, NULL);
+	timersub(&end, &start, &diff);
+	velvetLog(" === Threaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
+
 #ifdef OPENMP
 	free(nodeLocks);
 	nodeLocks = NULL;
