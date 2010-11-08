@@ -98,12 +98,16 @@ static inline void lockTwoNodes(IDnum nodeID, IDnum node2ID)
 	if (node2ID < 0)
 		node2ID = -node2ID;
 
-tryLock:
-	omp_set_lock (nodeLocks + nodeID);
-	if (!omp_test_lock (nodeLocks + node2ID))
+	/* Lock lowest ID first to avoid deadlocks */
+	if (nodeID < node2ID)
 	{
-		omp_unset_lock (nodeLocks + nodeID);
-		goto tryLock;
+		omp_set_lock (nodeLocks + nodeID);
+		omp_set_lock (nodeLocks + node2ID);
+	}
+	else
+	{
+		omp_set_lock (nodeLocks + node2ID);
+		omp_set_lock (nodeLocks + nodeID);
 	}
 }
 
