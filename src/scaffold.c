@@ -23,6 +23,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <time.h>
 #include <math.h>
 #include <sys/time.h>
+ 
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 #include "globals.h"
 #include "graph.h"
@@ -64,6 +68,56 @@ static Graph *graph;
 static Connection **scaffold = NULL;
 static RecycleBin *connectionMemory = NULL;
 static boolean estimated[CATEGORIES + 1];
+
+/* Array of per-node locks */
+
+#ifdef OPENMP
+static omp_lock_t *nodeLocks = NULL;
+
+static void
+createNodeLocks(Graph *graph)
+{
+	IDnum nbNodes;
+	IDnum nodeIndex;
+
+	nbNodes = nodeCount(graph) + 1;
+	if (nodeLocks)
+		free (nodeLocks);
+	nodeLocks = mallocOrExit(nbNodes, omp_lock_t);
+
+	#pragma omp parallel for
+	for (nodeIndex = 0; nodeIndex < nbNodes; nodeIndex++)
+		omp_init_lock(nodeLocks + nodeIndex);
+}
+
+/* Tries to avoid deadlocking */
+static inline void lockTwoNodes(IDnum nodeID, IDnum node2ID)
+{
+	if (nodeID < 0)
+		nodeID = -nodeID;
+	if (node2ID < 0)
+		node2ID = -node2ID;
+
+tryLock:
+	omp_set_lock (nodeLocks + nodeID);
+	if (!omp_test_lock (nodeLocks + node2ID))
+	{
+		omp_unset_lock (nodeLocks + nodeID);
+		goto tryLock;
+	}
+}
+
+static inline void unLockTwoNodes(IDnum nodeID, IDnum node2ID)
+{
+	if (nodeID < 0)
+		nodeID = -nodeID;
+	if (node2ID < 0)
+		node2ID = -node2ID;
+
+	omp_unset_lock (nodeLocks + nodeID);
+	omp_unset_lock (nodeLocks + node2ID);
+}
+#endif
 
 static Connection *allocateConnection()
 {
@@ -682,8 +736,7 @@ static void createConnection(IDnum nodeID, IDnum node2ID,
 	 * create it, unlock.  This would avoid any critical section.
 	 */
 #ifdef OPENMP
-	#pragma omp critical
-	{
+	lockTwoNodes(nodeID, node2ID);
 #endif
 
 	if (connect != NULL)
@@ -694,7 +747,7 @@ static void createConnection(IDnum nodeID, IDnum node2ID,
 				    paired_count, distance, variance);
 
 #ifdef OPENMP
-	}
+	unLockTwoNodes(nodeID, node2ID);
 #endif
 }
 
@@ -980,6 +1033,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 
 	gettimeofday(&start, NULL);
 #ifdef OPENMP
+	createNodeLocks(graph);
 	#pragma omp parallel for
 #endif 
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++) {
