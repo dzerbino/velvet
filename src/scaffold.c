@@ -123,13 +123,23 @@ static inline void unLockTwoNodes(IDnum nodeID, IDnum node2ID)
 }
 #endif
 
+/* SF TODO Have thread-specific recycleBin? */
 static Connection *allocateConnection()
 {
+	Connection *connect;
+#ifdef OPENMP
+#pragma omp critical
+	{
+#endif
 	if (connectionMemory == NULL)
 		connectionMemory =
 		    newRecycleBin(sizeof(Connection), BLOCK_SIZE);
 
-	return allocatePointer(connectionMemory);
+	connect = allocatePointer(connectionMemory);
+#ifdef OPENMP
+	}
+#endif
+	return connect;
 }
 
 static void deallocateConnection(Connection * connect)
@@ -733,15 +743,12 @@ static void createConnection(IDnum nodeID, IDnum node2ID,
 			     IDnum paired_count,
 			     Coordinate distance, double variance)
 {
-	Connection *connect = findConnection(nodeID, node2ID);
+	Connection *connect;
 
-	/* SF TODO I think that we can lock at the scaffold level:
-	 * locks the scaffolds of both nodes, find and update the connection or
-	 * create it, unlock.  This would avoid any critical section.
-	 */
 #ifdef OPENMP
 	lockTwoNodes(nodeID, node2ID);
 #endif
+	connect = findConnection(nodeID, node2ID);
 
 	if (connect != NULL)
 		readjustConnection(connect, distance, variance,
@@ -1047,6 +1054,9 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 		projectFromNode(nodeID, readNodes, readNodeCounts,
 				readPairs, cats, dubious, lengths);
 	}
+#ifdef OPENMP
+	free(nodeLocks);
+#endif
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
 	velvetLog(" === Nodes Scaffolded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
