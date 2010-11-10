@@ -1056,6 +1056,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 	}
 #ifdef OPENMP
 	free(nodeLocks);
+	nodeLocks = NULL;
 #endif
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
