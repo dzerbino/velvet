@@ -341,8 +341,8 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex <= sequenceCount_pg(preGraph);
 	     sequenceIndex++) {
 		if (sequenceIndex % 100000 == 0)
-			velvetLog("Sequence %d / %d\n", sequenceIndex,
-			       sequenceCount_pg(preGraph));
+			velvetLog("Sequence %li / %li\n", (long) sequenceIndex,
+			       (long) sequenceCount_pg(preGraph));
 
 		while (line[0] != '>')
 			if (!fgets(line, lineLength, file))
@@ -624,8 +624,8 @@ static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex++) {
 
 		if (sequenceIndex % 100000 == 0)
-			velvetLog("Connecting %d / %d\n", sequenceIndex,
-			       sequenceCount_pg(preGraph));
+			velvetLog("Connecting %li / %li\n", (long) sequenceIndex,
+			       (long) sequenceCount_pg(preGraph));
 
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
 		annotIndex = 0;
@@ -693,8 +693,8 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex++) {
 
 		if (sequenceIndex % 100000 == 0)
-			velvetLog("Connecting %d / %d\n", sequenceIndex,
-			       sequenceCount_pg(preGraph));
+			velvetLog("Connecting %li / %li\n", (long) sequenceIndex,
+			       (long) sequenceCount_pg(preGraph));
 
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
 		annotIndex = 0;
@@ -777,8 +777,8 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 	countPreNodes(rdmapArray, preGraph, markerCounters,
 		      insertionMarkers, veryLastMarker);
 
-	velvetLog("%d preNodes counted, creating them now\n",
-	       preNodeCount_pg(preGraph));
+	velvetLog("%li preNodes counted, creating them now\n",
+	       (long) preNodeCount_pg(preGraph));
 	createPreNodes(rdmapArray, preGraph, markerCounters,
 		       insertionMarkers, veryLastMarker, chains,
 		       sequenceFilename, WORDLENGTH);

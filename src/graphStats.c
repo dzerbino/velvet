@@ -499,9 +499,9 @@ void chainSawCorrection(Graph * graph, int minMult)
 		}
 	}
 
-	velvetLog("%d dubious nodes removed\n", removed);
+	velvetLog("%li dubious nodes removed\n", (long) removed);
 	concatenateGraph(graph);
-	velvetLog("%d node in the end\n", nodeCount(graph));
+	velvetLog("%li node in the end\n", (long) nodeCount(graph));
 }
 
 void grossErrorRemoval(Graph * graph, IDnum firstStrain)
@@ -524,9 +524,9 @@ void grossErrorRemoval(Graph * graph, IDnum firstStrain)
 		}
 	}
 
-	velvetLog("%d dubious nodes removed\n", removed);
+	velvetLog("%li dubious nodes removed\n", (long) removed);
 	concatenateGraph(graph);
-	velvetLog("%d node in the end\n", nodeCount(graph));
+	velvetLog("%li node in the end\n", (long) nodeCount(graph));
 }
 
 IDnum countSNPs(Graph * graph, IDnum firstStrain, int WORDLENGTH)
@@ -735,9 +735,9 @@ Coordinate readCoverage(Node * node)
 	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
 		if (getTwinMarker(marker) == NULL_IDX) {
-			velvetLog("Node %d screwed up\n", getNodeID(node));
-			velvetLog("Sequence %d\n",
-			       getPassageMarkerSequenceID(marker));
+			velvetLog("Node %li screwed up\n", (long) getNodeID(node));
+			velvetLog("Sequence %li\n",
+			       (long) getPassageMarkerSequenceID(marker));
 			abort();
 		}
 		sum += getPassageMarkerLength(marker);
@@ -769,9 +769,9 @@ Coordinate newReadCoverage(Node * node, IDnum firstStrain)
 		if (getAbsolutePassMarkerSeqID(marker) >= firstStrain) {
 			sum += getPassageMarkerLength(marker);
 			if (getPassageMarkerLength(marker) < 0)
-				velvetLog("Bizarre marker %d at node %d\n",
-				       getPassageMarkerSequenceID(marker),
-				       getNodeID(node));
+				velvetLog("Bizarre marker %li at node %li\n",
+				       (long) getPassageMarkerSequenceID(marker),
+				       (long) getNodeID(node));
 		}
 
 	return sum;
@@ -953,7 +953,7 @@ void destroyStrainSpecificIslands(Graph * graph, IDnum firstStrain)
 	}
 
 	// Renumber graph nodes
-	velvetLog("Removed %d nodes \n", counter);
+	velvetLog("Removed %li nodes \n", (long) counter);
 	renumberNodes(graph);
 }
 
@@ -1011,7 +1011,7 @@ void displayStrainOnlyDescriptors(Graph * graph, IDnum firstStrain)
 	destroyStrainSpecificIslands(graph, firstStrain);
 
 	for (nodeIndex = 1; nodeIndex <= nodeCount(graph); nodeIndex++) {
-		velvetLog("node %d from %d\n", nodeIndex, nodeCount(graph));
+		velvetLog("node %li from %li\n", (long) nodeIndex, (long) nodeCount(graph));
 		node = getNodeInGraph(graph, nodeIndex);
 
 		if (isOnlyStrain(node, firstStrain)) {
@@ -1214,7 +1214,7 @@ void displayBreakpoints(Graph * graph, IDnum firstStrain)
 	}
 
 
-	velvetLog("%d\t%d\t%d\n", counters[0], counters[1], counters[2]);
+	velvetLog("%li\t%li\t%li\n", (long) counters[0], (long) counters[1], (long) counters[2]);
 	free(strainDestination);
 	free(genomeDestination);
 }
@@ -1245,7 +1245,7 @@ void exportArcSequence(Arc * arc, FILE * outfile, int WORDLENGTH,
 	appendNodeSequence(getDestination(arc), output,
 			   getNodeLength(getOrigin(arc)));
 	str = readTightString(output);
-	velvetFprintf(outfile, "> ARC from NODE %d", getNodeID(getOrigin(arc)));
+	velvetFprintf(outfile, "> ARC from NODE %li", (long) getNodeID(getOrigin(arc)));
 	velvetFprintf(outfile, "%s\n", str);
 	destroyTightString(output);
 	free(str);
@@ -2574,7 +2574,7 @@ static void exportAMOSMarker(FILE * outfile, PassageMarkerI marker,
 		sequenceStart += wordShift;
 
 	velvetFprintf(outfile, "{TLE\n");
-	velvetFprintf(outfile, "src:%d\n", getAbsolutePassMarkerSeqID(marker));
+	velvetFprintf(outfile, "src:%li\n", (long) getAbsolutePassMarkerSeqID(marker));
 	if (getStartOffset(marker) > start)
 		velvetFprintf(outfile, "off:%lld\n",
 			(long long) (getStartOffset(marker) - start));
@@ -2601,7 +2601,7 @@ static void exportAMOSShortMarker(FILE * outfile, ShortReadMarker * marker,
 		return;
 
 	velvetFprintf(outfile, "{TLE\n");
-	velvetFprintf(outfile, "src:%d\n", getShortReadMarkerID(marker));
+	velvetFprintf(outfile, "src:%li\n", (long) getShortReadMarkerID(marker));
 	velvetFprintf(outfile, "off:%lld\n", (long long) (offset - start));
 	velvetFprintf(outfile, "clr:0,%lld\n", (long long) getLength(sequence));
 	velvetFprintf(outfile, "}\n");
@@ -2629,7 +2629,7 @@ static void exportAMOSReverseShortMarker(FILE * outfile,
 		return;
 
 	velvetFprintf(outfile, "{TLE\n");
-	velvetFprintf(outfile, "src:%d\n", getShortReadMarkerID(marker));
+	velvetFprintf(outfile, "src:%li\n", (long) getShortReadMarkerID(marker));
 	velvetFprintf(outfile, "off:%lld\n", (long long) (offset - start));
 	velvetFprintf(outfile, "clr:%lld,0\n", (long long) getLength(sequence));
 	velvetFprintf(outfile, "}\n");
@@ -2651,8 +2651,8 @@ static void exportAMOSContig(FILE * outfile, ReadSet * reads, Node * node,
 	Coordinate length = contigFinish - contigStart + wordShift;
 
 	velvetFprintf(outfile, "{CTG\n");
-	velvetFprintf(outfile, "iid:%d\n", iid);
-	velvetFprintf(outfile, "eid:%d-%d\n", getNodeID(node), internalIndex);
+	velvetFprintf(outfile, "iid:%li\n", (long) iid);
+	velvetFprintf(outfile, "eid:%li-%li\n", (long) getNodeID(node), (long) internalIndex);
 
 	velvetFprintf(outfile, "seq:\n");
 	for (start = 0; start <= length; start += 60) {
@@ -2733,14 +2733,14 @@ static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
 	start = 0;
 
 	velvetFprintf(outfile, "{SCF\n");
-	velvetFprintf(outfile, "eid:%d\n", getNodeID(node));
+	velvetFprintf(outfile, "eid:%li\n", (long) getNodeID(node));
 	for (gap = getGap(node, graph); gap; gap = getNextGap(gap)) {
 		finish = getGapStart(gap);
 		velvetFprintf(outfile, "{TLE\n");
 		velvetFprintf(outfile, "off:%lld\n", (long long) start);
 		velvetFprintf(outfile, "clr:0,%lld\n",
 			(long long) (finish - start + (long long) wordShift));
-		velvetFprintf(outfile, "src:%d\n", contigIndex++);
+		velvetFprintf(outfile, "src:%li\n", (long) contigIndex++);
 		velvetFprintf(outfile, "}\n");
 		start = getGapFinish(gap);
 	}
@@ -2748,7 +2748,7 @@ static void exportAMOSNode(FILE * outfile, ReadSet * reads, Node * node,
 	velvetFprintf(outfile, "{TLE\n");
 	velvetFprintf(outfile, "off:%lld\n", (long long) start);
 	velvetFprintf(outfile, "clr:0,%lld\n", (long long) (finish - start));
-	velvetFprintf(outfile, "src:%d\n", contigIndex++);
+	velvetFprintf(outfile, "src:%li\n", (long) contigIndex++);
 	velvetFprintf(outfile, "}\n");
 
 	velvetFprintf(outfile, "}\n");
@@ -2761,10 +2761,10 @@ static void exportAMOSRead(FILE * outfile, TightString * tString,
 	char str[100];
 
 	velvetFprintf(outfile, "{RED\n");
-	velvetFprintf(outfile, "iid:%d\n", index);
-	velvetFprintf(outfile, "eid:%d\n", index);
+	velvetFprintf(outfile, "iid:%li\n", (long) index);
+	velvetFprintf(outfile, "eid:%li\n", (long) index);
 	if (frg_index > 0)
-		velvetFprintf(outfile, "frg:%d\n", frg_index);
+		velvetFprintf(outfile, "frg:%li\n", (long) frg_index);
 
 	velvetFprintf(outfile, "seq:\n");
 	start = 0;
@@ -2814,10 +2814,10 @@ void exportAMOSContigs(char *filename, Graph * graph,
 			velvetFprintf(outfile, "{FRG\n");
 			velvetFprintf(outfile, "lib:%d\n",
 				(int) ((reads->categories[index - 1] / 2) + 1));
-			velvetFprintf(outfile, "rds:%d,%d\n", index,
-				index + 1);
-			velvetFprintf(outfile, "eid:%d\n", index);
-			velvetFprintf(outfile, "iid:%d\n", index);
+			velvetFprintf(outfile, "rds:%li,%li\n", (long) index,
+				(long) index + 1);
+			velvetFprintf(outfile, "eid:%li\n", (long) index);
+			velvetFprintf(outfile, "iid:%li\n", (long) index);
 			velvetFprintf(outfile, "typ:I\n");
 			velvetFprintf(outfile, "}\n");
 			index++;
@@ -2924,9 +2924,9 @@ static void checkNodeForHallidayJunction(Node * node, Graph * graph)
 		if (nodeC == NULL || nodeC == node
 		    || simpleArcCount(nodeC) != 2
 		    || !isUniqueBasic(nodeC)) {
-			velvetLog("NO %d %d %d %d\n", getNodeID(node),
-			       getNodeID(nodeA), getNodeID(nodeB),
-			       getNodeID(nodeC));
+			velvetLog("NO %li %li %li %li\n", (long) getNodeID(node),
+			       (long) getNodeID(nodeA), (long) getNodeID(nodeB),
+			       (long) getNodeID(nodeC));
 			return;
 		}
 	} else {
@@ -2961,9 +2961,9 @@ static void checkNodeForHallidayJunction(Node * node, Graph * graph)
 	if (nodeD != nodeC && nodeD != node)
 		return;
 
-	velvetLog("JOHNNY HALLIDAY JUNCTION %d %d %d %d\n",
-	       getNodeID(node), getNodeID(nodeC), getNodeID(nodeA),
-	       getNodeID(nodeB));
+	velvetLog("JOHNNY HALLIDAY JUNCTION %li %li %li %li\n",
+	       (long) getNodeID(node), (long) getNodeID(nodeC), (long) getNodeID(nodeA),
+	       (long) getNodeID(nodeB));
 }
 
 void searchForHallidayJunction(Graph * graph)

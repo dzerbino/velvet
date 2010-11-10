@@ -1752,9 +1752,9 @@ static void remapEmptyPathMarkersOntoMiddlePathDevious(PassageMarkerI emptyPath,
 	boolean untouchable = false;
 	Coordinate markerStart;
 
-	velvetLog("DEVIOUS %d\t%d\t%i\t%i\n", markerCount(finish),
-	       getNodeID(finish), arcCount(finish),
-	       arcCount(getTwinNode(finish)));
+	velvetLog("DEVIOUS %li\t%li\t%li\t%li\n", (long) markerCount(finish),
+	       (long) getNodeID(finish), (long) arcCount(finish),
+	       (long) arcCount(getTwinNode(finish)));
 
 	for (marker = getMarker(finish); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
@@ -2415,7 +2415,7 @@ static void tourBusNode(Node * node)
 
 	dbgCounter++;
 	if (dbgCounter % 1000 == 0) {
-		velvetLog("%d nodes visited\n", dbgCounter);
+		velvetLog("%li nodes visited\n", (long) dbgCounter);
 		fflush(stdout);
 	}
 
@@ -2547,7 +2547,7 @@ void clipTips(Graph * graph)
 	}
 
 	concatenateGraph(graph);
-	velvetLog("%d nodes left\n", nodeCount(graph));
+	velvetLog("%li nodes left\n", (long) nodeCount(graph));
 }
 
 void clipTipsHard(Graph * graph)
@@ -2600,7 +2600,7 @@ void clipTipsHard(Graph * graph)
 	}
 
 	concatenateGraph(graph);
-	velvetLog("%d nodes left\n", nodeCount(graph));
+	velvetLog("%li nodes left\n", (long) nodeCount(graph));
 }
 
 static void tourBus(Node * startingPoint)

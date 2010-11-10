@@ -618,7 +618,7 @@ static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * 
 
 	fclose(file);
 
-	velvetLog("%d sequences found\n", counter);
+	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -662,7 +662,7 @@ static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	fclose(file);
 
-	velvetLog("%d sequences found\n", counter);
+	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -733,7 +733,7 @@ static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	}
 
 	fclose(file);
-	velvetLog("%d reads found.\n", counter);
+	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -780,7 +780,7 @@ static void readRawFile(FILE* outfile, char *filename, Category cat, IDnum * seq
 	}
 
 	fclose(file);
-	velvetLog("%d reads found.\n", counter);
+	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -840,7 +840,7 @@ static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum 
 	}
 
 	gzclose(file);
-	velvetLog("%d reads found.\n", counter);
+	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -891,7 +891,7 @@ static void readRawGZFile(FILE * outfile, char *filename, Category cat, IDnum *s
 	}
 
 	gzclose(file);
-	velvetLog("%d reads found.\n", counter);
+	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -1010,7 +1010,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 	if (cat == REFERENCE) 
 		fillReferenceCoordinateTable(filename, refCoords, counter);
 
-	velvetLog("%d sequences found\n", counter);
+	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -1081,7 +1081,7 @@ static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum *
 		velvetFprintf(outfile, "\n");
 	gzclose(file);
 
-	velvetLog("%d sequences found\n", counter);
+	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -1128,7 +1128,7 @@ static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * s
 
 	gzclose(file);
 
-	velvetLog("%d sequences found\n", counter);
+	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
 }
 
@@ -1859,7 +1859,7 @@ ReadSet *importReadSet(char *filename)
 		if (line[0] == '>')
 			sequenceCount++;
 	fclose(file);
-	velvetLog("%d sequences found\n", sequenceCount);
+	velvetLog("%li sequences found\n", (long) sequenceCount);
 
 	reads->readCount = sequenceCount;
 	

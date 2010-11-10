@@ -331,3 +331,9 @@ V 1.0.14
 - Infinite loop with read coherency
 - Out of bounds bug for very long reads
 - -clean and -very_clean options
+
+V 1.0.15
+- Updated manual
+- Corrected help message
+- Big assembly option
+- Long sequences options

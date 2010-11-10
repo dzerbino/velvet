@@ -256,6 +256,6 @@ void clipTips_pg(PreGraph * preGraph)
 	}
 
 	concatenatePreGraph_pg(preGraph);
-	velvetLog("%d tips cut off\n", counter);
-	velvetLog("%d nodes left\n", preNodeCount_pg(preGraph));
+	velvetLog("%li tips cut off\n", (long) counter);
+	velvetLog("%li nodes left\n", (long) preNodeCount_pg(preGraph));
 }

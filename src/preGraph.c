@@ -907,7 +907,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 	PreArcI preArc;
 
 	velvetLog("Renumbering preNodes\n");
-	velvetLog("Initial preNode count %d\n", preGraph->preNodeCount);
+	velvetLog("Initial preNode count %li\n", (long) preGraph->preNodeCount);
 
 	for (preNodeIndex = 1; preNodeIndex <= preNodes; preNodeIndex++) {
 		currentPreNode = &(preGraph->preNodes[preNodeIndex]);
@@ -961,7 +961,7 @@ void renumberPreNodes_pg(PreGraph * preGraph)
 				     preGraph->preNodeCount +
 				      1, PreNode);
 
-	velvetLog("Destroyed %d preNodes\n", counter);
+	velvetLog("Destroyed %li preNodes\n", (long) counter);
 }
 
 // Allocate memory for an empty preGraph created with sequenceCount different sequences

@@ -163,7 +163,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 		}
 	}
 
-	velvetLog("%d roadmaps reads\n", rdmapIndex);
+	velvetLog("%li roadmaps reads\n", (long) rdmapIndex);
 
 	fclose(file);
 	free(line);
@@ -255,7 +255,7 @@ RoadMapArray *importReferenceRoadMapArray(char *filename, IDnum referenceCount)
 		}
 	}
 
-	velvetLog("%d roadmaps reads\n", rdmapIndex);
+	velvetLog("%li roadmaps reads\n", (long) rdmapIndex);
 
 	fclose(file);
 	free(line);

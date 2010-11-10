@@ -140,7 +140,7 @@ static void identifyUniqueNodes(boolean(*isUniqueFunction) (Node *))
 			counter++;
 	}
 
-	velvetLog("Done, %u unique nodes counted\n", counter);
+	velvetLog("Done, %li unique nodes counted\n", (long) counter);
 }
 
 static boolean uniqueNodesConnect(Node * startingNode)
@@ -557,8 +557,8 @@ void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node * node),
 
 	destroyRecycleBin(listMemory);
 
-	velvetLog("Confronted to %i multiple hits and %i null over %i\n",
-	       multCounter, nullCounter, dbgCounter);
+	velvetLog("Confronted to %li multiple hits and %li null over %li\n",
+	       (long) multCounter, (long) nullCounter, (long) dbgCounter);
 
 	velvetLog("Read coherency over!\n");
 }

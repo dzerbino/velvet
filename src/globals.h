@@ -38,7 +38,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #define VERSION_NUMBER 1
 #define RELEASE_NUMBER 0
-#define UPDATE_NUMBER 14
+#define UPDATE_NUMBER 15
 
 #define MAXLINE 5000 
 
@@ -79,9 +79,17 @@ extern struct kmerOccurenceTable_st;
 typedef int8_t boolean;
 typedef int8_t Nucleotide;
 typedef uint8_t Descriptor;
+#ifdef BIGASSEMBLY
+typedef int64_t IDnum;
+#else
 typedef int32_t IDnum;
+#endif
 typedef int64_t Coordinate;
+#ifdef LONGSEQUENCES
 typedef int16_t ShortLength;
+#else
+typedef int32_t ShortLength;
+#endif
 typedef double Time;
 typedef uint8_t Quality;
 typedef double Probability;

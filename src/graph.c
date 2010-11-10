@@ -570,7 +570,7 @@ char *readNode(Node * node)
 	Nucleotide nucleotide;
 	Coordinate i;
 
-	sprintf(s, "NODE %d :", node->ID);
+	sprintf(s, "NODE %li :", (long) node->ID);
 
 	for (i = 0; i < node->length; i++) {
 		nucleotide = getNucleotideInDescriptor(descriptor, i);
@@ -613,8 +613,8 @@ void displayGraph(Graph * graph)
 	Node *currentNode;
 	IDnum nodeIndex;
 
-	velvetLog("%d sequences\n", graph->sequenceCount);
-	velvetLog("%d*2 nodes\n", graph->nodeCount);
+	velvetLog("%li sequences\n", (long) graph->sequenceCount);
+	velvetLog("%li*2 nodes\n", (long) graph->nodeCount);
 
 	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
 		currentNode = graph->nodes[nodeIndex];
@@ -1212,7 +1212,7 @@ void renumberNodes(Graph * graph)
 	IDnum newIndex;
 
 	velvetLog("Renumbering nodes\n");
-	velvetLog("Initial node count %d\n", graph->nodeCount);
+	velvetLog("Initial node count %li\n", (long) graph->nodeCount);
 
 	for (nodeIndex = 1; nodeIndex <= nodes; nodeIndex++) {
 		currentNode = getNodeInGraph(graph, nodeIndex);
@@ -1289,7 +1289,7 @@ void renumberNodes(Graph * graph)
 					    graph->nodeCount +
 					     1, GapMarker *);
 
-	velvetLog("Removed %d null nodes\n", counter);
+	velvetLog("Removed %li null nodes\n", (long) counter);
 }
 
 void splitNodeDescriptor(Node * source, Node * target, Coordinate offset)
@@ -1394,12 +1394,12 @@ void checkPassageMarkersStatus(Graph * graph)
 							  (marker)),
 						  graph) == NULL) {
 				velvetLog
-				    ("Missing arc %d -> %d (for %d)\n",
-				     getNodeID(node),
-				     getNodeID(getNode
+				    ("Missing arc %li -> %li (for %li)\n",
+				     (long) getNodeID(node),
+				     (long) getNodeID(getNode
 					       (getNextInSequence
 						(marker))),
-				     getPassageMarkerSequenceID(marker));
+				     (long) getPassageMarkerSequenceID(marker));
 				abort();
 			}
 			if (getPreviousInSequence(marker) != NULL_IDX
@@ -1409,12 +1409,12 @@ void checkPassageMarkersStatus(Graph * graph)
 						(marker)), node,
 					       graph) == NULL) {
 				velvetLog
-				    ("Missing arc %d -> %d (for %d)\n",
-				     getNodeID(getNode
+				    ("Missing arc %li -> %li (for %li)\n",
+				     (long) getNodeID(getNode
 					       (getNextInSequence
 						(marker))),
-				     getNodeID(node),
-				     getPassageMarkerSequenceID(marker));
+				     (long) getNodeID(node),
+				     (long) getPassageMarkerSequenceID(marker));
 				abort();
 			}
 		}
@@ -1903,8 +1903,8 @@ static void exportArc(FILE * outfile, Arc * arc)
 	if (originID == destinationID && originID < 0)
 		return;
 
-	velvetFprintf(outfile, "ARC\t%d\t%d\t%d\n", originID, destinationID,
-		arc->multiplicity);
+	velvetFprintf(outfile, "ARC\t%li\t%li\t%li\n", (long) originID, (long) destinationID,
+		(long) arc->multiplicity);
 }
 
 // Merges two lists of annotations in order of increasing position (used in mergeSort mainly)
@@ -2142,8 +2142,8 @@ void exportGraph(char *filename, Graph * graph, TightString * sequences)
 		velvetLog("Writing into graph file %s...\n", filename);
 
 	// General data
-	velvetFprintf(outfile, "%d\t%d\t%i\t%i\n", graph->nodeCount,
-		graph->sequenceCount, graph->wordLength, (int) graph->double_stranded);
+	velvetFprintf(outfile, "%li\t%li\t%i\t%i\n", (long) graph->nodeCount,
+		(long) graph->sequenceCount, graph->wordLength, (int) graph->double_stranded);
 
 	// Node info
 	for (index = 1; index <= graph->nodeCount; index++) {
@@ -2185,8 +2185,8 @@ void exportGraph(char *filename, Graph * graph, TightString * sequences)
 			if (readCount == 0)
 				continue;
 
-			velvetFprintf(outfile, "NR\t%d\t%d\n",
-				index - graph->nodeCount, readCount);
+			velvetFprintf(outfile, "NR\t%li\t%li\n",
+				(long) (index - graph->nodeCount), (long) readCount);
 
 			reads = graph->nodeReads[index];
 			for (readIndex = 0; readIndex < readCount;
@@ -2830,7 +2830,7 @@ void DOTNode(Node * node, FILE * outfile)
 	if (ID < 0)
 		return;
 
-	velvetFprintf(outfile, "\t%d [label=\"<left>|%d|<right>\"]\n", ID, ID);
+	velvetFprintf(outfile, "\t%li [label=\"<left>|%li|<right>\"]\n", (long) ID, (long) ID);
 
 	for (arc = node->arc; arc != NULL; arc = arc->next) {
 		otherNode = arc->destination;
@@ -2839,11 +2839,11 @@ void DOTNode(Node * node, FILE * outfile)
 		}
 
 		if (otherNode->ID > 0)
-			velvetFprintf(outfile, "\t%d:right -> %d:left\n", ID,
-				otherNode->ID);
+			velvetFprintf(outfile, "\t%li:right -> %li:left\n", (long) ID,
+				(long) otherNode->ID);
 		else
-			velvetFprintf(outfile, "\t%d:right -> %d:right\n", ID,
-				-otherNode->ID);
+			velvetFprintf(outfile, "\t%li:right -> %li:right\n", (long) ID,
+				(long) -otherNode->ID);
 	}
 
 	for (arc = node->twinNode->arc; arc != NULL; arc = arc->next) {
@@ -2853,11 +2853,11 @@ void DOTNode(Node * node, FILE * outfile)
 		}
 
 		if (otherNode->ID > 0)
-			velvetFprintf(outfile, "\t%d:left -> %d:left\n", ID,
-				otherNode->ID);
+			velvetFprintf(outfile, "\t%li:left -> %li:left\n", (long) ID,
+				(long) otherNode->ID);
 		else
-			velvetFprintf(outfile, "\t%d:left -> %d:right\n", ID,
-				-otherNode->ID);
+			velvetFprintf(outfile, "\t%li:left -> %li:right\n", (long) ID,
+				(long) -otherNode->ID);
 	}
 }
 

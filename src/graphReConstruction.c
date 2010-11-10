@@ -1078,8 +1078,8 @@ static void fillUpGraph(ReadSet * reads,
 		category = reads->categories[readIndex];
 	
 		if (readIndex % 100000 == 0)
-			velvetLog("Threading through reads %d / %d\n",
-			       readIndex, reads->readCount);
+			velvetLog("Threading through reads %li / %li\n",
+			       (long) readIndex, (long) reads->readCount);
 
 		threadSequenceThroughGraph(getTightStringInArray(reads->tSequences, readIndex),
 					   kmerTable,

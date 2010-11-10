@@ -18,6 +18,14 @@ Z_LIB_FILES=$(Z_LIB_DIR)/*.o
 # Sparc/Solaris users: uncomment the following line
 # CFLAGS = -Wall -m64
 
+ifdef BIGASSEMBLY
+override DEF := $(DEF) -D BIGASSEMBLY
+endif 	
+
+ifdef LONGSEQUENCES
+override DEF := $(DEF) -D LONGSEQUENCES
+endif 	
+
 OBJ = obj/tightString.o obj/run.o obj/splay.o obj/splayTable.o obj/graph.o obj/run2.o obj/fibHeap.o obj/fib.o obj/concatenatedGraph.o obj/passageMarker.o obj/graphStats.o obj/correctedGraph.o obj/dfib.o obj/dfibHeap.o obj/recycleBin.o obj/readSet.o obj/shortReadPairs.o obj/locallyCorrectedGraph.o obj/graphReConstruction.o obj/roadMap.o obj/preGraph.o obj/preGraphConstruction.o obj/concatenatedPreGraph.o obj/readCoherentGraph.o obj/crc.o obj/utility.o obj/kmer.o obj/scaffold.o obj/kmerOccurenceTable.o obj/allocArray.o
 OBJDBG = $(subst obj,obj/dbg,$(OBJ))
 

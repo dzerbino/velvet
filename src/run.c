@@ -90,16 +90,16 @@ int main(int argc, char **argv)
 	setProgramName("velveth");
 
 	if (argc < 4) {
-		velvetLog("velveth - simple hashing program\n");
-		velvetLog("Version %i.%i.%2.2i\n", VERSION_NUMBER,
+		printf("velveth - simple hashing program\n");
+		printf("Version %i.%i.%2.2i\n", VERSION_NUMBER,
 		       RELEASE_NUMBER, UPDATE_NUMBER);
-		velvetLog("\nCopyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)\n");
-		velvetLog("This is free software; see the source for copying conditions.  There is NO\n");
-		velvetLog("warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
-		velvetLog("Compilation settings:\n");
-		velvetLog("CATEGORIES = %i\n", CATEGORIES);
-		velvetLog("MAXKMERLENGTH = %i\n", MAXKMERLENGTH);
-		velvetLog("\n");
+		printf("\nCopyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)\n");
+		printf("This is free software; see the source for copying conditions.  There is NO\n");
+		printf("warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
+		printf("Compilation settings:\n");
+		printf("CATEGORIES = %i\n", CATEGORIES);
+		printf("MAXKMERLENGTH = %i\n", MAXKMERLENGTH);
+		printf("\n");
 		printUsage();
 		return 0;
 	}
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
 	splayTable = newSplayTable(hashLength, double_strand);
 
 	allSequences = importReadSet(seqFilename);
-	velvetLog("%i sequences in total.\n", allSequences->readCount);
+	velvetLog("%li sequences in total.\n", (long) allSequences->readCount);
 
 	strcpy(filename, directory);
 	strcat(filename, "/Roadmaps");

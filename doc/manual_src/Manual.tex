@@ -5,7 +5,7 @@
 \usepackage{graphicx}
 %-------------------------------------------------------------------------------------------
 \begin{document}
-\title{Velvet Manual - version 0.7}
+\title{Velvet Manual - version 1.0}
 \author{Daniel Zerbino}
 \date{August 29, 2008}
 
@@ -124,6 +124,31 @@ make 'MAXKMERLENGTH=57'
 
 By storing longer words, Velvet will be requiring more memory, so adjust this variable according to your needs and memory resources. 
 
+\subsubsection{BIGASSEMBLY}
+
+Read IDs are stored on signed 32bit integers, meaning that if you have a big assembly with more than 2.2 Mo reads more memory is needed to track the reads. To do so, simply add the following option to the make command:
+
+\begin{verbatim}
+make 'BIGASSEMBLY=1'
+\end{verbatim}
+
+(Note the single quotes and absence of spacing.)
+
+This will cost more memory overhead. 
+
+\subsubsection{LONGSEQUENCES}
+
+Read lengths are stored on signed 16bit integers, meaning that if you are assembling contigs longer than 32kb long, then more memory is required to store coordinates. To do so, simply add the following option to the make command: 
+
+\begin{verbatim}
+make 'LONGSEQUENCES=1'
+\end{verbatim}
+
+(Note the single quotes and absence of spacing.)
+
+This will cost more memory overhead. 
+
+This will cost more memory overhead. 
 \section{Running instructions}
 
 \subsection{Running velveth}
@@ -752,7 +777,7 @@ We are very grateful to all the people who send us bugs. However, to speed up th
 \end{verbatim}
 \item within gdb, request a backtrace:
 \begin{verbatim}
-(gdb) bt
+(gdb) bt full
 \end{verbatim}
 \item send the listing with the entire gdb session.
 \end{enumerate}

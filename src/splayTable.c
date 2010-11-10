@@ -212,7 +212,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords, TightStrin
 	table->lastIndex++;
 
 	currentIndex = table->lastIndex;
-	velvetFprintf(file, "ROADMAP %d\n", currentIndex);
+	velvetFprintf(file, "ROADMAP %li\n", (long) currentIndex);
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
@@ -544,7 +544,7 @@ void inputReferenceIntoSplayTable(TightString * tString,
 	table->lastIndex++;
 
 	currentIndex = table->lastIndex;
-	velvetFprintf(file, "ROADMAP %d\n", currentIndex);
+	velvetFprintf(file, "ROADMAP %li\n", (long) currentIndex);
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
@@ -663,8 +663,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	for (index = 0; index < sequenceCount; index++) {
 		// Prorgess report on screen
 		if (index % 100000 == 0) {
-			velvetLog("Inputting sequence %d / %d\n", index,
-			       sequenceCount);
+			velvetLog("Inputting sequence %li / %li\n", (long) index,
+			       (long) sequenceCount);
 			fflush(stdout);
 		}
 

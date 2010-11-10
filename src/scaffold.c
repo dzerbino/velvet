@@ -961,7 +961,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++) {
 		if (nodeID % 10000 == 0)
-			velvetLog("Scaffolding node %d\n", nodeID);
+			velvetLog("Scaffolding node %li\n", (long) nodeID);
 
 		projectFromNode(nodeID, readNodes, readNodeCounts,
 				readPairs, cats, dubious, lengths);

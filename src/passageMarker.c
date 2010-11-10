@@ -198,9 +198,9 @@ void setNextInNode(PassageMarkerI marker, PassageMarkerI next)
 		PassageMarker *nextVal;
 
 		if (markerVal->twinMarker == NULL_IDX) {
-			velvetLog("Dead marker in node %d %d\n",
-			       getNodeID(getNode(marker)),
-			       getPassageMarkerSequenceID(marker));
+			velvetLog("Dead marker in node %li %li\n",
+			       (long) getNodeID(getNode(marker)),
+			       (long) getPassageMarkerSequenceID(marker));
 			abort();
 		}
 		nextVal = PM_FI2P (next);
@@ -703,7 +703,7 @@ void exportMarker(FILE * outfile, PassageMarkerI marker,
 		current = markerVal->twinMarker;
 	}
 
-	velvetFprintf(outfile, "SEQ\t%d\n", PM_FI2P (current)->sequenceID);
+	velvetFprintf(outfile, "SEQ\t%li\n", (long) PM_FI2P (current)->sequenceID);
 	for (; current != NULL_IDX; current = PM_FI2P (current)->nextInSequence) {
 		velvetFprintf(outfile, "%ld\t%lld\t%lld\t%lld\t%lld",
 			(long) getNodeID(PM_FI2P (current)->node), (long long) getStartOffset(current),
