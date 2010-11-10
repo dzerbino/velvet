@@ -620,9 +620,6 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 		velvetLog("You should better declare this sequence as long, because it genuinely is!\n");
 		exit(1);
 	}
-	// Allocate memory for the read pairs
-	if (!readStartsAreActivated(graph))
-		activateReadStarts(graph);
 
 	// Fill in the initial word :
 	for (readNucleotideIndex = 0;
@@ -1037,6 +1034,9 @@ static void fillUpGraph(ReadSet * reads,
 	}
 
 	resetNodeStatus(graph);
+	// Allocate memory for the read pairs
+	if (!readStartsAreActivated(graph))
+		activateReadStarts(graph);
 
 	gettimeofday(&start, NULL);
 #ifdef OPENMP
