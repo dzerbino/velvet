@@ -60,4 +60,20 @@ void velvetLog(const char *format, ...)
 // fprintf wrapper which exits upon failure (e.g. disk full)
 void velvetFprintf(FILE * file, const char * format, ...)
 	ATTRIBUTE((format(printf, 2, 3)));
+
+// String Buffer
+
+typedef struct
+{
+	char *str;
+	size_t length;
+	size_t allocated;
+}
+StringBuffer;
+
+StringBuffer *newStringBuffer(size_t size);
+void destroyStringBuffer(StringBuffer *buffer, boolean freeString);
+void appendStringBuffer(StringBuffer *buffer, char *str);
+void resetStringBuffer(StringBuffer *buffer);
+
 #endif

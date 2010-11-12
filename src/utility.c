@@ -139,3 +139,61 @@ void velvetFprintf(FILE * file, const char * format, ...)
 	}
 	va_end(args);
 }
+
+StringBuffer *newStringBuffer(size_t size)
+{
+	StringBuffer *buffer;
+
+	buffer = callocOrExit(1, StringBuffer);
+	if (size > 0)
+	{
+		buffer->str = callocOrExit(size, char);
+		buffer->allocated = size;
+	}
+	buffer->length = 1; /* virtual count for the final '\0' */
+
+	return buffer;
+}
+
+void destroyStringBuffer(StringBuffer *buffer, boolean freeString)
+{
+	if (!buffer)
+		return;
+
+	if (freeString && buffer->allocated > 0)
+		free(buffer->str);
+	free(buffer);
+}
+
+void appendStringBuffer(StringBuffer *buffer, char *str)
+{
+	int strSize;
+	int newSize;
+
+	if (!buffer)
+		return;
+
+	strSize = strlen(str);
+	newSize = buffer->allocated;
+
+	while (strSize + buffer->length > newSize)
+		newSize *= 2;
+	if (newSize != buffer->allocated)
+	{
+		buffer->str = reallocOrExit(buffer->str, newSize, char);
+		if (!buffer->allocated)
+			*buffer->str = '\0';
+		buffer->allocated = newSize;
+	}
+	buffer->length += strSize;
+	buffer->str = strcat(buffer->str, str);
+}
+
+void resetStringBuffer(StringBuffer *buffer)
+{
+	if (buffer && buffer->allocated > 0)
+	{
+		buffer->length = 1; /* Virtual count for the final '\0' */
+		*buffer->str = '\0';
+	}
+}

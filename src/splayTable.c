@@ -36,6 +36,122 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "utility.h"
 #include "kmer.h"
 #include "kmerOccurenceTable.h"
+#include "recycleBin.h"
+
+
+#define BUFFER_SIZE 4096
+
+#ifdef OPENMP
+
+#define NB_PUSH 32
+
+StringBuffer **annotationBuffer = NULL;
+StringBuffer **annotationBufferW = NULL;
+int *nbPush = NULL;
+boolean producing = 1;
+
+static void initAnnotationBuffers(void)
+{
+	int n;
+	int i;
+
+	n = omp_get_max_threads();
+	annotationBuffer = callocOrExit(n, StringBuffer*);
+	annotationBufferW = callocOrExit(n, StringBuffer*);
+	nbPush = callocOrExit(n, int);
+
+	for (i = 0; i < n; i++)
+	{
+		annotationBuffer[i] = newStringBuffer(BUFFER_SIZE);
+		annotationBufferW[i] = newStringBuffer(BUFFER_SIZE);
+	}
+}
+
+static void destroyAnnotationBuffers(void)
+{
+	int n;
+	int i;
+
+	n = omp_get_max_threads();
+
+	for (i = 0; i < n; i++)
+	{
+		destroyStringBuffer(annotationBuffer[i], 1);
+		destroyStringBuffer(annotationBufferW[i], 1);
+	}
+
+	free(annotationBuffer);
+	free(annotationBufferW);
+	free(nbPush);
+	annotationBuffer = NULL;
+	annotationBufferW = NULL;
+	nbPush = NULL;
+}
+
+static void pushBufferCommit(int thread)
+{
+	StringBuffer *tmp;
+
+	do
+	{
+		#pragma omp flush(annotationBufferW)
+	}
+	while (*annotationBufferW[thread]->str);
+	tmp = annotationBufferW[thread];
+	annotationBufferW[thread] = annotationBuffer[thread];
+	annotationBuffer[thread] = tmp;
+	#pragma omp flush(annotationBufferW)
+}
+
+static void pushBuffer(int thread)
+{
+	if (++nbPush[thread] == NB_PUSH)
+	{
+		nbPush[thread] = 0;
+		pushBufferCommit(thread);
+	}
+}
+
+static void writeBuffers(FILE *outFile, int nbThreads)
+{
+	int i;
+
+	for (i = 0; i < nbThreads; i++)
+	{
+		#pragma omp flush(annotationBufferW)
+		if (*annotationBufferW[i]->str)
+		{
+			velvetFprintf(outFile, "%s", annotationBufferW[i]->str);
+			resetStringBuffer(annotationBufferW[i]);
+			#pragma omp flush(annotationBufferW)
+		}
+	}
+}
+
+static void bufferWritter(FILE *outFile)
+{
+	int n;
+
+	n = omp_get_max_threads();
+	while (producing)
+	{
+		writeBuffers(outFile, n);
+	}
+	writeBuffers(outFile, n);
+}
+
+static void appendLine(char *line, int thread)
+{
+	appendStringBuffer(annotationBuffer[thread], line);
+}
+#else
+StringBuffer *annotationBuffer = NULL;
+
+static void appendLine(char *line, int thread)
+{
+	appendStringBuffer(annotationBuffer, line);
+}
+#endif
 
 struct splayTable_st {
 	SplayTree **table;
@@ -255,21 +371,6 @@ static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
 	return doFindOrInsertOccurenceInSplayTree(kmer, seqID, position, table);
 }
 
-/* SF TODO This will be needed somewhere else, we should probably create a
- * StringBuffer class
- */
-#define BUFFER_APPEND(buffer, bufferSize, currentSize, line) \
-{ \
-	const int lineSize = strlen(line); \
-	currentSize += lineSize; \
-	while (currentSize > bufferSize) \
-	{ \
-		bufferSize *= 2; \
-		buffer = reallocOrExit (buffer, bufferSize, char); \
-	} \
-	buffer = strcat(buffer, line); \
-}
-
 static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 			     TightString * array, SplayTable * table,
 			     FILE * file, boolean second_in_pair, IDnum seqID) 
@@ -287,28 +388,29 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 	Coordinate finish = 0;
 	IDnum referenceSequenceID = 0;
 	Nucleotide nucleotide;
-	char *buffer;
-	char lineBuffer[128];
-	int bufferSize = 1024;
-	int currentSize = 1;
+	char lineBuffer[MAXLINE];
 	TightString * tString = getTightStringInArray(array, seqID - 1); 
+	int thread = 0;
 
 	clearKmer(&word);
 	clearKmer(&antiWord);
 
-	buffer = mallocOrExit(bufferSize, char);
-	buffer[0] = '\0';
+#ifdef OPENMP
+	thread = omp_get_thread_num();
+#endif
 
 	sprintf(lineBuffer, "ROADMAP %d\n", seqID);
-	BUFFER_APPEND(buffer, bufferSize, currentSize, lineBuffer);
+#ifdef OPENMP
+	appendLine(lineBuffer, thread);
+#endif
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
 #ifdef OPENMP
-	#pragma omp critical
+		pushBuffer(thread);
+#else
+		velvetFprintf(file, "%s", lineBuffer);
 #endif
-		velvetFprintf(file, "%s", buffer);
-		free(buffer);
 		return;
 	}
 
@@ -398,7 +500,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 				sprintf(lineBuffer, "%ld\t%lld\t%lld\t%lld\n",
 					(long) referenceSequenceID, (long long) position,
 					(long long) start, (long long) finish);
-				BUFFER_APPEND(buffer, bufferSize, currentSize, lineBuffer);
+				appendLine(lineBuffer, thread);
 			}
 			annotationClosed = true;
 		}
@@ -434,7 +536,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 				sprintf(lineBuffer, "%ld\t%lld\t%lld\t%lld\n",
 					(long) referenceSequenceID, (long long) position,
 					(long long) start, (long long) finish);
-				BUFFER_APPEND(buffer, bufferSize, currentSize, lineBuffer);
+				appendLine(lineBuffer, thread);
 
 				referenceSequenceID = sequenceID;
 				position = writeNucleotideIndex;
@@ -454,13 +556,14 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 		sprintf(lineBuffer, "%ld\t%lld\t%lld\t%lld\n",
 			(long) referenceSequenceID, (long long) position,
 			(long long) start, (long long) finish);
-		BUFFER_APPEND(buffer, bufferSize, currentSize, lineBuffer);
+		appendLine(lineBuffer, thread);
 	}
 #ifdef OPENMP
-	#pragma omp critical
+	pushBuffer(thread);
+#else
+	velvetFprintf(file, "%s", annotationBuffer->str);
+	resetStringBuffer(annotationBuffer);
 #endif
-	velvetFprintf(file, "%s", buffer);
-	free(buffer);
 
 	return;
 }
@@ -660,15 +763,20 @@ void inputReferenceIntoSplayTable(TightString * tString,
 	Kmer word;
 	Kmer antiWord;
 	Nucleotide nucleotide;
+#ifdef OPENMP
+	char lineBuffer[MAXLINE];
+#endif
 
 	clearKmer(&word);
 	clearKmer(&antiWord);
 
 	currentIndex = seqID;
 #ifdef OPENMP
-	#pragma omp critical
-#endif
+	sprintf(lineBuffer, "ROADMAP %d\n", currentIndex);
+	appendLine(lineBuffer, omp_get_thread_num());
+#else
 	velvetFprintf(file, "ROADMAP %d\n", currentIndex);
+#endif
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
@@ -770,6 +878,13 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	gettimeofday(&start, NULL);
 	array = reads->tSequences;
 
+#ifdef OPENMP
+	omp_set_nested(1);
+	initAnnotationBuffers();
+#else
+	annotationBuffer = newStringBuffer(BUFFER_SIZE);
+#endif
+
 	if (referenceSequenceCount && (kmerCount = countReferenceKmers(reads, table->WORDLENGTH)) > 0) {
 		table->kmerOccurenceTable = newKmerOccurenceTable(24 , table->WORDLENGTH);
 		allocateKmerOccurences(kmerCount, table->kmerOccurenceTable);
@@ -786,10 +901,27 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 					break;
 
 #ifdef OPENMP
-		#pragma omp parallel for
+		producing = 1;
+		#pragma omp parallel sections
+		{
+			#pragma omp section
+			{
+				bufferWritter(outfile);
+			}
+			#pragma omp section
+			{
+				#pragma omp parallel for
 #endif
-		for (index = 0; index < referenceSequenceCount; index++)
-			inputReferenceIntoSplayTable(getTightStringInArray(array, index), table, outfile, index + 1);
+				for (index = 0; index < referenceSequenceCount; index++)
+					inputReferenceIntoSplayTable(getTightStringInArray(array, index),
+								     table, outfile, index + 1);
+
+#ifdef OPENMP
+				producing = 0;
+				#pragma omp flush(producing)
+			}
+		}
+#endif
 
 		sortKmerOccurenceTable(table->kmerOccurenceTable);
 	}
@@ -797,31 +929,56 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	velvetLog("Inputting sequences...\n");
 
 #ifdef OPENMP
-	#pragma omp parallel for
+	producing = 1;
+	#pragma omp parallel sections
+	{
+		#pragma omp section
+		{
+			bufferWritter(outfile);
+		}
+		#pragma omp section
+		{
+			#pragma omp parallel for
 #endif
-	for (index = referenceSequenceCount; index < sequenceCount; index++) {
-		// Progress report on screen
-		if (index % 100000 == 0) {
-			velvetLog("Inputting sequence %li / %li\n", (long) index,
-			       (long) sequenceCount);
-			fflush(stdout);
-		}
+			for (index = referenceSequenceCount; index < sequenceCount; index++)
+			{
+				// Progress report on screen
+				if (index % 1000000 == 0) {
+					velvetLog("Inputting sequence %d / %d\n", index,
+							sequenceCount);
+					fflush(stdout);
+				}
 
-		// Test to make sure that all the reference reads are before all the other reads
-		if (reads->categories[index] == REFERENCE) {
-			velvetLog("Reference sequence placed after a non-reference read!\n");
-			velvetLog(">> Please re-order the filenames in your command line so as to have the reference sequence files before all the others\n");
+				// Test to make sure that all the reference reads are before all the other reads
+				if (reads->categories[index] == REFERENCE) {
+					velvetLog("Reference sequence placed after a non-reference read!\n");
+					velvetLog(">> Please re-order the filenames in your command line so as "
+						  "to have the reference sequence files before all the others\n");
 #ifdef DEBUG 
-			abort();
+					abort();
 #endif 
-			exit(0);
+					exit(0);
+				}
+				second_in_pair = reads->categories[index] % 2 && isSecondInPair(reads, index);
+
+				// Hashing the reads
+				inputSequenceIntoSplayTable(array, table,
+							    outfile, seqFile,
+							    second_in_pair, index + 1);
+			}
+#ifdef OPENMP
+			#pragma omp parallel for
+			for (index = 0; index < omp_get_max_threads(); index++)
+				pushBufferCommit(index);
+			producing = 0;
+			#pragma omp flush(producing)
 		}
-
-		second_in_pair = reads->categories[index] % 2 && isSecondInPair(reads, index);
-
-		// Hashing the reads
-		inputSequenceIntoSplayTable(array, table, outfile, seqFile, second_in_pair, index + 1);
 	}
+	destroyAnnotationBuffers();
+#else
+	destroyStringBuffer(annotationBuffer);
+#endif
+
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
 	velvetLog(" === Sequences loaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
