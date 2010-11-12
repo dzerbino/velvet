@@ -86,9 +86,9 @@ typedef int32_t IDnum;
 #endif
 typedef int64_t Coordinate;
 #ifdef LONGSEQUENCES
-typedef int16_t ShortLength;
-#else
 typedef int32_t ShortLength;
+#else
+typedef int16_t ShortLength;
 #endif
 typedef double Time;
 typedef uint8_t Quality;
