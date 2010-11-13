@@ -45,10 +45,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #define NB_PUSH 32
 
-StringBuffer **annotationBuffer = NULL;
-StringBuffer **annotationBufferW = NULL;
-int *nbPush = NULL;
-boolean producing = 1;
+static StringBuffer **annotationBuffer = NULL;
+static StringBuffer **annotationBufferW = NULL;
+static int *nbPush = NULL;
+static boolean producing = 1;
 
 static void initAnnotationBuffers(void)
 {
@@ -976,7 +976,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	}
 	destroyAnnotationBuffers();
 #else
-	destroyStringBuffer(annotationBuffer);
+	destroyStringBuffer(annotationBuffer, 1);
 #endif
 
 	gettimeofday(&end, NULL);
