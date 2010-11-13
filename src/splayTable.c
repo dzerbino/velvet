@@ -399,7 +399,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 	thread = omp_get_thread_num();
 #endif
 
-	sprintf(lineBuffer, "ROADMAP %d\n", seqID);
+	sprintf(lineBuffer, "ROADMAP %li\n", (long)seqID);
 #ifdef OPENMP
 	appendLine(lineBuffer, thread);
 #endif
@@ -772,10 +772,10 @@ void inputReferenceIntoSplayTable(TightString * tString,
 
 	currentIndex = seqID;
 #ifdef OPENMP
-	sprintf(lineBuffer, "ROADMAP %d\n", currentIndex);
+	sprintf(lineBuffer, "ROADMAP %li\n", (long)currentIndex);
 	appendLine(lineBuffer, omp_get_thread_num());
 #else
-	velvetFprintf(file, "ROADMAP %d\n", currentIndex);
+	velvetFprintf(file, "ROADMAP %li\n", (long)currentIndex);
 #endif
 
 	// Neglect any string shorter than WORDLENGTH :
@@ -879,7 +879,13 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	array = reads->tSequences;
 
 #ifdef OPENMP
-	omp_set_nested(1);
+	if (omp_get_max_threads() == 1)
+	{
+		omp_set_num_threads(2);
+		omp_set_nested(0);
+	}
+	else
+		omp_set_nested(1);
 	initAnnotationBuffers();
 #else
 	annotationBuffer = newStringBuffer(BUFFER_SIZE);
@@ -944,8 +950,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 			{
 				// Progress report on screen
 				if (index % 1000000 == 0) {
-					velvetLog("Inputting sequence %d / %d\n", index,
-							sequenceCount);
+					velvetLog("Inputting sequence %li / %li\n",
+						  (long)index, (long)sequenceCount);
 					fflush(stdout);
 				}
 
