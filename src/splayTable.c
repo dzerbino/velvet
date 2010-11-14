@@ -90,16 +90,17 @@ static void destroyAnnotationBuffers(void)
 static void pushBufferCommit(int thread)
 {
 	StringBuffer *tmp;
+	char *s;
 
+	s = annotationBufferW[thread]->str;
 	do
 	{
-		#pragma omp flush(annotationBufferW)
+		#pragma omp flush(s)
 	}
-	while (*annotationBufferW[thread]->str);
+	while (*s);
 	tmp = annotationBufferW[thread];
 	annotationBufferW[thread] = annotationBuffer[thread];
 	annotationBuffer[thread] = tmp;
-	#pragma omp flush(annotationBufferW)
 }
 
 static void pushBuffer(int thread)
@@ -117,12 +118,14 @@ static void writeBuffers(FILE *outFile, int nbThreads)
 
 	for (i = 0; i < nbThreads; i++)
 	{
-		#pragma omp flush(annotationBufferW)
-		if (*annotationBufferW[i]->str)
+		char *s;
+
+		s = annotationBufferW[i]->str;
+		#pragma omp flush(s)
+		if (*s)
 		{
 			velvetFprintf(outFile, "%s", annotationBufferW[i]->str);
 			resetStringBuffer(annotationBufferW[i]);
-			#pragma omp flush(annotationBufferW)
 		}
 	}
 }
