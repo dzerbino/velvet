@@ -39,11 +39,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "recycleBin.h"
 
 
-#define BUFFER_SIZE 4096
-
 #ifdef OPENMP
 
 #define NB_PUSH 32
+#define BUFFER_SIZE 4096
 
 static StringBuffer **annotationBuffer = NULL;
 static StringBuffer **annotationBufferW = NULL;
@@ -133,9 +132,11 @@ static void bufferWritter(FILE *outFile)
 	int n;
 
 	n = omp_get_max_threads();
+	#pragma omp flush(producing)
 	while (producing)
 	{
 		writeBuffers(outFile, n);
+		#pragma omp flush(producing)
 	}
 	writeBuffers(outFile, n);
 }
@@ -145,6 +146,9 @@ static void appendLine(char *line, int thread)
 	appendStringBuffer(annotationBuffer[thread], line);
 }
 #else
+
+#define BUFFER_SIZE 1024
+
 StringBuffer *annotationBuffer = NULL;
 
 static void appendLine(char *line, int thread)
@@ -400,16 +404,15 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 #endif
 
 	sprintf(lineBuffer, "ROADMAP %li\n", (long)seqID);
-#ifdef OPENMP
 	appendLine(lineBuffer, thread);
-#endif
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
 #ifdef OPENMP
 		pushBuffer(thread);
 #else
-		velvetFprintf(file, "%s", lineBuffer);
+		velvetFprintf(file, "%s", annotationBuffer->str);
+		resetStringBuffer(annotationBuffer);
 #endif
 		return;
 	}
@@ -593,38 +596,38 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 	#pragma omp critical
 	{
 #endif
-	// Get read ID:
-	if (!fgets(line, MAXLINE, seqFile)) {
-		puts("Incomplete Sequences file (computeHSPScores)");
+		// Get read ID:
+		if (!fgets(line, MAXLINE, seqFile)) {
+			puts("Incomplete Sequences file (computeHSPScores)");
 #ifdef DEBUG
-		abort();
+			abort();
 #endif 
-		exit(1);
-	}
-	sscanf(line, ">%*s\t%li\t", &long_var);
-	*seqID = (IDnum) long_var;
-	tString = getTightStringInArray(array, *seqID - 1);
-	length = getLength(tString);
-	*sequenceIDs = callocOrExit(length, IDnum);
-	*coords = callocOrExit(length, Coordinate);
+			exit(1);
+		}
+		sscanf(line, ">%*s\t%li\t", &long_var);
+		*seqID = (IDnum) long_var;
+		tString = getTightStringInArray(array, *seqID - 1);
+		length = getLength(tString);
+		*sequenceIDs = callocOrExit(length, IDnum);
+		*coords = callocOrExit(length, Coordinate);
 
-	// Parse file for mapping info
-	while (seqFile && fgets(line, MAXLINE, seqFile)) {
-		if (line[0] == '>')
-			break;
-	
-		if (line[0] == 'M') {
-			sscanf(line,"M\t%li\t%lli\n", &long_var, &longlong_var);
-			mapReferenceIDs[mapCount] = (IDnum) long_var;
-			mapCoords[mapCount] = (Coordinate) longlong_var;
+		// Parse file for mapping info
+		while (seqFile && fgets(line, MAXLINE, seqFile)) {
+			if (line[0] == '>')
+				break;
 
-			if (++mapCount == maxCount) {
-				maxCount *= 2;
-				mapReferenceIDs = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
-				mapCoords = reallocOrExit(mapCoords, maxCount, Coordinate);
+			if (line[0] == 'M') {
+				sscanf(line,"M\t%li\t%lli\n", &long_var, &longlong_var);
+				mapReferenceIDs[mapCount] = (IDnum) long_var;
+				mapCoords[mapCount] = (Coordinate) longlong_var;
+
+				if (++mapCount == maxCount) {
+					maxCount *= 2;
+					mapReferenceIDs = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
+					mapCoords = reallocOrExit(mapCoords, maxCount, Coordinate);
+				}
 			}
 		}
-	}
 #ifdef OPENMP
 	}
 #endif
@@ -923,6 +926,9 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 								     table, outfile, index + 1);
 
 #ifdef OPENMP
+				#pragma omp parallel for
+				for (index = 0; index < omp_get_max_threads(); index++)
+					pushBufferCommit(index);
 				producing = 0;
 				#pragma omp flush(producing)
 			}
