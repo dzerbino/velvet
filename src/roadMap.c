@@ -178,6 +178,7 @@ RoadMapArray *importReferenceRoadMapArray(char *filename)
 	const int maxline = 100;
 	char *line = mallocOrExit(maxline, char);
 	RoadMap *rdmap = NULL;
+	IDnum rdmapIndex = 0;
 	IDnum seqID;
 	Coordinate position, start, finish;
 	Annotation *nextAnnotation;
@@ -257,6 +258,7 @@ RoadMapArray *importReferenceRoadMapArray(char *filename)
 #else
 			rdmap++;
 #endif
+			rdmapIndex++;
 		} else {
 			sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
 			       &longlong_var, &longlong_var2, &longlong_var3);
@@ -282,7 +284,7 @@ RoadMapArray *importReferenceRoadMapArray(char *filename)
 		}
 	}
 
-	velvetLog("%li roadmaps reads\n", (long) rdmapIndex);
+	velvetLog("%li roadmaps references\n", (long) rdmapIndex);
 
 #ifdef OPENMP
 	free(annotationOffset);
