@@ -3123,10 +3123,6 @@ void addReadStart(Node * node, IDnum seqID, Coordinate position,
 	ShortReadMarker *array = graph->nodeReads[nodeIndex];
 	IDnum arrayLength = graph->nodeReadCounts[nodeIndex];
 
-	if (node->status)
-		return;
-	node->status = true;
-
 	array[arrayLength].readID = seqID;
 	array[arrayLength].position = position;
 	array[arrayLength].offset = (ShortLength) offset;
