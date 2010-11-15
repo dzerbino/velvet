@@ -22,6 +22,11 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <sys/time.h>
+ 
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 #include "globals.h"
 #include "graph.h"
@@ -64,13 +69,77 @@ static Connection **scaffold = NULL;
 static RecycleBin *connectionMemory = NULL;
 static boolean estimated[CATEGORIES + 1];
 
+/* Array of per-node locks */
+
+#ifdef OPENMP
+static omp_lock_t *nodeLocks = NULL;
+
+static void
+createNodeLocks(Graph *graph)
+{
+	IDnum nbNodes;
+	IDnum nodeIndex;
+
+	nbNodes = nodeCount(graph) + 1;
+	if (nodeLocks)
+		free (nodeLocks);
+	nodeLocks = mallocOrExit(nbNodes, omp_lock_t);
+
+	#pragma omp parallel for
+	for (nodeIndex = 0; nodeIndex < nbNodes; nodeIndex++)
+		omp_init_lock(nodeLocks + nodeIndex);
+}
+
+/* Tries to avoid deadlocking */
+static inline void lockTwoNodes(IDnum nodeID, IDnum node2ID)
+{
+	if (nodeID < 0)
+		nodeID = -nodeID;
+	if (node2ID < 0)
+		node2ID = -node2ID;
+
+	/* Lock lowest ID first to avoid deadlocks */
+	if (nodeID < node2ID)
+	{
+		omp_set_lock (nodeLocks + nodeID);
+		omp_set_lock (nodeLocks + node2ID);
+	}
+	else
+	{
+		omp_set_lock (nodeLocks + node2ID);
+		omp_set_lock (nodeLocks + nodeID);
+	}
+}
+
+static inline void unLockTwoNodes(IDnum nodeID, IDnum node2ID)
+{
+	if (nodeID < 0)
+		nodeID = -nodeID;
+	if (node2ID < 0)
+		node2ID = -node2ID;
+
+	omp_unset_lock (nodeLocks + nodeID);
+	omp_unset_lock (nodeLocks + node2ID);
+}
+#endif
+
+/* SF TODO Have thread-specific recycleBin? */
 static Connection *allocateConnection()
 {
+	Connection *connect;
+#ifdef OPENMP
+#pragma omp critical
+	{
+#endif
 	if (connectionMemory == NULL)
 		connectionMemory =
 		    newRecycleBin(sizeof(Connection), BLOCK_SIZE);
 
-	return allocatePointer(connectionMemory);
+	connect = allocatePointer(connectionMemory);
+#ifdef OPENMP
+	}
+#endif
+	return connect;
 }
 
 static void deallocateConnection(Connection * connect)
@@ -674,7 +743,12 @@ static void createConnection(IDnum nodeID, IDnum node2ID,
 			     IDnum paired_count,
 			     Coordinate distance, double variance)
 {
-	Connection *connect = findConnection(nodeID, node2ID);
+	Connection *connect;
+
+#ifdef OPENMP
+	lockTwoNodes(nodeID, node2ID);
+#endif
+	connect = findConnection(nodeID, node2ID);
 
 	if (connect != NULL)
 		readjustConnection(connect, distance, variance,
@@ -682,6 +756,10 @@ static void createConnection(IDnum nodeID, IDnum node2ID,
 	else
 		createNewConnection(nodeID, node2ID, direct_count,
 				    paired_count, distance, variance);
+
+#ifdef OPENMP
+	unLockTwoNodes(nodeID, node2ID);
+#endif
 }
 
 static void projectFromSingleRead(Node * node,
@@ -694,6 +772,9 @@ static void projectFromSingleRead(Node * node,
 	double variance = 1;
 
 	if (target == getTwinNode(node) || target == node)
+		return;
+
+	if (getUniqueness(target) && getNodeID(target) < getNodeID(node))
 		return;
 
 	if (position < 0) {
@@ -955,10 +1036,17 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 {
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
+	struct timeval start, end, diff;
+
 	scaffold = callocOrExit(2 * nodes + 1, Connection *);
 
 	velvetLog("Computing direct node to node mappings\n");
 
+	gettimeofday(&start, NULL);
+#ifdef OPENMP
+	createNodeLocks(graph);
+	#pragma omp parallel for
+#endif 
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++) {
 		if (nodeID % 10000 == 0)
 			velvetLog("Scaffolding node %li\n", (long) nodeID);
@@ -966,6 +1054,13 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 		projectFromNode(nodeID, readNodes, readNodeCounts,
 				readPairs, cats, dubious, lengths);
 	}
+#ifdef OPENMP
+	free(nodeLocks);
+	nodeLocks = NULL;
+#endif
+	gettimeofday(&end, NULL);
+	timersub(&end, &start, &diff);
+	velvetLog(" === Nodes Scaffolded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
 
 	return scaffold;
 }
