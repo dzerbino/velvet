@@ -647,10 +647,22 @@ PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
 				Coordinate finish, Coordinate startOffset,
 				Coordinate finishOffset)
 {
-	PassageMarkerI marker = allocatePassageMarker();
-	PassageMarkerI twinMarker = allocatePassageMarker();
-	PassageMarker *markerVal = PM_FI2P (marker);
-	PassageMarker *twinMarkerVal = PM_FI2P (twinMarker);
+	PassageMarkerI marker;
+	PassageMarkerI twinMarker;
+	PassageMarker *markerVal;
+	PassageMarker *twinMarkerVal;
+
+#ifdef OPENMP
+	#pragma omp critical
+	{
+#endif
+		marker = allocatePassageMarker();
+		twinMarker = allocatePassageMarker();
+#ifdef OPENMP
+	}
+#endif
+	markerVal = PM_FI2P (marker);
+	twinMarkerVal = PM_FI2P (twinMarker);
 
 //      velvetLog("Values %d\t%d\t%d\t%d\t%d\n", seqID, start, finish, startOffset, finishOffset);
 

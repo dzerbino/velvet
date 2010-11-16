@@ -170,6 +170,9 @@ Arc *createArc(Node * originNode, Node * destinationNode, Graph * graph)
 		return arc;
 	}
 	// If not found
+#ifdef OPENMP
+	#pragma omp critical
+#endif
 	arc = allocateArc();
 	arc->destination = destinationNode;
 	arc->multiplicity = 1;
@@ -197,6 +200,9 @@ Arc *createArc(Node * originNode, Node * destinationNode, Graph * graph)
 		return arc;
 	}
 
+#ifdef OPENMP
+	#pragma omp critical
+#endif
 	twinArc = allocateArc();
 	twinArc->destination = originNode->twinNode;
 	twinArc->multiplicity = 1;

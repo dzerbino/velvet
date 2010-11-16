@@ -81,6 +81,48 @@ static inline void lockNode(Node *node)
 	omp_set_lock (nodeLocks + nodeID);
 }
 
+/* Assumes node is already locked */
+static inline void lockTwoNodes(Node *node, Node *node2)
+{
+	IDnum nodeID = getNodeID(node);
+	IDnum node2ID = getNodeID(node2);
+
+	if (nodeID < 0)
+		nodeID = -nodeID;
+	if (node2ID < 0)
+		node2ID = -node2ID;
+
+	if (nodeID == node2ID)
+		return;
+
+	/* Lock lowest ID first to avoid deadlocks */
+	if (nodeID < node2ID)
+	{
+		omp_set_lock (nodeLocks + node2ID);
+	}
+	else if (!omp_test_lock (nodeLocks + node2ID))
+	{
+		omp_unset_lock (nodeLocks + nodeID);
+		omp_set_lock (nodeLocks + node2ID);
+		omp_set_lock (nodeLocks + nodeID);
+	}
+}
+
+static inline void unLockTwoNodes(Node *node, Node *node2)
+{
+	IDnum nodeID = getNodeID(node);
+	IDnum node2ID = getNodeID(node2);
+
+	if (nodeID < 0)
+		nodeID = -nodeID;
+	if (node2ID < 0)
+		node2ID = -node2ID;
+
+	omp_unset_lock (nodeLocks + nodeID);
+	if (nodeID != node2ID)
+		omp_unset_lock (nodeLocks + node2ID);
+}
+
 static inline void unLockNode(Node *node)
 {
 	IDnum nodeID = getNodeID(node);
@@ -942,13 +984,11 @@ static void threadSequenceThroughGraph(TightString * tString,
 					incrementOriginalVirtualCoverage
 					    (node, category / 2, 1);
 				}
-
+#ifdef OPENMP
+				unLockNode(node);
+#endif
 			} else {
 				if (category / 2 >= CATEGORIES) {
-#ifdef OPENMP
-					/* SF TODO should lock at the allocator level */
-					#pragma omp critical
-#endif
 					marker =
 					    newPassageMarker(seqID,
 							     kmerIndex,
@@ -984,16 +1024,14 @@ static void threadSequenceThroughGraph(TightString * tString,
 					incrementOriginalVirtualCoverage
 					    (node, category / 2, 1);
 				}
-
 #ifdef OPENMP
-				/* SF TODO should lock at the allocator level */
-				#pragma omp critical
+				lockTwoNodes(node, previousNode);
 #endif
 				createArc(previousNode, node, graph);
-			}
 #ifdef OPENMP
-			unLockNode(node);
+				unLockTwoNodes(node, previousNode);
 #endif
+			}
 
 			previousNode = node;
 			previousCoord = coord;
