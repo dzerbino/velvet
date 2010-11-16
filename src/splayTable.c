@@ -582,6 +582,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 	Nucleotide nucleotide;
 	KmerOccurence * hit;
 	char line[MAXLINE];
+	char c;
 	
 	Coordinate mapCount = 0;
 	Coordinate maxCount = 10;	
@@ -607,20 +608,24 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 #endif 
 			exit(1);
 		}
-		sscanf(line, ">%*s\t%li\t", &long_var);
+		sscanf(line, "%*s\t%li\t", &long_var);
 		*seqID = (IDnum) long_var;
+		if (*seqID == 0)
+			abort();
 		tString = getTightStringInArray(array, *seqID - 1);
 		length = getLength(tString);
 		*sequenceIDs = callocOrExit(length, IDnum);
 		*coords = callocOrExit(length, Coordinate);
 
 		// Parse file for mapping info
-		while (seqFile && fgets(line, MAXLINE, seqFile)) {
-			if (line[0] == '>')
+		while (seqFile && (c = getc(seqFile)) != EOF) {
+			if (c == '>')
 				break;
 
-			if (line[0] == 'M') {
-				sscanf(line,"M\t%li\t%lli\n", &long_var, &longlong_var);
+			fgets(line, MAXLINE, seqFile);
+
+			if (c == 'M') {
+				sscanf(line,"\t%li\t%lli\n", &long_var, &longlong_var);
 				mapReferenceIDs[mapCount] = (IDnum) long_var;
 				mapCoords[mapCount] = (Coordinate) longlong_var;
 
@@ -865,6 +870,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	IDnum referenceSequenceCount = 0;
 	char line[MAXLINE];
 	struct timeval start, end, diff;
+	char c;
 	boolean second_in_pair;
 
 	if (outfile == NULL)
@@ -907,10 +913,18 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		else
 			velvetLog("Reading mapping info from file %s\n", seqFilename);
 
-		for (index = 0; index < referenceSequenceCount + 1; index++) 
-			while (fgets(line, MAXLINE, seqFile))
+		// Skip through reference headers quickly
+		for (index = 0; index < referenceSequenceCount; index++)
+			while (fgets(line, MAXLINE, seqFile)) 
 				if (line[0] == '>')
 					break;
+
+		// Edge to the first sequence header
+		while ((c = getc(seqFile))) {
+			if (c == '>')
+				break;
+			fgets(line, MAXLINE, seqFile);
+		}
 
 #ifdef OPENMP
 		producing = 1;

@@ -138,14 +138,20 @@ void allocateKmerOccurences(IDnum kmerCount, KmerOccurenceTable * table) {
 }
 
 void recordKmerOccurence(Kmer * kmer, IDnum nodeID, Coordinate position, KmerOccurenceTable * table) {
-	if (table->kmerOccurenceIndex == table->kmerTableSize)
-		abort();
-	copyKmers(&(table->kmerOccurencePtr->kmer), kmer);
-	table->kmerOccurencePtr->nodeID = nodeID;
-	table->kmerOccurencePtr->position = position;
+	KmerOccurence * kmerOccurence;
 
-	table->kmerOccurencePtr++;
-	table->kmerOccurenceIndex++;
+#ifdef OPENMP
+	#pragma omp critical
+#endif 
+	{
+		kmerOccurence = table->kmerOccurencePtr++;
+		table->kmerOccurenceIndex++;
+	}
+
+	copyKmers(&(kmerOccurence->kmer), kmer);
+	kmerOccurence->nodeID = nodeID;
+	kmerOccurence->position = position;
+
 }
 
 void sortKmerOccurenceTable(KmerOccurenceTable * table) {

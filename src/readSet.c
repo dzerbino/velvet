@@ -1925,9 +1925,9 @@ ReadSet *importReadSet(char *filename)
 	const int maxline = 5000;
 	char line[5000];
 	IDnum sequenceCount, sequenceIndex;
-	IDnum index;
 	ReadSet *reads;
 	short int temp_short;
+	int lineLength;
 
 	if (file != NULL)
 		velvetLog("Reading read set file %s;\n", filename);
@@ -2005,10 +2005,9 @@ ReadSet *importReadSet(char *filename)
 		} else if (line[0] == 'M') {;
 			// Map line
 		} else {
-			for (index = 0; index < (Coordinate) strlen(line) - 1;
-			     index++)
-				sequence[bpCount + index] = line[index];
-			bpCount += (Coordinate) (strlen(line) - 1);
+			lineLength = strlen(line) - 1;
+			strncpy(sequence + bpCount, line, lineLength);
+			bpCount += (Coordinate) lineLength;
 		}
 	}
 
