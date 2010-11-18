@@ -2414,7 +2414,7 @@ static void tourBusNode(Node * node)
 	IDnum id;
 
 	dbgCounter++;
-	if (dbgCounter % 1000 == 0) {
+	if (dbgCounter % 10000 == 0) {
 		velvetLog("%li nodes visited\n", (long) dbgCounter);
 		fflush(stdout);
 	}

@@ -340,7 +340,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	for (sequenceIndex = 1;
 	     sequenceIndex <= sequenceCount_pg(preGraph);
 	     sequenceIndex++) {
-		if (sequenceIndex % 100000 == 0)
+		if (sequenceIndex % 1000000 == 0)
 			velvetLog("Sequence %li / %li\n", (long) sequenceIndex,
 			       (long) sequenceCount_pg(preGraph));
 
@@ -623,7 +623,7 @@ static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex <= referenceCount;
 	     sequenceIndex++) {
 
-		if (sequenceIndex % 100000 == 0)
+		if (sequenceIndex % 1000000 == 0)
 			velvetLog("Connecting %li / %li\n", (long) sequenceIndex,
 			       (long) sequenceCount_pg(preGraph));
 
@@ -692,7 +692,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	     sequenceIndex <= sequenceCount_pg(preGraph);
 	     sequenceIndex++) {
 
-		if (sequenceIndex % 100000 == 0)
+		if (sequenceIndex % 1000000 == 0)
 			velvetLog("Connecting %li / %li\n", (long) sequenceIndex,
 			       (long) sequenceCount_pg(preGraph));
 
