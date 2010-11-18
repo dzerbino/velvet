@@ -101,6 +101,8 @@ static void pushBufferCommit(int thread)
 	tmp = annotationBufferW[thread];
 	annotationBufferW[thread] = annotationBuffer[thread];
 	annotationBuffer[thread] = tmp;
+	tmp = annotationBufferW[thread];
+	#pragma omp flush(tmp)
 }
 
 static void pushBuffer(int thread)
@@ -118,9 +120,12 @@ static void writeBuffers(FILE *outFile, int nbThreads)
 
 	for (i = 0; i < nbThreads; i++)
 	{
+		StringBuffer *b;
 		char *s;
 
-		s = annotationBufferW[i]->str;
+		b = annotationBufferW[i];
+		#pragma omp flush(b)
+		s = b->str;
 		#pragma omp flush(s)
 		if (*s)
 		{
@@ -942,8 +947,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 								     table, outfile, index + 1);
 
 #ifdef OPENMP
-				#pragma omp parallel for
-				for (index = 0; index < omp_get_max_threads(); index++)
+				for (index = omp_get_max_threads() - 1; index >= 0; index--)
 					pushBufferCommit(index);
 				producing = 0;
 				#pragma omp flush(producing)
@@ -997,8 +1001,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 							    second_in_pair, index + 1);
 			}
 #ifdef OPENMP
-			#pragma omp parallel for
-			for (index = 0; index < omp_get_max_threads(); index++)
+			for (index = omp_get_max_threads() - 1; index >= 0; index--)
 				pushBufferCommit(index);
 			producing = 0;
 			#pragma omp flush(producing)

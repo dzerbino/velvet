@@ -198,46 +198,29 @@ TightString *newTightStringArrayFromStringArray(char **sequences,
 						char **tSeqMem)
 {
 	IDnum sequenceIndex;
+	Codon *tmp;
 	TightString *tStringArray = mallocOrExit(sequenceCount, TightString);
-	Coordinate *offsets;
 	Coordinate totalLength = 0;
+	int arrayLength;
 
-	offsets = mallocOrExit (sequenceCount + 1, Coordinate);
-	offsets[0] = 0;
-
-#ifdef OPENMP
-	#pragma omp parallel for schedule(dynamic)
-#endif
 	for (sequenceIndex = 0; sequenceIndex < sequenceCount; sequenceIndex++)
 	{
-		int arrayLength;
-
-		tStringArray[sequenceIndex].length = strlen(sequences[sequenceIndex]);
+		tStringArray[sequenceIndex].length = strlen (sequences[sequenceIndex]);
 		arrayLength = (tStringArray[sequenceIndex].length + 3) / 4;
-		offsets[sequenceIndex + 1] = arrayLength;
+		totalLength += arrayLength;
 	}
-
-	for (sequenceIndex = 2; sequenceIndex <= sequenceCount; sequenceIndex++)
-		offsets[sequenceIndex] += offsets[sequenceIndex - 1];
-
-	totalLength = offsets[sequenceCount];
 	*tSeqMem = callocOrExit (totalLength, char);
-
-#ifdef OPENMP
-	#pragma omp parallel for schedule(dynamic)
-#endif
+	tmp = (Codon*)*tSeqMem;
 	for (sequenceIndex = 0; sequenceIndex < sequenceCount; sequenceIndex++)
 	{
-		int arrayLength;
-
-		arrayLength = (tStringArray[sequenceIndex].length + 3) / 4;
-		fillTightStringWithString (tStringArray + sequenceIndex,
+		fillTightStringWithString (&tStringArray[sequenceIndex],
 					   sequences[sequenceIndex],
-					   (Codon*)(*tSeqMem + offsets[sequenceIndex]));
+					   tmp);
+		arrayLength = (tStringArray[sequenceIndex].length + 3) / 4;
+		tmp += arrayLength;
 	}
 
 	free(sequences);
-	free (offsets);
 	return tStringArray;
 }
 
