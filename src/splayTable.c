@@ -871,7 +871,6 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	char line[MAXLINE];
 	struct timeval start, end, diff;
 	char c;
-	boolean second_in_pair;
 
 	if (outfile == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", filename);
@@ -971,6 +970,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 #endif
 			for (index = referenceSequenceCount; index < sequenceCount; index++)
 			{
+				boolean second_in_pair;
+
 				// Progress report on screen
 				if (index % 1000000 == 0) {
 					velvetLog("Inputting sequence %li / %li\n",

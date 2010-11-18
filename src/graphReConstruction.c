@@ -1054,11 +1054,7 @@ static void fillUpGraph(ReadSet * reads,
 			char * roadmapFilename)
 {
 	IDnum readIndex;
-	Category category;
-	Annotation * annotations = NULL;
 	RoadMapArray *roadmap = NULL;
-	IDnum annotationCount = 0;
-	boolean second_in_pair = false;
 	Coordinate *annotationOffset;
 	struct timeval start, end, diff;
 	
@@ -1084,6 +1080,11 @@ static void fillUpGraph(ReadSet * reads,
 #endif
 	for (readIndex = refCount; readIndex < reads->readCount; readIndex++)
 	{
+		Annotation * annotations = NULL;
+		IDnum annotationCount = 0;
+		Category category;
+		boolean second_in_pair;
+
 		if (readIndex % 1000000 == 0)
 			velvetLog("Ghost Threading through reads %ld / %ld\n",
 				  (long) readIndex, (long) reads->readCount);
@@ -1117,6 +1118,11 @@ static void fillUpGraph(ReadSet * reads,
 #endif
 	for (readIndex = 0; readIndex < reads->readCount; readIndex++)
 	{
+		Annotation * annotations = NULL;
+		IDnum annotationCount = 0;
+		Category category;
+		boolean second_in_pair;
+
 		if (readIndex % 1000000 == 0)
 			velvetLog("Threading through reads %li / %li\n",
 				  (long) readIndex, (long) reads->readCount);

@@ -206,7 +206,7 @@ TightString *newTightStringArrayFromStringArray(char **sequences,
 	offsets[0] = 0;
 
 #ifdef OPENMP
-	#pragma omp parallel for
+	#pragma omp parallel for schedule(dynamic)
 #endif
 	for (sequenceIndex = 0; sequenceIndex < sequenceCount; sequenceIndex++)
 	{
@@ -224,7 +224,7 @@ TightString *newTightStringArrayFromStringArray(char **sequences,
 	*tSeqMem = callocOrExit (totalLength, char);
 
 #ifdef OPENMP
-	#pragma omp parallel for
+	#pragma omp parallel for schedule(dynamic)
 #endif
 	for (sequenceIndex = 0; sequenceIndex < sequenceCount; sequenceIndex++)
 	{
