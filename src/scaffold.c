@@ -109,7 +109,6 @@ static inline void lockTwoNodes(IDnum nodeID, IDnum node2ID)
 		omp_set_lock (nodeLocks + node2ID);
 		omp_set_lock (nodeLocks + nodeID);
 	}
-	#pragma omp flush
 }
 
 static inline void unLockTwoNodes(IDnum nodeID, IDnum node2ID)
@@ -119,7 +118,6 @@ static inline void unLockTwoNodes(IDnum nodeID, IDnum node2ID)
 	if (node2ID < 0)
 		node2ID = -node2ID;
 
-	#pragma omp flush
 	omp_unset_lock (nodeLocks + nodeID);
 	omp_unset_lock (nodeLocks + node2ID);
 }
