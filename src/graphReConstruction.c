@@ -79,6 +79,7 @@ static inline void lockNode(Node *node)
 	if (nodeID < 0)
 		nodeID = -nodeID;
 	omp_set_lock (nodeLocks + nodeID);
+	#pragma omp flush
 }
 
 /* Assumes node is already locked */
@@ -106,6 +107,7 @@ static inline void lockTwoNodes(Node *node, Node *node2)
 		omp_set_lock (nodeLocks + node2ID);
 		omp_set_lock (nodeLocks + nodeID);
 	}
+	#pragma omp flush
 }
 
 static inline void unLockTwoNodes(Node *node, Node *node2)
@@ -118,6 +120,7 @@ static inline void unLockTwoNodes(Node *node, Node *node2)
 	if (node2ID < 0)
 		node2ID = -node2ID;
 
+	#pragma omp flush
 	omp_unset_lock (nodeLocks + nodeID);
 	if (nodeID != node2ID)
 		omp_unset_lock (nodeLocks + node2ID);
@@ -129,6 +132,7 @@ static inline void unLockNode(Node *node)
 
 	if (nodeID < 0)
 		nodeID = -nodeID;
+	#pragma omp flush
 	omp_unset_lock (nodeLocks + nodeID);
 }
 
