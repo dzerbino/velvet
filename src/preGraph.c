@@ -187,6 +187,9 @@ PreArcI createPreArc_pg(IDnum originPreNodeID, IDnum destinationPreNodeID,
 		return preArc;
 	}
 	// If not found
+#ifdef OPENMP
+	#pragma omp critical
+#endif
 	preArc = allocatePreArc_pg();
 	preArcVal = PREARC_FI2P (preArc);
 	preArcVal->preNodeIDLeft = originPreNodeID;
