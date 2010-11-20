@@ -45,8 +45,8 @@ typedef struct readOccurence_st ReadOccurence;
 
 struct connection_st {
 	Node *destination;
-	Connection *next;
-	Connection *previous;
+	Connection *right;
+	Connection *left;
 	Connection *twin;
 	double distance;
 	double variance;
@@ -141,6 +141,7 @@ static Connection *allocateConnection()
 #ifdef OPENMP
 	}
 #endif
+	connect->destination = NULL;
 	return connect;
 }
 
@@ -154,7 +155,7 @@ Node * getConnectionDestination(Connection * connect) {
 }
 
 Connection * getNextConnection(Connection * connect) {
-	return connect->next;
+	return connect->right;
 }
 
 Connection * getTwinConnection(Connection * connect) {
@@ -249,13 +250,13 @@ void destroyConnection(Connection * connect, IDnum nodeID)
 	if (connect == NULL)
 		return;
 
-	previous = connect->previous;
-	next = connect->next;
+	previous = connect->left;
+	next = connect->right;
 
 	if (previous != NULL)
-		previous->next = next;
+		previous->right = next;
 	if (next != NULL)
-		next->previous = previous;
+		next->left = previous;
 
 	if (scaffold[nodeID + nodeCount(graph)] == connect)
 		scaffold[nodeID + nodeCount(graph)] = next;
@@ -643,22 +644,6 @@ static void estimateMissingInsertLengths(ReadOccurence ** readNodes, IDnum * rea
 	velvetLog("Done\n");
 }
 
-static Connection *findConnection(IDnum nodeID, IDnum node2ID)
-{
-	Node *node2 = getNodeInGraph(graph, node2ID);
-	Connection *connect;
-
-	if (node2 == NULL)
-		return NULL;
-
-	for (connect = scaffold[nodeID + nodeCount(graph)];
-	     connect != NULL; connect = connect->next)
-		if (connect->destination == node2)
-			break;
-
-	return connect;
-}
-
 static void createTwinConnection(IDnum nodeID, IDnum node2ID,
 				 Connection * connect)
 {
@@ -677,10 +662,10 @@ static void createTwinConnection(IDnum nodeID, IDnum node2ID,
 	connect->twin = newConnection;
 
 	// Insert in scaffold
-	newConnection->previous = NULL;
-	newConnection->next = scaffold[nodeIndex];
+	newConnection->left = NULL;
+	newConnection->right = scaffold[nodeIndex];
 	if (scaffold[nodeIndex] != NULL)
-		scaffold[nodeIndex]->previous = newConnection;
+		scaffold[nodeIndex]->left = newConnection;
 	scaffold[nodeIndex] = newConnection;
 }
 
@@ -702,10 +687,10 @@ Connection *createNewConnection(IDnum nodeID, IDnum node2ID,
 	connect->variance = variance;
 
 	// Insert in scaffold
-	connect->previous = NULL;
-	connect->next = scaffold[nodeIndex];
+	connect->left = NULL;
+	connect->right = scaffold[nodeIndex];
 	if (scaffold[nodeIndex] != NULL)
-		scaffold[nodeIndex]->previous = connect;
+		scaffold[nodeIndex]->left = connect;
 	scaffold[nodeIndex] = connect;
 
 	// Event. pair up to twin
@@ -740,24 +725,330 @@ void readjustConnection(Connection * connect, Coordinate distance,
 	}
 }
 
-static void createConnection(IDnum nodeID, IDnum node2ID,
+//////////////////////////////////////
+// Splay tree function for Connections
+//////////////////////////////////////
+
+/* This function can be called only if K2 has a left child */
+/* Perform a rotate between a node (K2) and its left child */
+/* Update heights, then return new root */
+
+static Connection *connectionSingleRotateWithLeft(Connection * K2)
+{
+	Connection *K1;
+
+	K1 = K2->left;
+	K2->left = K1->right;
+	K1->right = K2;
+
+	return K1;		/* New root */
+}
+
+/* This function can be called only if K1 has a right child */
+/* Perform a rotate between a node (K1) and its right child */
+/* Update heights, then return new root */
+
+static Connection *connectionSingleRotateWithRight(Connection * K1)
+{
+	Connection *K2;
+
+	K2 = K1->right;
+	K1->right = K2->left;
+	K2->left = K1;
+
+	return K2;		/* New root */
+}
+
+/* Top-down splay procedure, */
+/* not requiring destination to be in tree */
+
+static Connection *splayConnection(Connection * T, IDnum nodeID)
+{
+	Connection Header;
+	Connection *LeftTreeMax, *RightTreeMin;
+
+	if (T == NULL)
+		return NULL;
+
+	Header.left = Header.right = NULL;
+	LeftTreeMax = RightTreeMin = &Header;
+
+	while (nodeID != getNodeID(T->destination))
+	{
+		if (nodeID < getNodeID(T->destination))
+		{
+			if (T->left == NULL)
+				break;
+			if (nodeID  < getNodeID(T->left->destination))
+				T = connectionSingleRotateWithLeft(T);
+			if (T->left == NULL)
+				break;
+			/* Link right */
+			RightTreeMin->left = T;
+			RightTreeMin = T;
+			T = T->left;
+		}
+		else
+		{
+			if (T->right == NULL)
+				break;
+			if (nodeID > getNodeID(T->right->destination))
+				T = connectionSingleRotateWithRight(T);
+			if (T->right == NULL)
+				break;
+			/* Link left */
+			LeftTreeMax->right = T;
+			LeftTreeMax = T;
+			T = T->right;
+		}
+	} /* while nodeID != T->destination */
+
+	/* Reassemble */
+	LeftTreeMax->right = T->left;
+	RightTreeMin->left = T->right;
+	T->left = Header.right;
+	T->right = Header.left;
+
+	return T;
+}
+
+static Connection* findOrCreateConnection(IDnum nodeID,
+					  IDnum node2ID)
+{
+	Connection **T;
+	Connection *newConnection;
+	IDnum nodeIndex;
+
+	nodeIndex = nodeID + nodeCount(graph);
+	T = scaffold + nodeIndex;
+
+	if (*T == NULL)
+	{
+		newConnection = allocateConnection();
+
+		newConnection->left = NULL;
+		newConnection->right = NULL;
+		*T = newConnection;
+	}
+
+	*T = splayConnection(*T, node2ID);
+	if (node2ID < getNodeID((*T)->destination))
+	{
+		newConnection = allocateConnection();
+
+		newConnection->left = (*T)->left;
+		newConnection->right = *T;
+		(*T)->left = NULL;
+
+		*T = newConnection;
+	}
+	else if (node2ID > getNodeID((*T)->destination))
+	{
+		newConnection = allocateConnection();
+
+		newConnection->right = (*T)->right;
+		newConnection->left = *T;
+		(*T)->right = NULL;
+
+		*T = newConnection;
+	}
+	else
+		newConnection = *T;
+
+	return newConnection;
+}
+
+RecycleBin *connectionStackMemory = NULL;
+
+typedef struct ConnectionStack_st ConnectionStack;
+
+struct ConnectionStack_st
+{
+	Connection *connection;
+	ConnectionStack *next;
+};
+
+static ConnectionStack *allocateConnectionStack(void)
+{
+	ConnectionStack *stack;
+#ifdef OPENMP
+#pragma omp critical
+	{
+#endif
+	if (connectionStackMemory == NULL)
+		connectionStackMemory =
+		    newRecycleBin(sizeof(ConnectionStack), BLOCK_SIZE);
+
+	stack = allocatePointer(connectionStackMemory);
+#ifdef OPENMP
+	}
+#endif
+	return stack;
+}
+
+static void deallocateConnectionStack(ConnectionStack *stack)
+{
+	deallocatePointer(connectionStackMemory, stack);
+}
+
+static void pushConnectionStack(ConnectionStack **stack, Connection *connection)
+{
+	ConnectionStack *newElement;
+
+	newElement = allocateConnectionStack();
+	newElement->connection = connection;
+	newElement->next = *stack;
+	*stack = newElement;
+}
+
+static Connection *popConnectionStack(ConnectionStack **stack)
+{
+	ConnectionStack *nextElement;
+	Connection *connection;
+
+	if (stack == NULL)
+		return NULL;
+
+	nextElement = (*stack)->next;
+	connection = (*stack)->connection;
+	deallocateConnectionStack(*stack);
+	*stack = nextElement;
+
+	return connection;
+}
+
+static void splayToList(Connection **connection)
+{
+	ConnectionStack *stack = NULL;
+	Connection *current;
+	Connection *list = NULL;
+
+	if (*connection == NULL)
+		return;
+
+	pushConnectionStack(&stack, *connection);
+
+	while (stack != NULL)
+	{
+		Connection *right;
+		Connection *left;
+
+		current = popConnectionStack(&stack);
+		right = current->right;
+		if (right != NULL)
+			pushConnectionStack(&stack, right);
+		left = current->left;
+		if (left != NULL)
+			pushConnectionStack(&stack, left);
+		if (list != NULL)
+			list->left = current;
+		current->right = list;
+		list = current;
+	}
+	list->left = NULL;
+	*connection = list;
+}
+
+static Connection *fillNewConnectionInTree(Connection *connect,
+					   Node *destination,
+					   IDnum direct_count,
+					   IDnum paired_count,
+					   Coordinate distance,
+					   double variance)
+{
+	connect->destination = destination;
+	connect->direct_count = direct_count;
+	connect->paired_count = paired_count;
+	connect->distance = (double)distance;
+	connect->variance = variance;
+
+	return connect;
+}
+
+static void readjustConnectionInTree(Connection *connect,
+				     IDnum direct_count,
+				     IDnum paired_count,
+				     Coordinate distance,
+				     double variance)
+{
+	connect->direct_count += direct_count;
+	connect->paired_count += paired_count;
+
+	connect->distance = (variance * connect->distance + distance * connect->variance) /
+			    (variance + connect->variance);
+	connect->variance = (variance * connect->variance) / (variance + connect->variance);
+
+	if (connect->twin != NULL)
+	{
+		connect->twin->distance = connect->distance;
+		connect->twin->variance = connect->variance;
+		connect->twin->direct_count = connect->direct_count;
+		connect->twin->paired_count = connect->paired_count;
+	}
+}
+
+static void createTwinConnectionInTree(IDnum nodeID,
+				       IDnum node2ID,
+				       Connection *connect)
+{
+	Connection *newConnection;
+
+	newConnection = findOrCreateConnection(nodeID, node2ID);
+	if (newConnection->destination == NULL)
+		fillNewConnectionInTree(newConnection,
+					getNodeInGraph(graph, node2ID),
+					connect->direct_count,
+					connect->paired_count,
+					(Coordinate)connect->distance,
+					connect->variance);
+	else
+		readjustConnectionInTree(newConnection,
+					 connect->direct_count,
+					 connect->paired_count,
+					 (Coordinate)connect->distance,
+					 connect->variance);
+
+	// Batch to twin
+	newConnection->twin = connect;
+	connect->twin = newConnection;
+}
+
+static void createConnection(IDnum nodeID,
+			     IDnum node2ID,
 			     IDnum direct_count,
 			     IDnum paired_count,
-			     Coordinate distance, double variance)
+			     Coordinate distance,
+			     double variance)
 {
 	Connection *connect;
 
 #ifdef OPENMP
 	lockTwoNodes(nodeID, node2ID);
 #endif
-	connect = findConnection(nodeID, node2ID);
-
-	if (connect != NULL)
-		readjustConnection(connect, distance, variance,
-				   direct_count, paired_count);
+	connect = findOrCreateConnection(nodeID, node2ID);
+	if (connect->destination)
+	{
+		readjustConnectionInTree(connect,
+					 direct_count,
+					 paired_count,
+					 distance,
+					 variance);
+	}
 	else
-		createNewConnection(nodeID, node2ID, direct_count,
-				    paired_count, distance, variance);
+	{
+		Node *destination = getNodeInGraph(graph, node2ID);
+		fillNewConnectionInTree(connect,
+					destination,
+					direct_count,
+					paired_count,
+					distance,
+					variance);
+
+		if (getUniqueness(destination))
+			createTwinConnectionInTree(node2ID, nodeID, connect);
+		else
+			connect->twin = NULL;
+	}
 
 #ifdef OPENMP
 	unLockTwoNodes(nodeID, node2ID);
@@ -1049,13 +1340,22 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 	createNodeLocks(graph);
 	#pragma omp parallel for
 #endif 
-	for (nodeID = -nodes; nodeID <= nodes; nodeID++) {
+	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
+	{
 		if (nodeID % 10000 == 0)
 			velvetLog("Scaffolding node %li\n", (long) nodeID);
 
 		projectFromNode(nodeID, readNodes, readNodeCounts,
 				readPairs, cats, dubious, lengths);
 	}
+#ifdef OPENMP
+	#pragma omp parallel for
+#endif
+	for (nodeID = 2 * nodes; nodeID >= 0; nodeID--)
+	{
+		splayToList(scaffold + nodeID);
+	}
+
 #ifdef OPENMP
 	free(nodeLocks);
 	nodeLocks = NULL;
@@ -1121,7 +1421,7 @@ void printConnections(ReadSet * reads)
 		node = getNodeInGraph(graph, index - nodeCount(graph));
 		for (connect = scaffold[index]; connect != NULL;
 		     connect = next) {
-			next = connect->next;
+			next = connect->right;
 			if (getUniqueness(connect->destination)) {
 				velvetLog
 				    ("CONNECT %ld %ld %ld %ld %lld %lld %lld %f %ld %ld",
@@ -1176,7 +1476,7 @@ static void removeUnreliableConnections(ReadSet * reads)
 	for (index = 0; index < maxNodeIndex; index++) {
 		for (connect = scaffold[index]; connect != NULL;
 		     connect = next) {
-			next = connect->next;
+			next = connect->right;
 			if (!testConnection
 			    (index - nodes, connect, counts))
 				destroyConnection(connect, index - nodes);
