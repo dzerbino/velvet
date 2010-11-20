@@ -80,7 +80,9 @@ static void lockTwoNodes(IDnum preNodeID, IDnum preNode2ID)
 		preNode2ID = -preNode2ID;
 
 	/* Lock lowest ID first to avoid deadlocks */
-	if (preNodeID < preNode2ID)
+	if (preNodeID == preNode2ID)
+		omp_set_lock (nodeLocks + preNodeID);
+	else if (preNodeID < preNode2ID)
 	{
 		omp_set_lock (nodeLocks + preNodeID);
 		omp_set_lock (nodeLocks + preNode2ID);
@@ -100,7 +102,8 @@ static void unLockTwoNodes(IDnum preNodeID, IDnum preNode2ID)
 		preNode2ID = -preNode2ID;
 
 	omp_unset_lock (nodeLocks + preNodeID);
-	omp_unset_lock (nodeLocks + preNode2ID);
+	if (preNodeID != preNode2ID)
+		omp_unset_lock (nodeLocks + preNode2ID);
 }
 #endif
 
@@ -785,7 +788,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	annotationOffset[0] = 0;
 	for (sequenceIndex = 1; sequenceIndex <= rdmaps->length; sequenceIndex++)
 		annotationOffset[sequenceIndex] = annotationOffset[sequenceIndex - 1] +
-						  getAnnotationCount(getRoadMapInArray(rdmaps, sequenceIndex));
+						  getAnnotationCount(getRoadMapInArray(rdmaps, sequenceIndex - 1));
 #else
 	Annotation *annot = rdmaps->annotations;
 #endif
