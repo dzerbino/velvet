@@ -870,29 +870,58 @@ struct ConnectionStack_st
 	ConnectionStack *next;
 };
 
+#ifdef OPENMP
+static void initConnectionStackMemory(void)
+{
+	int n = omp_get_max_threads();
+
+	#pragma omp critical
+	{
+		if (connectionStackMemory == NULL)
+			connectionStackMemory = newRecycleBinArray(n, sizeof(ConnectionStack), BLOCK_SIZE);
+	}
+}
+#endif
+
 static ConnectionStack *allocateConnectionStack(void)
 {
-	ConnectionStack *stack;
 #ifdef OPENMP
-#pragma omp critical
+#if DEBUG
+	if (connectionStackMemory == NULL)
 	{
+		velvetLog("The memory for connection stack seems uninitialised, "
+			  "this is probably a bug, aborting.\n");
+		abort();
+	}
 #endif
+	return allocatePointer(getRecycleBinInArray(connectionStackMemory,
+				omp_get_thread_num()));
+#else
 	if (connectionStackMemory == NULL)
 		connectionStackMemory =
 		    newRecycleBin(sizeof(ConnectionStack), BLOCK_SIZE);
 
-	stack = allocatePointer(connectionStackMemory);
-#ifdef OPENMP
-	}
+	return allocatePointer(connectionStackMemory);
 #endif
-	return stack;
 }
 
 static void deallocateConnectionStack(ConnectionStack *stack)
 {
 #ifdef OPENMP
-#pragma omp critical
+	deallocatePointer(getRecycleBinInArray(connectionStackMemory,
+					       omp_get_thread_num()),
+			  stack);
+#else
 	deallocatePointer(connectionStackMemory, stack);
+#endif
+}
+
+static void destroyConnectionStackMemory(void)
+{
+#ifdef OPENMP
+	destroyRecycleBinArray(connectionStackMemory);
+#else
+	destroyRecycleBin(connectionStackMemory);
 #endif
 }
 
@@ -1347,12 +1376,13 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 				readPairs, cats, dubious, lengths);
 	}
 #ifdef OPENMP
+	initConnectionStackMemory();
 	#pragma omp parallel for
 #endif
 	for (nodeID = 2 * nodes; nodeID >= 0; nodeID--)
-	{
 		splayToList(scaffold + nodeID);
-	}
+
+	destroyConnectionStackMemory();
 
 #ifdef OPENMP
 	free(nodeLocks);
