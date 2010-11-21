@@ -830,30 +830,32 @@ static Connection* findOrCreateConnection(IDnum nodeID,
 		newConnection->right = NULL;
 		*T = newConnection;
 	}
-
-	*T = splayConnection(*T, node2ID);
-	if (node2ID < getNodeID((*T)->destination))
-	{
-		newConnection = allocateConnection();
-
-		newConnection->left = (*T)->left;
-		newConnection->right = *T;
-		(*T)->left = NULL;
-
-		*T = newConnection;
-	}
-	else if (node2ID > getNodeID((*T)->destination))
-	{
-		newConnection = allocateConnection();
-
-		newConnection->right = (*T)->right;
-		newConnection->left = *T;
-		(*T)->right = NULL;
-
-		*T = newConnection;
-	}
 	else
-		newConnection = *T;
+	{
+		IDnum destID;
+
+		*T = splayConnection(*T, node2ID);
+		destID = getNodeID((*T)->destination);
+		if (destID == node2ID)
+			newConnection = *T;
+		else
+		{
+			newConnection = allocateConnection();
+			if (node2ID < destID)
+			{
+				newConnection->left = (*T)->left;
+				newConnection->right = *T;
+				(*T)->left = NULL;
+			}
+			else if (node2ID > destID)
+			{
+				newConnection->right = (*T)->right;
+				newConnection->left = *T;
+				(*T)->right = NULL;
+			}
+			*T = newConnection;
+		}
+	}
 
 	return newConnection;
 }
@@ -888,7 +890,10 @@ static ConnectionStack *allocateConnectionStack(void)
 
 static void deallocateConnectionStack(ConnectionStack *stack)
 {
+#ifdef OPENMP
+#pragma omp critical
 	deallocatePointer(connectionStackMemory, stack);
+#endif
 }
 
 static void pushConnectionStack(ConnectionStack **stack, Connection *connection)
@@ -906,7 +911,7 @@ static Connection *popConnectionStack(ConnectionStack **stack)
 	ConnectionStack *nextElement;
 	Connection *connection;
 
-	if (stack == NULL)
+	if (*stack == NULL)
 		return NULL;
 
 	nextElement = (*stack)->next;
@@ -926,14 +931,11 @@ static void splayToList(Connection **connection)
 	if (*connection == NULL)
 		return;
 
-	pushConnectionStack(&stack, *connection);
-
-	while (stack != NULL)
+	for (current = *connection; current != NULL; current = popConnectionStack(&stack))
 	{
 		Connection *right;
 		Connection *left;
 
-		current = popConnectionStack(&stack);
 		right = current->right;
 		if (right != NULL)
 			pushConnectionStack(&stack, right);
@@ -949,20 +951,18 @@ static void splayToList(Connection **connection)
 	*connection = list;
 }
 
-static Connection *fillNewConnectionInTree(Connection *connect,
-					   Node *destination,
-					   IDnum direct_count,
-					   IDnum paired_count,
-					   Coordinate distance,
-					   double variance)
+static void fillNewConnectionInTree(Connection *connect,
+				    Node *destination,
+				    IDnum direct_count,
+				    IDnum paired_count,
+				    Coordinate distance,
+				    double variance)
 {
 	connect->destination = destination;
 	connect->direct_count = direct_count;
 	connect->paired_count = paired_count;
 	connect->distance = (double)distance;
 	connect->variance = variance;
-
-	return connect;
 }
 
 static void readjustConnectionInTree(Connection *connect,
@@ -973,17 +973,16 @@ static void readjustConnectionInTree(Connection *connect,
 {
 	connect->direct_count += direct_count;
 	connect->paired_count += paired_count;
-
 	connect->distance = (variance * connect->distance + distance * connect->variance) /
 			    (variance + connect->variance);
 	connect->variance = (variance * connect->variance) / (variance + connect->variance);
 
 	if (connect->twin != NULL)
 	{
-		connect->twin->distance = connect->distance;
-		connect->twin->variance = connect->variance;
 		connect->twin->direct_count = connect->direct_count;
 		connect->twin->paired_count = connect->paired_count;
+		connect->twin->distance = connect->distance;
+		connect->twin->variance = connect->variance;
 	}
 }
 
@@ -995,22 +994,23 @@ static void createTwinConnectionInTree(IDnum nodeID,
 
 	newConnection = findOrCreateConnection(nodeID, node2ID);
 	if (newConnection->destination == NULL)
+	{
 		fillNewConnectionInTree(newConnection,
 					getNodeInGraph(graph, node2ID),
 					connect->direct_count,
 					connect->paired_count,
 					(Coordinate)connect->distance,
 					connect->variance);
+		// Batch to twin
+		newConnection->twin = connect;
+		connect->twin = newConnection;
+	}
 	else
 		readjustConnectionInTree(newConnection,
 					 connect->direct_count,
 					 connect->paired_count,
 					 (Coordinate)connect->distance,
 					 connect->variance);
-
-	// Batch to twin
-	newConnection->twin = connect;
-	connect->twin = newConnection;
 }
 
 static void createConnection(IDnum nodeID,
@@ -1026,15 +1026,7 @@ static void createConnection(IDnum nodeID,
 	lockTwoNodes(nodeID, node2ID);
 #endif
 	connect = findOrCreateConnection(nodeID, node2ID);
-	if (connect->destination)
-	{
-		readjustConnectionInTree(connect,
-					 direct_count,
-					 paired_count,
-					 distance,
-					 variance);
-	}
-	else
+	if (connect->destination == NULL)
 	{
 		Node *destination = getNodeInGraph(graph, node2ID);
 		fillNewConnectionInTree(connect,
@@ -1049,6 +1041,12 @@ static void createConnection(IDnum nodeID,
 		else
 			connect->twin = NULL;
 	}
+	else
+		readjustConnectionInTree(connect,
+					 direct_count,
+					 paired_count,
+					 distance,
+					 variance);
 
 #ifdef OPENMP
 	unLockTwoNodes(nodeID, node2ID);
