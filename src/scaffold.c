@@ -923,6 +923,7 @@ static void destroyConnectionStackMemory(void)
 #else
 	destroyRecycleBin(connectionStackMemory);
 #endif
+	connectionStackMemory = NULL;
 }
 
 static void pushConnectionStack(ConnectionStack **stack, Connection *connection)
