@@ -197,6 +197,19 @@ static void deallocateSmallNodeList(SmallNodeList * smallNodeList)
 #endif
 }
 
+static void destroySmallNodeListMemmory(void)
+{
+	if (smallNodeListMemory != NULL)
+	{
+#ifdef OPENMP
+		destroyRecycleBinArray(smallNodeListMemory);
+#else
+		destroyRecycleBin(smallNodeListMemory);
+#endif
+		smallNodeListMemory = NULL;
+	}
+}
+
 static inline void memorizeNode(Node * node, SmallNodeList ** nodePile)
 {
 	SmallNodeList *list = allocateSmallNodeList();
@@ -1164,8 +1177,7 @@ static void fillUpGraph(ReadSet * reads,
 
 	orderNodeReadStartArrays(graph);
 
-	if (smallNodeListMemory != NULL)
-		destroyRecycleBin(smallNodeListMemory);
+	destroySmallNodeListMemmory();
 
 	destroyKmerOccurenceTable(kmerTable);
 }
