@@ -148,7 +148,25 @@ make 'LONGSEQUENCES=1'
 
 This will cost more memory overhead. 
 
-This will cost more memory overhead. 
+\subsubsection{OPENMP}
+
+Some sections of velvet can be run in parallel on more than one core.
+This is achieved using the OpenMP specifications.
+To compile velvet with OpenMP support, simply add the following option to the make command:
+
+\begin{verbatim}
+make 'OPENMP=1'
+\end{verbatim}
+
+By default velvet will use all the CPUs available on your system.
+If you want to set the number of cores used to a different value, set the \texttt{OMP\_NUM\_THREAD} variable to the desired number, for instance:
+
+\begin{verbatim}
+OMP_NUM_THREADS=8 ./velveth
+\end{verbatim}
+
+see next section for detailed instructions on how to run velvet.
+
 \section{Running instructions}
 
 \subsection{Running velveth}
