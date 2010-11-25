@@ -1072,7 +1072,7 @@ static void fillUpGraph(ReadSet * reads,
 {
 	IDnum readIndex;
 	RoadMapArray *roadmap = NULL;
-	Coordinate *annotationOffset;
+	Coordinate *annotationOffset = NULL;
 	struct timeval start, end, diff;
 	
 	if (referenceMappings)
