@@ -680,6 +680,9 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 		exit(1);
 	}
 
+	clearKmer(&word);
+	clearKmer(&antiWord);
+
 	// Fill in the initial word :
 	for (readNucleotideIndex = 0;
 	     readNucleotideIndex < wordLength - 1; readNucleotideIndex++) {
@@ -838,12 +841,12 @@ static void threadSequenceThroughGraph(TightString * tString,
 	IDnum annotCount = 0;
 	SmallNodeList * nodePile = NULL;
 
-	clearKmer(&word);
-	clearKmer(&antiWord);
-
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < wordLength)
 		return;
+
+	clearKmer(&word);
+	clearKmer(&antiWord);
 
 	// Fill in the initial word : 
 	for (readNucleotideIndex = 0;
