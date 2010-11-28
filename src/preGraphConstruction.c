@@ -92,7 +92,7 @@ setInsertionMarkers(RoadMapArray * rdmaps,
 {
 	IDnum sequenceCounter = rdmaps->length;
 	IDnum sequenceIndex, sequenceIndex2;
-	IDnum totalCount = 0;
+	Coordinate totalCount = 0;
 	RoadMap *rdmap;
 	Annotation *annot = rdmaps->annotations;
 	InsertionMarker *nextMarker, *newMarker;
