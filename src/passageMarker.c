@@ -20,6 +20,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 */
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 #include "globals.h"
 #include "allocArray.h"

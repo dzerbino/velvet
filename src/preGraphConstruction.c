@@ -782,7 +782,6 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 {
 	IDnum sequenceIndex;
 	IDnum referenceCount = rdmaps->referenceCount;
-	boolean isReference;
 #ifdef OPENMP
 	annotationOffset = mallocOrExit(rdmaps->length + 1, Coordinate);
 	annotationOffset[0] = 0;
@@ -809,6 +808,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		Coordinate currentPosition, currentInternalPosition;
 		IDnum currentPreNodeID, nextInternalPreNodeID;
 		IDnum annotIndex, lastAnnotIndex;
+		boolean isReference;
 
 		if (sequenceIndex % 1000000 == 0)
 			velvetLog("Connecting %li / %li\n", (long) sequenceIndex,

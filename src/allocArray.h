@@ -22,12 +22,17 @@ Copyright 2009 Sylvain Foret (sylvain.foret@anu.edu.au)
 #ifndef _ALLOC_ARRAY_H_
 #define _ALLOC_ARRAY_H_
 
+#ifdef OPENMP
+#include <omp.h>
+#endif
+
 #include "globals.h"
 
 typedef struct AllocArray_st AllocArray;
 typedef struct AllocArrayFreeElement_st AllocArrayFreeElement;
 
-struct AllocArray_st {
+struct AllocArray_st
+{
 	void **blocks;
 	AllocArrayFreeElement *freeElements;
 	size_t elementSize;
@@ -41,6 +46,10 @@ struct AllocArray_st {
 	size_t elementsRecycled;
 	size_t elementsAllocated;
 #endif
+#ifdef OPENMP
+	boolean shut;
+	boolean counter;
+#endif 
 };
 
 AllocArray* newAllocArray (size_t elementSize, char *name);
@@ -58,13 +67,23 @@ static inline type* name##_FI2P(ArrayIdx idx) \
 	const ArrayIdx elementIdx = i % array->maxElements; \
 	return &((type*)(array->blocks[blockIdx]))[elementIdx]; \
 } \
-\
 /* Slower version, with null pointer checks */ \
 static inline type* name##_I2P(ArrayIdx idx) \
 { \
 	if (idx != NULL_IDX) \
 		return name##_FI2P(idx); \
 	return NULL; \
-}
+} 
+
+#ifdef OPENMP
+// For multithreading: thread-specific alloc arrays 
+AllocArray *newAllocArrayArray(unsigned int n,
+			       size_t node_size, char * name);
+void destroyAllocArrayArray(AllocArray * alloc_bin);
+AllocArray *getAllocArrayInArray(AllocArray *allocArray,
+				 int	     position);
+ArrayIdx allocArrayArrayAllocate (AllocArray *array);
+void allocArrayArrayFree (AllocArray *array, ArrayIdx idx);
+#endif
 
 #endif /* _ALLOC_ARRAY_H_ */

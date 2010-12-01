@@ -22,6 +22,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 #include "globals.h"
 #include "allocArray.h"
@@ -76,19 +79,58 @@ struct preGraph_st {
 };
 
 static AllocArray *preArcMemory = NULL;
-DECLARE_FAST_ACCESSORS (PREARC, PreArc, preArcMemory)
+
+#ifndef OPENMP
+DECLARE_FAST_ACCESSORS(PREARC, PreArc, preArcMemory)
+#else
+/* Fast version, without null pointer checks */ 
+static inline PreArc* PREARC_FI2P(ArrayIdx idx) 
+{ 
+	AllocArray * thread_array = getAllocArrayInArray(preArcMemory, idx % omp_get_max_threads());
+	while(thread_array->shut) { 
+		#pragma omp flush (thread_array) 
+	} 
+	#pragma omp atomic 
+	thread_array->counter++; 
+	#pragma omp flush (thread_array) 
+	const ArrayIdx i = idx / omp_get_max_threads() - 1; 
+	const ArrayIdx blockIdx = i / thread_array->maxElements; 
+	const ArrayIdx elementIdx = i % thread_array->maxElements; 
+	PreArc * preArc = &((PreArc*)(thread_array->blocks[blockIdx]))[elementIdx]; 
+	#pragma omp atomic 
+	thread_array->counter--; 
+	#pragma omp flush (thread_array) 
+	return preArc;
+} 
+/* Slower version, with null pointer checks */ 
+static inline PreArc* PREARC_I2P(ArrayIdx idx) 
+{ 
+	if (idx != NULL_IDX) 
+		return PREARC_FI2P(idx); 
+	return NULL; 
+}
+#endif
+
 
 PreArcI allocatePreArc_pg()
 {
+	#ifndef OPENMP
 	if (preArcMemory == NULL)
 		preArcMemory = newAllocArray(sizeof(PreArc), "PreArc");
-
 	return allocArrayAllocate (preArcMemory);
+	#else
+	return allocArrayArrayAllocate (preArcMemory); 
+	#endif
+
 }
 
 void deallocatePreArc_pg(PreArcI preArc)
 {
+#ifndef OPENMP
 	allocArrayFree (preArcMemory, preArc);
+#else
+	allocArrayArrayFree (preArcMemory, preArc);
+#endif
 }
 
 // Returns the length of the preNode's descriptor list
@@ -154,7 +196,11 @@ static void addPreArcToPreNode_pg(PreArcI preArc, IDnum preNodeID,
 	else
 		preArcPtr = &(preNode->preArcLeft);
 
+#ifndef OPENMP
 	preArcVal = PREARC_I2P (preArc);
+#else
+	preArcVal = PREARC_I2P (preArc);
+#endif
 	if (preNodeID == preArcVal->preNodeIDLeft) {
 		preArcVal->nextLeft = *preArcPtr;
 		*preArcPtr = preArc;
@@ -187,9 +233,6 @@ PreArcI createPreArc_pg(IDnum originPreNodeID, IDnum destinationPreNodeID,
 		return preArc;
 	}
 	// If not found
-#ifdef OPENMP
-	#pragma omp critical
-#endif
 	preArc = allocatePreArc_pg();
 	preArcVal = PREARC_FI2P (preArc);
 	preArcVal->preNodeIDLeft = originPreNodeID;
@@ -375,7 +418,11 @@ void destroyPreGraph_pg(PreGraph * preGraph)
 	}
 
 	// Arcs
+#ifndef OPENMP
 	destroyAllocArray(preArcMemory);
+#else
+	destroyAllocArrayArray(preArcMemory);
+#endif
 
 	// Nodes
 	free(preGraph->preNodes);
@@ -446,10 +493,12 @@ PreArcI getNextPreArc_pg(PreArcI preArc, IDnum preNodeID)
 	PreArc *preArcVal;
 
 	preArcVal = PREARC_FI2P (preArc);
-	if (preNodeID == preArcVal->preNodeIDLeft)
+
+	if (preNodeID == preArcVal->preNodeIDLeft) {
 		return preArcVal->nextLeft;
-	else
+	} else {
 		return preArcVal->nextRight;
+	}
 }
 
 IDnum getMultiplicity_pg(PreArcI preArc)
@@ -479,6 +528,7 @@ IDnum getDestination_pg(PreArcI preArc, IDnum preNodeID)
 		return 0;
 
 	preArcVal = PREARC_FI2P (preArc);
+
 	if (preNodeID == preArcVal->preNodeIDLeft)
 		return -preArcVal->preNodeIDRight;
 	else
@@ -980,6 +1030,11 @@ PreGraph *emptyPreGraph_pg(IDnum sequenceCount, IDnum referenceCount, int wordLe
 	newPreGraph->nodeReferenceMarkerCounts = NULL;
 	newPreGraph->nodeReferenceMarkers = NULL;
 	newPreGraph->referenceStarts = NULL;
+
+#ifdef OPENMP
+	preArcMemory = newAllocArrayArray(omp_get_max_threads(), sizeof(PreArc), "PreArc");
+#endif
+
 	return newPreGraph;
 }
 
@@ -1259,9 +1314,8 @@ char simplePreArcCount_pg(IDnum preNodeID, PreGraph * preGraph)
 
 boolean isLoop_pg(PreArcI preArc)
 {
-	PreArc *preArcVal;
+	PreArc *preArcVal = PREARC_FI2P (preArc);
 
-	preArcVal = PREARC_FI2P (preArc);
 	return (preArcVal->preNodeIDLeft == preArcVal->preNodeIDRight
 		|| preArcVal->preNodeIDLeft == -preArcVal->preNodeIDRight);
 }
