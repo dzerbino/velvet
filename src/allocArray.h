@@ -41,15 +41,14 @@ struct AllocArray_st
 	size_t currentBlocks;
 	size_t maxElements;
 	size_t currentElements;
-#if DEBUG
+#ifdef DEBUG
 	char *name;
 	size_t elementsRecycled;
 	size_t elementsAllocated;
 #endif
 #ifdef OPENMP
-	boolean shut;
-	boolean counter;
-#endif 
+	int nbThreads;
+#endif
 };
 
 AllocArray* newAllocArray (size_t elementSize, char *name);
@@ -78,10 +77,11 @@ static inline type* name##_I2P(ArrayIdx idx) \
 #ifdef OPENMP
 // For multithreading: thread-specific alloc arrays 
 AllocArray *newAllocArrayArray(unsigned int n,
-			       size_t node_size, char * name);
-void destroyAllocArrayArray(AllocArray * alloc_bin);
+			       size_t elementSize,
+			       char * name);
+void destroyAllocArrayArray(AllocArray * allocArray);
 AllocArray *getAllocArrayInArray(AllocArray *allocArray,
-				 int	     position);
+				 int position);
 ArrayIdx allocArrayArrayAllocate (AllocArray *array);
 void allocArrayArrayFree (AllocArray *array, ArrayIdx idx);
 #endif

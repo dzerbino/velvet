@@ -22,6 +22,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+
 #ifdef OPENMP
 #include <omp.h>
 #endif
@@ -80,56 +81,26 @@ struct preGraph_st {
 
 static AllocArray *preArcMemory = NULL;
 
-#ifndef OPENMP
 DECLARE_FAST_ACCESSORS(PREARC, PreArc, preArcMemory)
-#else
-/* Fast version, without null pointer checks */ 
-static inline PreArc* PREARC_FI2P(ArrayIdx idx) 
-{ 
-	AllocArray * thread_array = getAllocArrayInArray(preArcMemory, idx % omp_get_max_threads());
-	while(thread_array->shut) { 
-		#pragma omp flush (thread_array) 
-	} 
-	#pragma omp atomic 
-	thread_array->counter++; 
-	#pragma omp flush (thread_array) 
-	const ArrayIdx i = idx / omp_get_max_threads() - 1; 
-	const ArrayIdx blockIdx = i / thread_array->maxElements; 
-	const ArrayIdx elementIdx = i % thread_array->maxElements; 
-	PreArc * preArc = &((PreArc*)(thread_array->blocks[blockIdx]))[elementIdx]; 
-	#pragma omp atomic 
-	thread_array->counter--; 
-	#pragma omp flush (thread_array) 
-	return preArc;
-} 
-/* Slower version, with null pointer checks */ 
-static inline PreArc* PREARC_I2P(ArrayIdx idx) 
-{ 
-	if (idx != NULL_IDX) 
-		return PREARC_FI2P(idx); 
-	return NULL; 
-}
-#endif
-
 
 PreArcI allocatePreArc_pg()
 {
-	#ifndef OPENMP
+#ifdef OPENMP
+	return allocArrayArrayAllocate (preArcMemory); 
+#else
 	if (preArcMemory == NULL)
 		preArcMemory = newAllocArray(sizeof(PreArc), "PreArc");
 	return allocArrayAllocate (preArcMemory);
-	#else
-	return allocArrayArrayAllocate (preArcMemory); 
-	#endif
+#endif
 
 }
 
 void deallocatePreArc_pg(PreArcI preArc)
 {
-#ifndef OPENMP
-	allocArrayFree (preArcMemory, preArc);
-#else
+#ifdef OPENMP
 	allocArrayArrayFree (preArcMemory, preArc);
+#else
+	allocArrayFree (preArcMemory, preArc);
 #endif
 }
 
@@ -196,11 +167,9 @@ static void addPreArcToPreNode_pg(PreArcI preArc, IDnum preNodeID,
 	else
 		preArcPtr = &(preNode->preArcLeft);
 
-#ifndef OPENMP
 	preArcVal = PREARC_I2P (preArc);
-#else
 	preArcVal = PREARC_I2P (preArc);
-#endif
+
 	if (preNodeID == preArcVal->preNodeIDLeft) {
 		preArcVal->nextLeft = *preArcPtr;
 		*preArcPtr = preArc;
@@ -418,10 +387,10 @@ void destroyPreGraph_pg(PreGraph * preGraph)
 	}
 
 	// Arcs
-#ifndef OPENMP
-	destroyAllocArray(preArcMemory);
-#else
+#ifdef OPENMP
 	destroyAllocArrayArray(preArcMemory);
+#else
+	destroyAllocArray(preArcMemory);
 #endif
 
 	// Nodes
