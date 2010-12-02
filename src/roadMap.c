@@ -113,10 +113,8 @@ RoadMapArray *importRoadMapArray(char *filename)
 	short short_var;
 	long long_var, long_var2;
 	long long longlong_var, longlong_var2, longlong_var3;
-#ifdef OPENMP
 	Coordinate *annotationOffset;
 	IDnum thisSeqID = 0;
-#endif
 
 	velvetLog("Reading roadmap file %s\n", filename);
 
@@ -131,25 +129,19 @@ RoadMapArray *importRoadMapArray(char *filename)
 	result->array = callocOrExit(sequenceCount, RoadMap);
 	result->double_strand = (boolean) short_var;
 
-#ifdef OPENMP
 	annotationOffset = callocOrExit(sequenceCount + 1, Coordinate);
-#endif
 	while (fgets(line, maxline, file) != NULL)
 	{
 		if (line[0] != 'R')
 		{
 			annotationCount++;
-#ifdef OPENMP
 			annotationOffset[thisSeqID]++;
-#endif
 		}
-#ifdef OPENMP
 		else
 		{
 		    	sscanf(line, "%*s %ld\n", &long_var);
 			thisSeqID = (IDnum) long_var;
 		}
-#endif
 	}
 
 	result->annotations = callocOrExit(annotationCount, Annotation);
@@ -158,25 +150,19 @@ RoadMapArray *importRoadMapArray(char *filename)
 
 	file = fopen(filename, "r");
 
-#ifdef OPENMP
 	// Cumulative sum
 	for (seqID = 1; seqID <= sequenceCount; seqID++)
 		annotationOffset[seqID] += annotationOffset[seqID - 1];
-#endif
 
 	rdmap = result->array - 1;
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
 	while (fgets(line, maxline, file) != NULL) {
 		if (line[0] == 'R') {
-#ifdef OPENMP
 		    	sscanf(line, "%*s %ld\n", &long_var);
 			thisSeqID = (IDnum) long_var;
 			nextAnnotation = result->annotations + annotationOffset[thisSeqID - 1];
 			rdmap = result->array + thisSeqID - 1;
-#else
-			rdmap++;
-#endif
 		} else {
 			sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
 			       &longlong_var, &longlong_var2, &longlong_var3);
@@ -200,6 +186,7 @@ RoadMapArray *importRoadMapArray(char *filename)
 	}
 	velvetLog("%li roadmaps read\n", (long)sequenceCount);
 
+	free (annotationOffset);
 	fclose(file);
 	free(line);
 	return result;
@@ -223,10 +210,8 @@ RoadMapArray *importReferenceRoadMapArray(char *filename)
 	short short_var;
 	long long_var, long_var2;
 	long long longlong_var, longlong_var2, longlong_var3;
-#ifdef OPENMP
 	Coordinate *annotationOffset;
 	IDnum thisSeqID = 0;
-#endif
 
 	velvetLog("Reading roadmap file %s\n", filename);
 
@@ -241,9 +226,7 @@ RoadMapArray *importReferenceRoadMapArray(char *filename)
 	result->array = callocOrExit(sequenceCount, RoadMap);
 	result->double_strand = (boolean) short_var;
 
-#ifdef OPENMP
 	annotationOffset = callocOrExit(sequenceCount + 1, Coordinate);
-#endif
 	while (fgets(line, maxline, file) != NULL)
 	{
 		if (line[0] != 'R')
@@ -254,18 +237,14 @@ RoadMapArray *importReferenceRoadMapArray(char *filename)
 			if (seqID <= result->referenceCount && seqID >= -result->referenceCount)
 			{
 				annotationCount++;
-#ifdef OPENMP
 				annotationOffset[thisSeqID]++;
-#endif
 			}
 		}
-#ifdef OPENMP
 		else
 		{
 		    	sscanf(line, "%*s %ld\n", &long_var);
 			thisSeqID = (IDnum) long_var;
 		}
-#endif
 	}
 
 	result->annotations = callocOrExit(annotationCount, Annotation);
@@ -274,25 +253,19 @@ RoadMapArray *importReferenceRoadMapArray(char *filename)
 
 	file = fopen(filename, "r");
 
-#ifdef OPENMP
 	// Cumulative sum
 	for (seqID = 1; seqID <= sequenceCount; seqID++)
 		annotationOffset[seqID] += annotationOffset[seqID - 1];
-#endif
 
 	rdmap = result->array - 1;
 	if (!fgets(line, maxline, file))
 		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
 	while (fgets(line, maxline, file) != NULL) {
 		if (line[0] == 'R') {
-#ifdef OPENMP
 		    	sscanf(line, "%*s %ld\n", &long_var);
 			thisSeqID = (IDnum) long_var;
 			nextAnnotation = result->annotations + annotationOffset[thisSeqID - 1];
 			rdmap = result->array + thisSeqID - 1;
-#else
-			rdmap++;
-#endif
 			rdmapIndex++;
 		} else {
 			sscanf(line, "%ld\t%lld\t%lld\t%lld\n", &long_var,
@@ -321,10 +294,7 @@ RoadMapArray *importReferenceRoadMapArray(char *filename)
 
 	velvetLog("%li roadmaps references\n", (long) rdmapIndex);
 
-#ifdef OPENMP
 	free(annotationOffset);
-#endif
-
 	fclose(file);
 	free(line);
 	return result;

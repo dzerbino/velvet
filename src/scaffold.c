@@ -376,14 +376,13 @@ static IDnum *computeReadToNodeCounts(Coordinate *totalCount)
 		// Long reads
 		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
-			IDnum readIndex;
-			const unsigned int idx = readIndex / 8;
-			const unsigned int mask = 1 << (readIndex & 7);
+			IDnum readIndex = getPassageMarkerSequenceID(marker);;
 
-			readIndex = getPassageMarkerSequenceID(marker);
 			if (readIndex < 0)
 				continue;
 
+			const unsigned int idx = readIndex / 8;
+			const unsigned int mask = 1 << (readIndex & 7);
 			if (readMarker[idx] & mask)
 				continue;
 
