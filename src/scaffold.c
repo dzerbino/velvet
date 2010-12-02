@@ -69,10 +69,41 @@ static Connection **scaffold = NULL;
 static RecycleBin *connectionMemory = NULL;
 static boolean estimated[CATEGORIES + 1];
 
-/* Array of per-node locks */
-
 #ifdef OPENMP
+
+#define READS_PER_LOCK 32
+
+
+/* Array of reads locks */
+static omp_lock_t *readsLocks = NULL;
+/* Array of per-node locks */
 static omp_lock_t *nodeLocks = NULL;
+
+static void
+createReadsLocks()
+{
+	Coordinate nbLocks;
+	Coordinate lockIndex;
+
+	if (readsLocks)
+		free (readsLocks);
+	nbLocks = 1 + sequenceCount(graph) / READS_PER_LOCK;
+	readsLocks = mallocOrExit(nbLocks, omp_lock_t);
+
+	#pragma omp parallel for
+	for (lockIndex = 0; lockIndex < nbLocks; lockIndex++)
+		omp_init_lock(readsLocks + lockIndex);
+}
+
+static inline void lockRead(IDnum readID)
+{
+	omp_set_lock (readsLocks + readID / READS_PER_LOCK);
+}
+
+static inline void unLockRead(IDnum readID)
+{
+	omp_unset_lock (readsLocks + readID / READS_PER_LOCK);
+}
 
 static void
 createNodeLocks(Graph *graph)
@@ -293,21 +324,26 @@ static boolean testConnection(IDnum IDA, Connection * connect,
 	return connect->paired_count >= total / 10;
 }
 
-static IDnum *computeReadToNodeCounts()
+static IDnum *computeReadToNodeCounts(Coordinate *totalCount)
 {
-	IDnum readIndex, nodeIndex;
+	IDnum nodeIndex;
 	IDnum maxNodeIndex = 2 * nodeCount(graph) + 1;
 	IDnum maxReadIndex = sequenceCount(graph) + 1;
 	IDnum *readNodeCounts = callocOrExit(maxReadIndex, IDnum);
-	boolean *readMarker = callocOrExit(maxReadIndex, boolean); /* SF TODO this could be a bit field */
-	ShortReadMarker *nodeArray, *shortMarker;
-	PassageMarkerI marker;
-	Node *node;
-	IDnum nodeReadCount;
+	unsigned char *readMarker = callocOrExit(1 + maxReadIndex / 8, unsigned char);
+	Coordinate total = 0;
 
 	velvetLog("Computing read to node mapping array sizes\n");
 
+#ifdef OPENMP
+	#pragma omp parallel for reduction(+:total)
+#endif
 	for (nodeIndex = 0; nodeIndex < maxNodeIndex; nodeIndex++) {
+		Node *node;
+		ShortReadMarker *nodeArray;
+		IDnum nodeReadCount;
+		IDnum readIndex;
+
 		node = getNodeInGraph(graph, nodeIndex - nodeCount(graph));
 		if (node == NULL)
 			continue;
@@ -316,52 +352,75 @@ static IDnum *computeReadToNodeCounts()
 
 		// Short reads
 		for (readIndex = 0; readIndex < nodeReadCount; readIndex++) {
-			shortMarker =
-			    getShortReadMarkerAtIndex(nodeArray,
-						      readIndex);
-			readNodeCounts[getShortReadMarkerID
-				       (shortMarker)]++;
-		}
+			ShortReadMarker *shortMarker;
+			IDnum readID;
 
+			shortMarker = getShortReadMarkerAtIndex(nodeArray,
+								readIndex);
+			readID = getShortReadMarkerID(shortMarker);
+#ifdef OPENMP
+			#pragma omp atomic
+#endif
+			readNodeCounts[readID]++;
+			total++;
+		}
+	}
+
+	for (nodeIndex = 0; nodeIndex < maxNodeIndex; nodeIndex++) {
+		Node *node;
+		PassageMarkerI marker;
+
+		node = getNodeInGraph(graph, nodeIndex - nodeCount(graph));
+		if (node == NULL)
+			continue;
 		// Long reads
 		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
+			IDnum readIndex;
+			const unsigned int idx = readIndex / 8;
+			const unsigned int mask = 1 << (readIndex & 7);
+
 			readIndex = getPassageMarkerSequenceID(marker);
 			if (readIndex < 0)
 				continue;
 
-			if (readMarker[readIndex])
+			if (readMarker[idx] & mask)
 				continue;
 
 			readNodeCounts[readIndex]++;
-			readMarker[readIndex] = true;
+			total++;
+			readMarker[idx] |= mask;
 		}
 
 		// Clean up marker array
 		for (marker = getMarker(node); marker != NULL_IDX;
 		     marker = getNextInNode(marker)) {
-			readIndex = getPassageMarkerSequenceID(marker);
+			IDnum readIndex = getPassageMarkerSequenceID(marker);
 			if (readIndex > 0)
-				readMarker[readIndex] = false;
+				// No need to go bit-wise
+				readMarker[readIndex / 8] = 0;
 		}
 	}
 
+	*totalCount = total;
 	free(readMarker);
 	return readNodeCounts;
 }
 
-static ReadOccurence **allocateReadToNodeTables(IDnum * readNodeCounts)
+static ReadOccurence **allocateReadToNodeTables(IDnum * readNodeCounts,
+						Coordinate totalCount,
+						ReadOccurence **readNodesArray)
 {
+	Coordinate offset = 0;
 	IDnum readIndex;
 	IDnum maxReadIndex = sequenceCount(graph) + 1;
-	ReadOccurence **readNodes =
-	    callocOrExit(maxReadIndex, ReadOccurence *);
+	ReadOccurence **readNodes = callocOrExit(maxReadIndex, ReadOccurence *);
+	*readNodesArray = callocOrExit(totalCount, ReadOccurence);
 
 	for (readIndex = 1; readIndex < maxReadIndex; readIndex++) {
 		if (readNodeCounts[readIndex] != 0) {
-			readNodes[readIndex] =
-			    callocOrExit(readNodeCounts[readIndex],
-				   ReadOccurence);
+			readNodes[readIndex] = *readNodesArray + offset;
+			offset += readNodeCounts[readIndex];
 			readNodeCounts[readIndex] = 0;
 		}
 	}
@@ -369,11 +428,9 @@ static ReadOccurence **allocateReadToNodeTables(IDnum * readNodeCounts)
 	return readNodes;
 }
 
-static void computePartialReadToNodeMapping(IDnum nodeID,
-					    ReadOccurence ** readNodes,
-					    IDnum * readNodeCounts,
-					    boolean * readMarker,
-					    ReadSet * reads)
+static void computePartialReadToNodeMappingShort(IDnum nodeID,
+						 ReadOccurence ** readNodes,
+						 IDnum * readNodeCounts)
 {
 	ShortReadMarker *shortMarker;
 	IDnum index, readIndex;
@@ -381,12 +438,14 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 	Node *node = getNodeInGraph(graph, nodeID);
 	ShortReadMarker *nodeArray = getNodeReads(node, graph);
 	IDnum nodeReadCount = getNodeReadCount(node, graph);
-	PassageMarkerI marker;
 
 	for (index = 0; index < nodeReadCount; index++) {
 		shortMarker = getShortReadMarkerAtIndex(nodeArray, index);
 		readIndex = getShortReadMarkerID(shortMarker);
 		readArray = readNodes[readIndex];
+#ifdef OPENMP
+		lockRead(readIndex);
+#endif
 		readOccurence = &readArray[readNodeCounts[readIndex]];
 		readOccurence->nodeID = nodeID;
 		readOccurence->position =
@@ -394,7 +453,22 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 		readOccurence->offset =
 		    getShortReadMarkerOffset(shortMarker);
 		readNodeCounts[readIndex]++;
+#ifdef OPENMP
+		unLockRead(readIndex);
+#endif
 	}
+}
+
+static void computePartialReadToNodeMappingLong(IDnum nodeID,
+						ReadOccurence ** readNodes,
+						IDnum * readNodeCounts,
+						ReadSet * reads)
+{
+	IDnum readIndex;
+	ReadOccurence *readArray, *readOccurence;
+	Node *node = getNodeInGraph(graph, nodeID);
+	PassageMarkerI marker;
+	unsigned char *readMarker = callocOrExit(1 + sequenceCount(graph) / 8, unsigned char);
 
 	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
@@ -402,7 +476,15 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 		if (readIndex <= 0 || reads->categories[readIndex - 1] == REFERENCE)
 			continue;
 
-		if (!readMarker[readIndex]) {
+		const unsigned int idx = readIndex / 8;
+		const unsigned int mask = 1 << (readIndex & 7);
+		if (readMarker[idx] & mask) {
+			readArray = readNodes[readIndex];
+			readOccurence =
+			    &readArray[readNodeCounts[readIndex] - 1];
+			readOccurence->position = -1;
+			readOccurence->offset = -1;
+		} else {
 			readArray = readNodes[readIndex];
 			readOccurence =
 			    &readArray[readNodeCounts[readIndex]];
@@ -411,13 +493,7 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 			readOccurence->offset =
 			    getPassageMarkerStart(marker);
 			readNodeCounts[readIndex]++;
-			readMarker[readIndex] = true;
-		} else {
-			readArray = readNodes[readIndex];
-			readOccurence =
-			    &readArray[readNodeCounts[readIndex] - 1];
-			readOccurence->position = -1;
-			readOccurence->offset = -1;
+			readMarker[idx] |= mask;
 		}
 	}
 
@@ -425,38 +501,59 @@ static void computePartialReadToNodeMapping(IDnum nodeID,
 	     marker = getNextInNode(marker)) {
 		readIndex = getPassageMarkerSequenceID(marker);
 		if (readIndex > 0)
-			readMarker[readIndex] = false;
+			// No need to go bit-wise
+			readMarker[readIndex / 8] = 0;
 	}
+	free(readMarker);
 }
 
-static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts, ReadSet * reads)
+static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts,
+						 ReadSet * reads,
+						 Coordinate totalCount,
+						 ReadOccurence **readNodesArray)
 {
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
-	ReadOccurence **readNodes =
-	    allocateReadToNodeTables(readNodeCounts);
-	boolean *readMarker =
-	    callocOrExit(sequenceCount(graph) + 1, boolean); /* SF TODO This could be a bit field */
+	ReadOccurence **readNodes = allocateReadToNodeTables(readNodeCounts,
+							     totalCount,
+							     readNodesArray);
 
 	velvetLog("Computing read to node mappings\n");
 
+#ifdef OPENMP
+	createReadsLocks();
+	#pragma omp parallel for
+#endif
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
 		if (nodeID != 0 && getNodeInGraph(graph, nodeID))
-			computePartialReadToNodeMapping(nodeID, readNodes,
-							readNodeCounts,
-							readMarker,
-							reads);
+			computePartialReadToNodeMappingShort(nodeID, readNodes,
+							     readNodeCounts);
 
-	free(readMarker);
+#ifdef OPENMP
+	free(readsLocks);
+	readsLocks = NULL;
+#endif
+
+	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
+		if (nodeID != 0 && getNodeInGraph(graph, nodeID))
+			computePartialReadToNodeMappingLong(nodeID, readNodes,
+							    readNodeCounts,
+							    reads);
+
 	return readNodes;
 }
 
-static boolean * countCoOccurences(IDnum * coOccurencesCount, ReadOccurence ** readNodes, IDnum * readNodeCounts, IDnum * readPairs, Category * cats) {
+static unsigned char * countCoOccurences(IDnum * coOccurencesCount,
+					 ReadOccurence ** readNodes,
+					 IDnum * readNodeCounts,
+					 IDnum * readPairs,
+					 Category * cats)
+{
 	IDnum readIndex, readPairIndex;
 	IDnum readNodeCount;
 	IDnum readOccurenceIndex, readPairOccurenceIndex;
 	ReadOccurence * readOccurence, *readPairOccurence;
-	boolean * interestingReads = callocOrExit(sequenceCount(graph), boolean); /* SF TODO This could be a bit field */
+	unsigned char *interestingReads = callocOrExit(1 + sequenceCount(graph) / 8, unsigned char);
 	Category libID;
 
 	for (libID = 0; libID < CATEGORIES + 1; libID++)
@@ -472,8 +569,8 @@ static boolean * countCoOccurences(IDnum * coOccurencesCount, ReadOccurence ** r
 		// We know that for each read the read occurences are ordered by increasing node ID
 		// Therefore one list is followed by increasing index, whereas the other is followed 
 		// by decreasing index
-		libID = cats[readIndex]/2;
-		readPairIndex = readPairs[readIndex];	
+		libID = cats[readIndex] / 2;
+		readPairIndex = readPairs[readIndex];
 		
 		readOccurenceIndex = 0;
 		readOccurence = readNodes[readIndex + 1];
@@ -486,7 +583,7 @@ static boolean * countCoOccurences(IDnum * coOccurencesCount, ReadOccurence ** r
 			if (readOccurence->nodeID == -readPairOccurence->nodeID) {
 				if (readOccurence->position > 0 && readPairOccurence->position > 0) {
 					coOccurencesCount[libID]++;
-					interestingReads[readIndex] = true;
+					interestingReads[readIndex / 8] |= 1 << (readIndex & 7);
 					break;
 				} else {
 					readOccurence++;
@@ -507,7 +604,13 @@ static boolean * countCoOccurences(IDnum * coOccurencesCount, ReadOccurence ** r
 	return interestingReads;
 }
 
-static void measureCoOccurences(Coordinate ** coOccurences, boolean * interestingReads, ReadOccurence ** readNodes, IDnum * readNodeCounts, IDnum * readPairs, Category * cats) {
+static void measureCoOccurences(Coordinate ** coOccurences,
+				unsigned char * interestingReads,
+				ReadOccurence ** readNodes,
+				IDnum * readNodeCounts,
+				IDnum * readPairs,
+				Category * cats)
+{
 	IDnum coOccurencesIndex[CATEGORIES + 1];
 	IDnum observationIndex;
 	IDnum readIndex, readPairIndex;
@@ -521,7 +624,7 @@ static void measureCoOccurences(Coordinate ** coOccurences, boolean * interestin
 
 	for (readIndex = 0; readIndex < sequenceCount(graph); readIndex++) {
 		// Eliminating dodgy, unpaired, already counted or user-specified reads
-		if (!interestingReads[readIndex])
+		if (!(interestingReads[readIndex / 8] & (1 << (readIndex & 7))))
 			continue;
 		
 		// Find co-occurence
@@ -628,7 +731,7 @@ static void estimateMissingInsertLengths(ReadOccurence ** readNodes, IDnum * rea
 
 	velvetLog("Estimating library insert lengths...\n");
 
-	boolean * interestingReads = countCoOccurences(coOccurencesCounts, readNodes, readNodeCounts, readPairs, cats);
+	unsigned char * interestingReads = countCoOccurences(coOccurencesCounts, readNodes, readNodeCounts, readPairs, cats);
 
 	for (libID = 0; libID < CATEGORIES + 1; libID++)
 		coOccurences[libID] = callocOrExit(coOccurencesCounts[libID], Coordinate); /* SF TODO This could probably be done with IDnum */
@@ -1524,17 +1627,17 @@ void buildScaffold(Graph * argGraph, ReadSet * reads, boolean * dubious) {
 	Category *cats;
 	IDnum *readNodeCounts;
 	ReadOccurence **readNodes;
-	IDnum *lengths =
-	    getSequenceLengths(reads, getWordLength(argGraph));
-	IDnum index;
+	ReadOccurence *readNodesArray = NULL;
+	IDnum *lengths = getSequenceLengths(reads, getWordLength(argGraph));
+	Coordinate totalCount = 0;
 
 	graph = argGraph;
 	readPairs = reads->mateReads;
 	cats = reads->categories;
 
 	// Prepare primary scaffold
-	readNodeCounts = computeReadToNodeCounts();
-	readNodes = computeReadToNodeMappings(readNodeCounts, reads);
+	readNodeCounts = computeReadToNodeCounts(&totalCount);
+	readNodes = computeReadToNodeMappings(readNodeCounts, reads, totalCount, &readNodesArray);
 
 	estimateMissingInsertLengths(readNodes, readNodeCounts, readPairs, cats);
 
@@ -1542,10 +1645,7 @@ void buildScaffold(Graph * argGraph, ReadSet * reads, boolean * dubious) {
 				      readPairs, cats, dubious, lengths);
 	removeUnreliableConnections(reads);
 
-	// Clean up memory
-	for (index = 1; index <= sequenceCount(graph); index++)
-		free(readNodes[index]);
-
+	free(readNodesArray);
 	free(readNodes);
 	free(readNodeCounts);
 	free(lengths);
