@@ -23,6 +23,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <string.h>
 #include <ctype.h>
 
+#ifdef OPENMP
+#include <omp.h>
+#endif
+
 #include "globals.h"
 #include "allocArray.h"
 #include "preGraph.h"
@@ -76,19 +80,28 @@ struct preGraph_st {
 };
 
 static AllocArray *preArcMemory = NULL;
-DECLARE_FAST_ACCESSORS (PREARC, PreArc, preArcMemory)
+
+DECLARE_FAST_ACCESSORS(PREARC, PreArc, preArcMemory)
 
 PreArcI allocatePreArc_pg()
 {
+#ifdef OPENMP
+	return allocArrayArrayAllocate (preArcMemory); 
+#else
 	if (preArcMemory == NULL)
 		preArcMemory = newAllocArray(sizeof(PreArc), "PreArc");
-
 	return allocArrayAllocate (preArcMemory);
+#endif
+
 }
 
 void deallocatePreArc_pg(PreArcI preArc)
 {
+#ifdef OPENMP
+	allocArrayArrayFree (preArcMemory, preArc);
+#else
 	allocArrayFree (preArcMemory, preArc);
+#endif
 }
 
 // Returns the length of the preNode's descriptor list
@@ -155,6 +168,8 @@ static void addPreArcToPreNode_pg(PreArcI preArc, IDnum preNodeID,
 		preArcPtr = &(preNode->preArcLeft);
 
 	preArcVal = PREARC_I2P (preArc);
+	preArcVal = PREARC_I2P (preArc);
+
 	if (preNodeID == preArcVal->preNodeIDLeft) {
 		preArcVal->nextLeft = *preArcPtr;
 		*preArcPtr = preArc;
@@ -372,7 +387,11 @@ void destroyPreGraph_pg(PreGraph * preGraph)
 	}
 
 	// Arcs
+#ifdef OPENMP
+	destroyAllocArrayArray(preArcMemory);
+#else
 	destroyAllocArray(preArcMemory);
+#endif
 
 	// Nodes
 	free(preGraph->preNodes);
@@ -443,10 +462,12 @@ PreArcI getNextPreArc_pg(PreArcI preArc, IDnum preNodeID)
 	PreArc *preArcVal;
 
 	preArcVal = PREARC_FI2P (preArc);
-	if (preNodeID == preArcVal->preNodeIDLeft)
+
+	if (preNodeID == preArcVal->preNodeIDLeft) {
 		return preArcVal->nextLeft;
-	else
+	} else {
 		return preArcVal->nextRight;
+	}
 }
 
 IDnum getMultiplicity_pg(PreArcI preArc)
@@ -476,6 +497,7 @@ IDnum getDestination_pg(PreArcI preArc, IDnum preNodeID)
 		return 0;
 
 	preArcVal = PREARC_FI2P (preArc);
+
 	if (preNodeID == preArcVal->preNodeIDLeft)
 		return -preArcVal->preNodeIDRight;
 	else
@@ -977,6 +999,11 @@ PreGraph *emptyPreGraph_pg(IDnum sequenceCount, IDnum referenceCount, int wordLe
 	newPreGraph->nodeReferenceMarkerCounts = NULL;
 	newPreGraph->nodeReferenceMarkers = NULL;
 	newPreGraph->referenceStarts = NULL;
+
+#ifdef OPENMP
+	preArcMemory = newAllocArrayArray(omp_get_max_threads(), sizeof(PreArc), "PreArc");
+#endif
+
 	return newPreGraph;
 }
 
@@ -1256,9 +1283,8 @@ char simplePreArcCount_pg(IDnum preNodeID, PreGraph * preGraph)
 
 boolean isLoop_pg(PreArcI preArc)
 {
-	PreArc *preArcVal;
+	PreArc *preArcVal = PREARC_FI2P (preArc);
 
-	preArcVal = PREARC_FI2P (preArc);
 	return (preArcVal->preNodeIDLeft == preArcVal->preNodeIDRight
 		|| preArcVal->preNodeIDLeft == -preArcVal->preNodeIDRight);
 }

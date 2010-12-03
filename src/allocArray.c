@@ -22,11 +22,14 @@ Copyright 2009 Sylvain Foret (sylvain.foret@anu.edu.au)
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#ifdef OPENMP
+#include <omp.h>
+#endif
 
 #include "allocArray.h"
 #include "utility.h"
 
-#if DEBUG
+#ifdef DEBUG
 #define NB_PAGES_ALLOC    1
 #define BLOCKS_ALLOC_SIZE 1
 #else
@@ -35,10 +38,32 @@ Copyright 2009 Sylvain Foret (sylvain.foret@anu.edu.au)
 #endif
 
 
-struct AllocArrayFreeElement_st {
+struct AllocArrayFreeElement_st
+{
 	AllocArrayFreeElement *next;
 	ArrayIdx idx;
 };
+
+static void initAllocArray(AllocArray * array, size_t elementSize, char * name) 
+{
+	array->freeElements = NULL;
+	array->elementSize = elementSize;
+	array->blockSize = sysconf (_SC_PAGESIZE) * NB_PAGES_ALLOC;
+	array->maxElements = array->blockSize / array->elementSize;
+	array->maxBlocks = BLOCKS_ALLOC_SIZE;
+	array->blocks = mallocOrExit (array->maxBlocks, void*);
+	array->blocks[0] = mallocOrExit (array->blockSize, char);
+	array->currentBlocks = 1;
+	array->currentElements = 0;
+#ifdef DEBUG
+	array->elementsRecycled = 0;
+	array->elementsAllocated = 0;
+	array->name = name;
+#endif
+#ifdef OPENMP
+	array->nbThreads = 0;
+#endif
+}
 
 AllocArray*
 newAllocArray (size_t elementSize, char *name)
@@ -50,22 +75,17 @@ newAllocArray (size_t elementSize, char *name)
 		exit(-1);
 	}
 	array = mallocOrExit (1, AllocArray);
-	array->freeElements = NULL;
-	array->elementSize = elementSize;
-	array->blockSize = sysconf (_SC_PAGESIZE) * NB_PAGES_ALLOC;
-	array->maxElements = array->blockSize / array->elementSize;
-	array->maxBlocks = BLOCKS_ALLOC_SIZE;
-	array->blocks = mallocOrExit (array->maxBlocks, void*);
-	array->blocks[0] = mallocOrExit (array->blockSize, char);
-	array->currentBlocks = 1;
-	array->currentElements = 0;
-#if DEBUG
-	array->elementsRecycled = 0;
-	array->elementsAllocated = 0;
-	array->name = name;
-#endif
-
+	initAllocArray(array, elementSize, name);
 	return array;
+}
+
+void
+destroyAllocArrayChunks (AllocArray *array)
+{
+	size_t i;
+	for (i = 0; i < array->currentBlocks; i++)
+		free (array->blocks[i]);
+	free (array->blocks);
 }
 
 void
@@ -73,11 +93,8 @@ destroyAllocArray (AllocArray *array)
 {
 	if (array)
 	{
-		size_t i;
-		for (i = 0; i < array->currentBlocks; i++)
-			free (array->blocks[i]);
-		free (array->blocks);
-#if DEBUG
+		destroyAllocArrayChunks(array);
+#ifdef DEBUG
 		velvetLog(">>> Allocation summary for %s\n", array->name);
 		velvetLog(">>> Alloc'ed %ld bytes\n", array->blockSize * array->currentBlocks);
 		velvetLog(">>> Alloc'ed %ld elements\n", array->elementsAllocated);
@@ -96,7 +113,7 @@ allocArrayAllocate (AllocArray *array)
 
 		element = array->freeElements;
 		array->freeElements = element->next;
-#if DEBUG
+#ifdef DEBUG
 		array->elementsRecycled++;
 #endif
 		return element->idx;
@@ -113,12 +130,16 @@ allocArrayAllocate (AllocArray *array)
 		array->currentElements = 0;
 	}
 	array->currentElements++;
-#if DEBUG
 	if (array->maxElements * (array->currentBlocks - 1) + array->currentElements == UINT32_MAX)
 	{
+#ifdef DEBUG
 		velvetLog (">>> Reached maximum `%s' addressable with 32 bits\n", array->name);
+#else
+		velvetLog (">>> Reached maximum elements addressable with 32 bits\n");
+#endif
 		abort();
 	}
+#ifdef DEBUG
 	array->elementsAllocated++;
 #endif
 	return array->maxElements * (array->currentBlocks - 1) + array->currentElements;
@@ -146,7 +167,133 @@ allocArrayGetElement (AllocArray *array, ArrayIdx idx)
 		const ArrayIdx i = idx - 1;
 		const ArrayIdx blockIdx = i / array->maxElements;
 		const ArrayIdx elementIdx = i % array->maxElements;
-		return (char *) (array->blocks[blockIdx]) + elementIdx * array->elementSize;
+		return ((char*)(array->blocks[blockIdx])) + elementIdx * array->elementSize;
 	}
 	return NULL;
 }
+
+#ifdef OPENMP
+
+#define BLOCKS_ALLOC_SHIFT 16
+
+static void initAllocArrayArray(AllocArray *array,
+				void *blocks,
+				size_t nbBlocks,
+				size_t elementSize,
+				char *name,
+				int nbThreads,
+				int thisThread)
+{
+	array->freeElements = NULL;
+	array->elementSize = elementSize;
+	array->blockSize = (1 << BLOCKS_ALLOC_SHIFT) * elementSize;
+	array->maxElements = (1 << BLOCKS_ALLOC_SHIFT);
+	array->maxBlocks = nbBlocks;
+	array->blocks = blocks;
+	array->blocks[thisThread] = callocOrExit(array->blockSize, char);
+	array->currentBlocks = thisThread;
+	array->currentElements = 0;
+	array->nbThreads = nbThreads;
+#ifdef DEBUG
+	array->elementsRecycled = 0;
+	array->elementsAllocated = 0;
+	array->name = name;
+#endif
+}
+
+AllocArray *newAllocArrayArray(unsigned int n,
+			       size_t elementSize,
+			       char * name)
+{
+	AllocArray *allocArray;
+	void **blocks;
+	size_t nbBlocks;
+	int i;
+
+	allocArray = callocOrExit (n + 1, AllocArray);
+	nbBlocks = (1 << (32 - BLOCKS_ALLOC_SHIFT));
+	blocks = callocOrExit(nbBlocks, void*);
+	for (i = 0; i < n; i++)
+		initAllocArrayArray(allocArray + i,
+				    blocks,
+				    nbBlocks,
+				    elementSize,
+				    name,
+				    n, i);
+	/* Last element marker */
+	allocArray[n].elementSize = 0;
+
+	return allocArray;
+}
+
+void destroyAllocArrayArray(AllocArray *allocArray)
+{
+	int i;
+
+	for (i = allocArray[0].maxBlocks - 1; i >= 0; --i)
+		if (allocArray[0].blocks[i] != NULL)
+			free(allocArray[0].blocks[i]);
+	free(allocArray[0].blocks);
+	free(allocArray);
+}
+
+AllocArray *getAllocArrayInArray(AllocArray *allocArray,
+				 int	     position)
+{
+	return allocArray + position;
+}
+
+ArrayIdx allocArrayArrayAllocate(AllocArray *array)
+{
+	int thread = omp_get_thread_num();
+
+	array += thread;
+	if (array->freeElements != NULL)
+	{
+		AllocArrayFreeElement *element;
+
+		element = array->freeElements;
+		array->freeElements = element->next;
+#ifdef DEBUG
+		array->elementsRecycled++;
+#endif
+		return element->idx;
+	}
+	if (array->currentElements >= array->maxElements)
+	{
+		if ((array->currentBlocks + array->nbThreads) >= array->maxBlocks)
+		{
+#ifdef DEBUG
+			velvetLog(">>> Reached maximum `%s' addressable with 32 bits\n",
+				  array->name);
+#else
+			velvetLog(">>> Reached maximum elements addressable with 32 bits\n");
+#endif
+			abort();
+		}
+		array->currentBlocks += array->nbThreads;
+		array->blocks[array->currentBlocks] = callocOrExit(array->blockSize, char);
+		array->currentElements = 0;
+	}
+	array->currentElements++;
+#ifdef DEBUG
+	array->elementsAllocated++;
+#endif
+	return array->maxElements * array->currentBlocks + array->currentElements;
+}
+
+void
+allocArrayArrayFree(AllocArray *array, ArrayIdx idx)
+{
+	if (idx != NULL_IDX)
+	{
+		AllocArrayFreeElement *freeElem;
+		array += ((idx - 1) / array[0].maxElements) % omp_get_max_threads();
+
+		freeElem = allocArrayGetElement(array, idx);
+		freeElem->idx = idx;
+		freeElem->next = array->freeElements;
+		array->freeElements = freeElem;
+	}
+}
+#endif
