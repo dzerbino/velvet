@@ -48,8 +48,8 @@ struct connection_st {
 	Connection *right;
 	Connection *left;
 	Connection *twin;
-	double distance;
-	double variance;
+	float distance;
+	float variance;
 	IDnum direct_count;
 	IDnum paired_count;
 }  ATTRIBUTE_PACKED;
@@ -461,13 +461,13 @@ static void computePartialReadToNodeMappingShort(IDnum nodeID,
 static void computePartialReadToNodeMappingLong(IDnum nodeID,
 						ReadOccurence ** readNodes,
 						IDnum * readNodeCounts,
+						unsigned char *readMarker,
 						ReadSet * reads)
 {
 	IDnum readIndex;
 	ReadOccurence *readArray, *readOccurence;
 	Node *node = getNodeInGraph(graph, nodeID);
 	PassageMarkerI marker;
-	unsigned char *readMarker = callocOrExit(1 + sequenceCount(graph) / 8, unsigned char);
 
 	for (marker = getMarker(node); marker != NULL_IDX;
 	     marker = getNextInNode(marker)) {
@@ -503,7 +503,6 @@ static void computePartialReadToNodeMappingLong(IDnum nodeID,
 			// No need to go bit-wise
 			readMarker[readIndex / 8] = 0;
 	}
-	free(readMarker);
 }
 
 static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts,
@@ -511,6 +510,7 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts,
 						 Coordinate totalCount,
 						 ReadOccurence **readNodesArray)
 {
+	unsigned char *readMarker;
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
 	ReadOccurence **readNodes = allocateReadToNodeTables(readNodeCounts,
@@ -533,12 +533,15 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts,
 	readsLocks = NULL;
 #endif
 
+	readMarker = callocOrExit(1 + sequenceCount(graph) / 8, unsigned char);
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
 		if (nodeID != 0 && getNodeInGraph(graph, nodeID))
 			computePartialReadToNodeMappingLong(nodeID, readNodes,
 							    readNodeCounts,
+							    readMarker,
 							    reads);
 
+	free(readMarker);
 	return readNodes;
 }
 
@@ -988,7 +991,7 @@ static void initConnectionStackMemory(void)
 static ConnectionStack *allocateConnectionStack(void)
 {
 #ifdef OPENMP
-#if DEBUG
+#ifdef DEBUG
 	if (connectionStackMemory == NULL)
 	{
 		velvetLog("The memory for connection stack seems uninitialised, "

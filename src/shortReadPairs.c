@@ -43,7 +43,7 @@ struct miniConnection_st {
 	Connection *frontReference;
 	Connection *backReference;
 	NodeList *nodeList;
-	double variance;
+	float variance;
 	IDnum distance;
 }  ATTRIBUTE_PACKED;
 
@@ -1213,12 +1213,13 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * reads,
 
 	velvetLog("Starting pebble resolution...\n");
 
-	// Prepare graph
 	resetNodeStatus(graph);
-	prepareGraphForLocalCorrections(graph);
 
 	// Prepare scaffold
 	buildScaffold(graph, reads, dubious);
+
+	// Prepare graph
+	prepareGraphForLocalCorrections(graph);
 
 	// Prepare local scaffold 
 	localScaffold =
