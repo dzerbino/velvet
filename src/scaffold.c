@@ -154,7 +154,6 @@ static inline void unLockTwoNodes(IDnum nodeID, IDnum node2ID)
 }
 #endif
 
-/* SF TODO Have thread-specific recycleBin? */
 static Connection *allocateConnection()
 {
 	Connection *connect;
@@ -604,7 +603,7 @@ static unsigned char * countCoOccurences(IDnum * coOccurencesCount,
 	return interestingReads;
 }
 
-static void measureCoOccurences(Coordinate ** coOccurences,
+static void measureCoOccurences(IDnum ** coOccurences,
 				unsigned char * interestingReads,
 				ReadOccurence ** readNodes,
 				IDnum * readNodeCounts,
@@ -678,11 +677,11 @@ int compareReadOccurences(const void *A, const void * B) {
 	return -1;	
 }
 
-static void estimateLibraryInsertLength(Coordinate * coOccurences, IDnum coOccurencesCount, Category libID) {
+static void estimateLibraryInsertLength(IDnum * coOccurences, IDnum coOccurencesCount, Category libID) {
 	Coordinate median, variance;
 	IDnum index;
 	int counter = 0;
-	qsort(coOccurences, coOccurencesCount, sizeof(Coordinate), compareReadOccurences);
+	qsort(coOccurences, coOccurencesCount, sizeof(IDnum), compareReadOccurences);
 
 	median = coOccurences[coOccurencesCount / 2];
 
@@ -713,7 +712,7 @@ static void estimateLibraryInsertLength(Coordinate * coOccurences, IDnum coOccur
 	estimated[libID] = true;
 }
 
-static void estimateLibraryInsertLengths(Coordinate ** coOccurences, IDnum * coOccurencesCounts) {
+static void estimateLibraryInsertLengths(IDnum ** coOccurences, IDnum * coOccurencesCounts) {
 	Category libID;
 
 	for (libID = 0; libID < CATEGORIES + 1; libID++)
@@ -725,7 +724,7 @@ static void estimateLibraryInsertLengths(Coordinate ** coOccurences, IDnum * coO
 }
 
 static void estimateMissingInsertLengths(ReadOccurence ** readNodes, IDnum * readNodeCounts, IDnum * readPairs, Category * cats) {
-	Coordinate * coOccurences[CATEGORIES + 1]; /* SF TODO This could probably be done with IDnum */
+	IDnum * coOccurences[CATEGORIES + 1];
 	IDnum coOccurencesCounts[CATEGORIES + 1]; 
 	Category libID;
 
@@ -734,7 +733,7 @@ static void estimateMissingInsertLengths(ReadOccurence ** readNodes, IDnum * rea
 	unsigned char * interestingReads = countCoOccurences(coOccurencesCounts, readNodes, readNodeCounts, readPairs, cats);
 
 	for (libID = 0; libID < CATEGORIES + 1; libID++)
-		coOccurences[libID] = callocOrExit(coOccurencesCounts[libID], Coordinate); /* SF TODO This could probably be done with IDnum */
+		coOccurences[libID] = callocOrExit(coOccurencesCounts[libID], IDnum);
 
 	measureCoOccurences(coOccurences, interestingReads, readNodes, readNodeCounts, readPairs, cats);
 	estimateLibraryInsertLengths(coOccurences, coOccurencesCounts);

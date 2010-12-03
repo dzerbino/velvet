@@ -2103,7 +2103,7 @@ IDnum *getSequenceLengths(ReadSet * reads, int wordLength)
 	return lengths;
 }
 
-IDnum *getSequenceLengthsFromFile(char *filename, int wordLength) /* SF TODO This could also be chopped down to IDnum */
+IDnum *getSequenceLengthsFromFile(char *filename, int wordLength)
 {
 	IDnum *lengths;
 	FILE *file = fopen(filename, "r");

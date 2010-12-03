@@ -220,7 +220,7 @@ static inline void memorizeNode(Node * node, SmallNodeList ** nodePile)
 static inline boolean isNodeMemorized(Node * node, SmallNodeList * nodePile)
 {
 #ifdef OPENMP
-	/* SF TODO There must be a faster way to do this: bit mask, hash table, ... ? */
+	/* SF TODO There must be a faster way to do this: bit mask, hash table, tree, ... ? */
 	SmallNodeList * list;
 
 	for (list = nodePile; list; list = list->next)
