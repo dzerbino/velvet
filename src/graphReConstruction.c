@@ -164,7 +164,7 @@ static void initSmallNodeListMemory(void)
 static SmallNodeList *allocateSmallNodeList()
 {
 #ifdef OPENMP
-#if DEBUG
+#ifdef DEBUG
 	if (smallNodeListMemory == NULL)
 	{
 		velvetLog("The memory for small nodes seems uninitialised, "

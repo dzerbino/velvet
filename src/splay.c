@@ -61,7 +61,7 @@ void initSplayTreeMemory(void)
 static SplayNode *allocateSplayNode()
 {
 #ifdef OPENMP
-#if DEBUG
+#ifdef DEBUG
 	if (treeMemory == NULL)
 	{
 		velvetLog("The memory for splay trees seems uninitialised, "
