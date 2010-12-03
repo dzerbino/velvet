@@ -2460,96 +2460,6 @@ static Coordinate getTipLength(Node * node)
 	return length;
 }
 
-static boolean isMinorityChoice(Node * node)
-{
-	Node *current = getTwinNode(node);
-	Arc *arc;
-	Arc *activeArc = NULL;
-	IDnum mult = 0;
-
-	// Finding first tangle
-	while (current != NULL && simpleArcCount(getTwinNode(current)) < 2
-	       && simpleArcCount(current) < 2) {
-		activeArc = getArc(current);
-		current = getDestination(activeArc);
-	}
-
-	// If isolated snippet:
-	if (current == NULL)
-		return true;
-
-	// Joined tips  
-	if (simpleArcCount(getTwinNode(current)) < 2)
-		return false;
-
-	// If unique event
-	if (getMultiplicity(activeArc) == 1)
-		return true;
-
-	// Computing max arc
-	for (arc = getArc(getTwinNode(current)); arc != NULL;
-	     arc = getNextArc(arc))
-		if (getMultiplicity(arc) > mult)
-			mult = getMultiplicity(arc);
-
-	// Testing for minority
-	return mult >= getMultiplicity(activeArc);
-}
-
-void clipTips(Graph * graph)
-{
-	IDnum index;
-	Node *current, *twin;
-	boolean modified = true;
-	int Wordlength = getWordLength(graph);
-	PassageMarkerI marker;
-
-	velvetLog("Clipping short tips off graph\n");
-
-	while (modified) {
-		modified = false;
-		for (index = 1; index <= nodeCount(graph); index++) {
-			current = getNodeInGraph(graph, index);
-
-			if (current == NULL)
-				continue;
-
-			twin = getTwinNode(current);
-
-			if (getArc(current) == NULL
-			    && getTipLength(current) < 2 * Wordlength
-			    && isMinorityChoice(current)) {
-				while ((marker = getMarker(current))) {
-					if (!isInitial(marker)
-					    && !isTerminal(marker))
-						disconnectNextPassageMarker
-						    (getPreviousInSequence
-						     (marker), graph);
-					destroyPassageMarker(marker);
-				}
-				destroyNode(current, graph);
-				modified = true;
-			} else if (getArc(twin) == NULL
-				   && getTipLength(twin) < 2 * Wordlength
-				   && isMinorityChoice(twin)) {
-				while ((marker = getMarker(current))) {
-					if (!isInitial(marker)
-					    && !isTerminal(marker))
-						disconnectNextPassageMarker
-						    (getPreviousInSequence
-						     (marker), graph);
-					destroyPassageMarker(marker);
-				}
-				destroyNode(twin, graph);
-				modified = true;
-			}
-		}
-	}
-
-	concatenateGraph(graph);
-	velvetLog("%li nodes left\n", (long) nodeCount(graph));
-}
-
 void clipTipsHard(Graph * graph)
 {
 	IDnum index;
@@ -2636,7 +2546,6 @@ void correctGraph(Graph * argGraph, IDnum * argSequenceLengths, Category * argSe
 
 	velvetLog("Correcting graph with cutoff %f\n", MAXDIVERGENCE);
 
-	//clipTips(graph);
 	nodes = nodeCount(graph);
 
 	// Allocating memory

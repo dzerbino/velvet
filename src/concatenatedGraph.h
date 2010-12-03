@@ -27,6 +27,4 @@ void concatenateReadStarts(Node * nodeA, Node * nodeB, Graph * graph);
 // Concatenates all pairs of nodes which form a linear structure
 void concatenateGraph(Graph * graph);
 
-// Concatenates two nodes together (supposing that they form a linear structure)
-void concatenateNodes(Node * nodeA, Node * nodeB, Graph * graph);
 #endif

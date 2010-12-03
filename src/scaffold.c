@@ -1537,64 +1537,6 @@ static IDnum **countShortReads(Graph * graph, ReadSet * reads)
 	return counts;
 }
 
-void printConnections(ReadSet * reads)
-{
-	IDnum maxNodeIndex = nodeCount(graph) * 2 + 1;
-	IDnum index;
-	Connection *connect, *next;
-	Node *node;
-	IDnum **counts = countShortReads(graph, reads);
-	IDnum nodes = nodeCount(graph);
-
-	velvetLog("CONNECT IDA IDB dcount pcount dist lengthA lengthB var countA countB coordA coordB real exp distance test\n");
-
-	for (index = 0; index < maxNodeIndex; index++) {
-		node = getNodeInGraph(graph, index - nodeCount(graph));
-		for (connect = scaffold[index]; connect != NULL;
-		     connect = next) {
-			next = connect->right;
-			if (getUniqueness(connect->destination)) {
-				velvetLog
-				    ("CONNECT %ld %ld %ld %ld %lld %lld %lld %f %ld %ld",
-				     (long) index - nodeCount(graph),
-				     (long) getNodeID(connect->destination),
-				     (long) connect->direct_count,
-				     (long) connect->paired_count,
-				     (long long) getConnectionDistance(connect),
-				     (long long) getNodeLength(node),
-				     (long long) getNodeLength(connect->destination),
-				     connect->variance,
-				     (long) getNodeReadCount(node, graph),
-				     (long) getNodeReadCount(connect->destination,
-						      graph));
-				if (markerCount(node) == 1
-				    && markerCount(connect->destination) ==
-				    1)
-					velvetLog(" %lld %lld %lld",
-					       (long long) getPassageMarkerFinish
-					       (getMarker(node)),
-					       (long long) getPassageMarkerFinish
-					       (getMarker
-						(connect->destination)),
-					       (long long) (getPassageMarkerFinish
-					       (getMarker(node)) - 
-					       getPassageMarkerFinish
-					       (getMarker
-						(connect->destination))));
-				else
-					velvetLog(" ? ?");
-				velvetLog(" %ld", (long) expectedNumberOfConnections(index-nodeCount(graph), connect, counts, 0));
-				velvetLog(" %lld", (long long) (getConnectionDistance(connect) - (getNodeLength(node) + getNodeLength(connect->destination))/2));
-				if (testConnection
-				    (index - nodes, connect, counts))
-					velvetLog(" OK\n");
-				else
-					velvetLog(" NG\n");
-			}
-		}
-	}
-}
-
 static void removeUnreliableConnections(ReadSet * reads)
 {
 	IDnum maxNodeIndex = nodeCount(graph) * 2 + 1;

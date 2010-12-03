@@ -51,12 +51,6 @@ struct roadmap_st {
 	ShortLength annotationCount;
 }  ATTRIBUTE_PACKED;
 
-// Creates empty RoadMap
-RoadMap *newRoadMap()
-{
-	return callocOrExit(1, RoadMap);
-}
-
 IDnum getAnnotationCount(RoadMap * rdmap)
 {
 	return rdmap->annotationCount;

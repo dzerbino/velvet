@@ -25,10 +25,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 // PreNode functions
 ////////////////////////////////////////////////////////////
 
-//Creators/destructor
-PreNode *newPreNode_pg(Coordinate start,
-		       Coordinate finish,
-		       FILE * file, Kmer * initialKmer, int wordLength);
 void destroyPreNode_pg(IDnum preNode, PreGraph * preGraph);
 
 // Locator
@@ -69,7 +65,6 @@ void destroyPreArc_pg(PreArcI preArc, PreGraph * preGraph);
 // Multiplicity
 void setMultiplicity_pg(PreArcI preArc, IDnum mult);
 IDnum getMultiplicity_pg(PreArcI preArc);
-void changeMultiplicity_pg(PreArcI preArc, IDnum variation);
 
 // Extremities
 IDnum getDestination_pg(PreArcI preArc, IDnum nodeID);
@@ -107,7 +102,4 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph);
 
 int getWordLength_pg(PreGraph * preGraph);
 
-void displayPreArcMemory_pg();
-
-int test_preGraph(int argc, char **argv);
 #endif

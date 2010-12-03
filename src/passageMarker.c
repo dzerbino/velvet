@@ -290,37 +290,6 @@ char *readPassageMarker(PassageMarkerI marker)
 	return s;
 }
 
-char *readPassageMarkerSequence(PassageMarkerI marker,
-				TightString ** sequences, int WORDLENGTH)
-{
-	TightString *sequence =
-	    sequences[getAbsolutePassMarkerSeqID(marker) - 1];
-	int i;
-	char *s = NULL;
-
-	if (marker == NULL_IDX)
-		return s;
-
-	s = mallocOrExit(getPassageMarkerLength(marker) + 1, char);
-
-	if (getPassageMarkerSequenceID(marker) > 0)
-		for (i = 0; i < getPassageMarkerLength(marker); i++)
-			s[i] =
-			    getNucleotideChar(getPassageMarkerStart(marker)
-					      + i + WORDLENGTH - 1,
-					      sequence);
-	else
-		for (i = 0; i < getPassageMarkerLength(marker); i++)
-			s[i] =
-			    getInverseNucleotideChar(getPassageMarkerStart
-						     (marker) - i - 1,
-						     sequence);
-
-	s[getPassageMarkerLength(marker)] = '\0';
-
-	return s;
-}
-
 PassageMarkerI addPassageMarker(IDnum sequenceID, Coordinate start,
 				Node * node)
 {
@@ -371,39 +340,6 @@ PassageMarkerList *copyPassageMarkerList(PassageMarkerList * list)
 	}
 
 	return result;
-}
-
-PassageMarkerI copyPassageMarker(PassageMarkerI marker)
-{
-	PassageMarker *markerVal = PM_FI2P (marker);
-	PassageMarker *twin = PM_FI2P (markerVal->twinMarker);
-	PassageMarkerI copy = allocatePassageMarker();
-	PassageMarkerI twinCopy = allocatePassageMarker();
-	PassageMarker *copyVal = PM_FI2P (copy);
-	PassageMarker *twinCopyVal = PM_FI2P (twinCopy);
-
-	copyVal->sequenceID = markerVal->sequenceID;
-	copyVal->start = markerVal->start;
-	copyVal->nextInNode = NULL_IDX;
-	copyVal->previousInNode = NULL_IDX;
-	copyVal->node = NULL;
-	copyVal->nextInSequence = markerVal->nextInSequence;
-	copyVal->finishOffset = markerVal->finishOffset;
-	copyVal->status = false;
-
-	twinCopyVal->sequenceID = twin->sequenceID;
-	twinCopyVal->start = twin->start;
-	twinCopyVal->nextInNode = NULL_IDX;
-	twinCopyVal->previousInNode = NULL_IDX;
-	twinCopyVal->node = NULL;
-	twinCopyVal->nextInSequence = twin->nextInSequence;
-	twinCopyVal->finishOffset = twin->finishOffset;
-	twinCopyVal->status = false;
-
-	copyVal->twinMarker = twinCopy;
-	twinCopyVal->twinMarker = copy;
-
-	return copy;
 }
 
 void incrementFinishOffset(PassageMarkerI marker, Coordinate offset)

@@ -40,8 +40,6 @@ void cleanScaffoldMemory();
 
 void setUnreliableConnectionCutoff(int val);
 
-void printConnections(ReadSet * reads);
-
 // Connection handlers
 Connection * getConnection(Node * node);
 

@@ -80,37 +80,6 @@ TightString *getTightStringInArray(TightString * tString,
 // Adds a nucleotide into the Codon pointed to by codonPtr at the desired
 // position (0, 1, 2, or 3);
 //
-Nucleotide charToNucleotide(char c)
-{
-	switch (c) {
-	case 'A':
-		return Adenine;
-	case 'C':
-		return Cytosine;
-	case 'G':
-		return Guanine;
-	case 'T':
-		return Thymine;
-	case 'a':
-		return Adenine;
-	case 'c':
-		return Cytosine;
-	case 'g':
-		return Guanine;
-	case 't':
-		return Thymine;
-	case '\n':
-		return '\n';
-	default:
-		return Adenine;
-	}
-
-}
-
-//
-// Adds a nucleotide into the Codon pointed to by codonPtr at the desired
-// position (0, 1, 2, or 3);
-//
 void writeNucleotide(Nucleotide nucleotide, Codon * codonPtr, int position)
 {
 	int nucleotideNum;
@@ -145,35 +114,6 @@ void writeNucleotide(Nucleotide nucleotide, Codon * codonPtr, int position)
 	}
 
 	writeNucleotideNumber(nucleotideNum, codonPtr, position);
-}
-
-//
-// Creates a tightString from a tradionnal string of A,T,G, and C of length size
-//
-TightString *newTightStringFromString(char *sequence)
-{
-	TightString *newTString = mallocOrExit(1, TightString);
-
-	int size = (int) strlen(sequence);
-	int arrayLength = size / 4;
-	int index;
-
-	if (size % 4 > 0)
-		arrayLength++;
-
-	newTString->length = size;
-	newTString->sequence = callocOrExit(arrayLength, Codon);
-
-	for (index = 0; index < arrayLength; index++)
-		newTString->sequence[index] = 0;
-
-	for (index = 0; index < size; index++)
-		writeNucleotide(sequence[index],
-				&(newTString->sequence[index / 4]),
-				index % 4);
-
-	free(sequence);
-	return newTString;
 }
 
 static void fillTightStringWithString(TightString * tString,
@@ -342,36 +282,6 @@ char getNucleotideChar(Coordinate nucleotideIndex, TightString * tString)
 	return '?';
 }
 
-char getInverseNucleotideChar(Coordinate nucleotideIndex,
-			      TightString * tString)
-{
-	Codon codon = tString->sequence[nucleotideIndex / 4];
-
-	switch (nucleotideIndex % 4) {
-#ifndef COLOR
-	case 3:
-		return readNucleotide(3 - ((codon & 192) >> 6));
-	case 2:
-		return readNucleotide(3 - ((codon & 48) >> 4));
-	case 1:
-		return readNucleotide(3 - ((codon & 12) >> 2));
-	case 0:
-		return readNucleotide(3 - ((codon & 3)));
-#else
-	case 3:
-		return readNucleotide(((codon & 192) >> 6));
-	case 2:
-		return readNucleotide(((codon & 48) >> 4));
-	case 1:
-		return readNucleotide(((codon & 12) >> 2));
-	case 0:
-		return readNucleotide(((codon & 3)));
-#endif
-	}
-
-	return '?';
-}
-
 TightString *newTightString(Coordinate length)
 {
 	Coordinate arrayLength = length / 4;
@@ -401,58 +311,15 @@ writeNucleotideAtPosition(Nucleotide nucleotide, Coordinate position,
 			      position % 4);
 }
 
-void trimTightString(TightString * tString, Coordinate length)
-{
-	Coordinate newArrayLength = length / 4;
-	if (length % 4 == 0)
-		newArrayLength++;
-
-	tString->length = length;
-	tString->sequence = 
-	    reallocOrExit(tString->sequence, newArrayLength, Codon);
-}
-
 IDnum getLength(TightString * tString)
 {
 	return tString->length;
-}
-
-TightString **concatenateTightStringArrays(TightString ** array1,
-					   TightString ** array2,
-					   IDnum size1, IDnum size2)
-{
-	TightString **unionArray;
-	IDnum index;
-
-	if (array1 == NULL)
-		return array2;
-
-	if (array2 == NULL)
-		return array1;
-
-	unionArray =
-	    reallocOrExit(array1, size1 + size2, TightString *);
-
-	for (index = 0; index < size2; index++)
-		unionArray[size1 + index] = array2[index];
-
-	free(array2);
-
-	return unionArray;
 }
 
 void destroyTightString(TightString * tString)
 {
 	free(tString->sequence);
 	free(tString);
-}
-
-void destroyTightStringArray(TightString ** array, IDnum sequenceCount)
-{
-	IDnum index;
-	for (index = 0; index < sequenceCount; index++)
-		destroyTightString(array[index]);
-	free(array);
 }
 
 void setTightStringLength(TightString * tString, Coordinate length)
@@ -472,62 +339,6 @@ void setTightStringLength(TightString * tString, Coordinate length)
 	}
 
 	tString->length = length;
-}
-
-// Shortens reads to a fixed size (good for Solexa where errors are markedly towards the end)
-void trimTightStringArray(TightString ** array, IDnum sequenceCount,
-			  Coordinate length)
-{
-	IDnum index;
-
-	for (index = 0; index < sequenceCount; index++)
-		trimTightString(array[index], length);
-}
-
-void trimTightStringArraySanger(TightString ** array, IDnum sequenceCount,
-				Coordinate min, Coordinate max)
-{
-	IDnum index;
-
-	for (index = 0; index < sequenceCount; index++) {
-		if (getLength(array[index]) > max)
-			trimTightString(array[index], max);
-		else if (getLength(array[index]) < min)
-			trimTightString(array[index], 0);
-	}
-}
-
-void clipTightString(TightString * tString, Coordinate start,
-		     Coordinate finish)
-{
-	Coordinate position;
-	Coordinate newLength = finish - start;
-
-	for (position = 0; position < newLength; position++)
-		writeNucleotideAtPosition(getNucleotide
-					  (position + start, tString),
-					  position, tString);
-
-	trimTightString(tString, newLength);
-}
-
-Nucleotide getNucleotideFromString(Coordinate nucleotideIndex,
-				   char *string)
-{
-	char letter = string[nucleotideIndex];
-
-	switch (letter) {
-	case 'A':
-		return Adenine;
-	case 'C':
-		return Cytosine;
-	case 'G':
-		return Guanine;
-	case 'T':
-		return Thymine;
-	default:
-		return Adenine;
-	}
 }
 
 void exportTightString(FILE * outfile, TightString * sequence, IDnum index)
@@ -550,25 +361,4 @@ void exportTightString(FILE * outfile, TightString * sequence, IDnum index)
 	}
 
 	fflush(outfile);
-}
-
-void exportSequenceArray(char *filename, TightString ** array,
-			 IDnum sequenceCount)
-{
-	IDnum index;
-	FILE *outfile = fopen(filename, "w+");
-
-	if (outfile == NULL) {
-		velvetLog("Couldn't open file, sorry\n");
-		return;
-	} else
-		velvetLog("Writing into file: %s\n", filename);
-
-	for (index = 0; index < sequenceCount; index++) {
-		exportTightString(outfile, array[index], index);
-	}
-
-	fclose(outfile);
-
-	velvetLog("Done\n");
 }

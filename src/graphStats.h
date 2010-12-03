@@ -21,31 +21,13 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _GRAPHSTATS_H_
 #define _GRAPHSTATS_H_
 
-// This header file and the corresponding code file contain a load of 
-// miscellaneous functions, many of which coded quickly and used only once 
-// for reasons long forgotten since.
-// Sorry for the mess ;-)
-
-///////////////////////////////////////////////////////////////////
-// Useful functions
-///////////////////////////////////////////////////////////////////
-void displayGraphStatistics(Graph * graph);
 
 void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads);
 
 void exportLongNodeSequences(char *filename, Graph * graph,
 			     Coordinate minLength);
 
-void exportMediumNodeSequences(char *filename, Graph * graph,
-			       Coordinate minLength);
-
-IDnum readStarts(Node * node);
-
 Coordinate readCoverage(Node * node);
-
-IDnum strainMarkerCount(Node * node, IDnum firstStrain);
-
-IDnum nodeMultiplicity(Node * node);
 
 Coordinate n50(Graph * graph);
 
@@ -81,83 +63,7 @@ void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLe
 
 void exportLongNodeMappings(char *filename, Graph * graph, ReadSet * reads,
 			     Coordinate minLength, char * sequencesFilename);
-///////////////////////////////////////////////////////////////////
-// Dodgy functions
-///////////////////////////////////////////////////////////////////
 
-IDnum countSinksAndSources(Graph * graph);
-
-IDnum countTangles(Graph * graph);
-
-IDnum countRepeats(Graph * graph);
-
-IDnum countSNPs(Graph * graph, IDnum firstStrain, int WORDLENGTH);
-
-void displayGraphStatisticsSelective(Graph * graph, IDnum first);
-
-void grossErrorRemoval(Graph * graph, IDnum firstStrain);
-
-Coordinate countCommonLength(Graph * graph, IDnum firstStrain);
-
-IDnum countBreakpoints(Graph * graph, IDnum firstStrain);
-
-IDnum countStrainOnlyNodes(Graph * graph, IDnum firstStrain);
-
-Coordinate countStrainOnlyBp(Graph * graph, IDnum firstStrain);
-
-void displayStrainOnlySequences(Graph * graph, IDnum firstStrain,
-				char *inputFilename, char *filename,
-				int WORDLENGTH);
-
-void displayStrainOnlyDescriptors(Graph * graph, IDnum firstStrain);
-
-void chainSawCorrection(Graph * graph, int minMult);
-
-void displayBreakpoints(Graph * graph, IDnum firstStrain);
-
-void destroyStrainSpecificIslands(Graph * graph, IDnum firstStrain);
-
-void spotIrregularReads(Graph * graph, IDnum firstStrain,
-			char *sequenceFile, char *outputFile);
-
-void displayAlignmentToReference(Graph * graph, IDnum seqID,
-				 IDnum firstStrain,
-				 TightString ** sequences, int WORDLENGTH,
-				 char *filename);
-
-void removeReferenceMarkers(Graph * graph, IDnum firstStrain);
-
-void testForBizarreMarkers(Graph * graph);
-
-void surveyPaths(Graph * graph);
-
-void destroyMixedReads(Graph * graph, IDnum minCoverage);
-
-void destroySinglePoolNodes(Graph * graph);
-void destroySinglePoolNodesStrict(Graph * graph);
-void destroyShortTips(Graph * graph);
-
-void destroyDisconnectedElements(Graph * graph);
-void measureTangleSizes(Graph * graph, Coordinate maxLength);
-
-void destroyEmptyNodes(Graph * graph);
-
-void removeShortReads(Graph * graph);
-
-Coordinate totalGraphLength(Graph * graph);
-
-void contigStats(Node ** node, IDnum readCount);
-
-void exportContigs(Node ** contigs, ReadSet * reads, char *filename,
-		   int WORDLENGTH, int pairedReadsCount);
-
-void removeLowCoverageNodes(Graph * graph, double minCov);
 void removeHighCoverageNodes(Graph * graph, double maxCov, boolean export, Coordinate minLength, char * filename);
-
-void removeMissingStrain(Graph * graph, Category cat);
-
-boolean isNatural(Graph * graph);
-
-void searchForHallidayJunction(Graph * graph);
 
 #endif

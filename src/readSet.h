@@ -35,26 +35,12 @@ struct readSet_st {
 };
 
 ReadSet *newReadSet();
-ReadSet *newReadSetAroundTightStringArray(TightString ** array,
-					  IDnum length);
 
 IDnum *getSequenceLengths(ReadSet * reads, int wordLength);
-IDnum *getSequenceLengthsFromFile(char *filename, int wordLength);
-
-void concatenateReadSets(ReadSet * A, ReadSet * B);
 
 void convertSequences(ReadSet * rs);
 
-void convertConfidenceScores(ReadSet * rs, int WORDLENGTH);
-
-void categorizeReads(ReadSet * reads, Category category);
-void simplifyReads(ReadSet * reads);
-
-// Exports a .sed script allowing to transform internal IDs to the original ones
-void exportIDMapping(char *filename, ReadSet * reads);
-
 ReadSet *importReadSet(char *filename);
-void exportReadSet(char *filename, ReadSet * reads);
 
 // The overall argument parser and file reader for the hash function
 void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand);

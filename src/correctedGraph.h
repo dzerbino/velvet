@@ -21,8 +21,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _CORRECTEDGRAPH_H_
 #define _CORRECTEDGRAPH_H_
 
-void clipTips(Graph * graph);
-
 void clipTipsHard(Graph * graph);
 
 void correctGraph(Graph * graph, IDnum * sequenceLengths, Category * sequenceCategories);

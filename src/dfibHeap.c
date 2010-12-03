@@ -25,11 +25,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "dfib.h"
 #include "utility.h"
 
-// Return number of elements stored in heap
-IDnum getDFibHeapSize(DFibHeap * heap)
-{
-	return dfibheap_getSize(heap);
-}
 
 // Constructor
 // Memory allocated

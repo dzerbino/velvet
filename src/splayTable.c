@@ -32,12 +32,13 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "readSet.h"
 #include "splay.h"
 #include "tightString.h"
-#include "crc.h"
 #include "utility.h"
 #include "kmer.h"
 #include "kmerOccurenceTable.h"
 #include "recycleBin.h"
 
+
+#define HASH_BUCKETS_NB 16777216
 
 #ifdef OPENMP
 
@@ -179,14 +180,14 @@ SplayTable *newSplayTable(int WORDLENGTH, boolean double_strand)
 {
 	SplayTable *splayTable = mallocOrExit(1, SplayTable);
 	splayTable->WORDLENGTH = WORDLENGTH;
-	splayTable->table = callocOrExit(CRC_HASH_BUCKETS, SplayTree *);
+	splayTable->table = callocOrExit(HASH_BUCKETS_NB, SplayTree *);
 	splayTable->kmerOccurenceTable = NULL;
 	splayTable->double_strand = double_strand;
 #ifdef OPENMP
-	splayTable->tableLocks = mallocOrExit(CRC_HASH_BUCKETS, omp_lock_t);
+	splayTable->tableLocks = mallocOrExit(HASH_BUCKETS_NB, omp_lock_t);
 	int i;
 	#pragma omp parallel for
-	for (i = 0; i < CRC_HASH_BUCKETS; i++)
+	for (i = 0; i < HASH_BUCKETS_NB; i++)
 		omp_init_lock(splayTable->tableLocks + i);
 	initSplayTreeMemory();
 #endif
@@ -225,7 +226,7 @@ static KmerKey hash_kmer(Kmer * kmer)
 	key = key ^ (key >> 28);
 	key = key + (key << 31);
 
-	return key % CRC_HASH_BUCKETS;
+	return key % HASH_BUCKETS_NB;
 #elif KMER_LONGS
 	KmerKey key = kmer->longs[0];
 
@@ -236,12 +237,12 @@ static KmerKey hash_kmer(Kmer * kmer)
 	key += ~(key << 11);
 	key ^= (key >> 16);
 
-	return key % CRC_HASH_BUCKETS;
+	return key % HASH_BUCKETS_NB;
 
 #elif KMER_INTS
-	return kmer->ints % CRC_HASH_BUCKETS;
+	return kmer->ints % HASH_BUCKETS_NB;
 #elif KMER_CHARS
-	return kmer->chars % CRC_HASH_BUCKETS;
+	return kmer->chars % HASH_BUCKETS_NB;
 #endif
 }
 

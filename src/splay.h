@@ -25,11 +25,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 typedef struct splayNode_st SplayTree;
 
-// Creates an empty tree (=NULL in fact)
-SplayTree *newSplayTree();
-
 // Deallocates tree memory
-void destroySplayTree(SplayTree * T);
 void destroyAllSplayTrees();
 
 // Finds occurrence of kmer in the tree
@@ -38,16 +34,6 @@ void destroyAllSplayTrees();
 boolean findOrInsertOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
 					 Coordinate * position,
 					 SplayTree ** T);
-
-boolean placeOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
-				  Coordinate * position, SplayTree ** T);
-
-void countOccurenceInSplayTree(Kmer * kmer, SplayTree ** T, int increment);
-
-void filterAndExportSplayTree(FILE * file, SplayTree * T, int minCov,
-			      int maxCov);
-
-void displaySplayTreeMemory();
 
 #ifdef OPENMP
 /* Initialises the per-thread RecycleBin array */

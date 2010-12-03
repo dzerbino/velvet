@@ -122,47 +122,6 @@ static Node *popNodeRecord()
 	return node;
 }
 
-void detachImprobablePairs(ReadSet * sequences)
-{
-	IDnum index, nodeIndex;
-	IDnum maxNodeIndex = 2 * nodeCount(graph) + 1;
-	ShortReadMarker *nodeArray, *shortMarker;
-	Node *node;
-	IDnum nodeReadCount;
-	IDnum seqID, pairID;
-	IDnum *mateReads = sequences->mateReads;
-	Category *cats = sequences->categories;
-
-	for (nodeIndex = 0; nodeIndex < maxNodeIndex; nodeIndex++) {
-		node = getNodeInGraph(graph, nodeIndex - nodeCount(graph));
-		if (node == NULL)
-			continue;
-
-		nodeArray = getNodeReads(node, graph);
-		nodeReadCount = getNodeReadCount(node, graph);
-
-		for (index = 0; index < nodeReadCount; index++) {
-			shortMarker =
-			    getShortReadMarkerAtIndex(nodeArray, index);
-
-			seqID = getShortReadMarkerID(shortMarker);
-			if (mateReads[seqID] == -1)
-				continue;
-
-			if (getNodeLength(node) -
-			    getShortReadMarkerPosition(shortMarker) >
-			    2 * getInsertLength(graph, cats[seqID])) {
-				pairID = mateReads[seqID];
-
-				if (pairID != -1) {
-					mateReads[seqID] = -1;
-					mateReads[pairID] = -1;
-				}
-			}
-		}
-	}
-}
-
 static void resetMiniConnection(Node * node, MiniConnection * localConnect,
 				Coordinate distance, double variance,
 				Connection * frontReference,

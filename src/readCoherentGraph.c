@@ -74,24 +74,6 @@ static void deallocateRBConnection(RBConnection * nodeList)
 	deallocatePointer(nodeListMemory, nodeList);
 }
 
-void setBaseCoverage(double coverage)
-{
-	expected_coverage = coverage;
-}
-
-boolean isUniqueBasic(Node * node)
-{
-	if (getNodeLength(node) < LONG_NODE_CUTOFF) {
-		return false;
-	}
-	if (readCoverage(node) / (double) getNodeLength(node) >
-	    1.5 * expected_coverage) {
-		return false;
-	}
-
-	return true;
-}
-
 boolean isUniqueSolexa(Node * node)
 {
 

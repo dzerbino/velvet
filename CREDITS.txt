@@ -5,8 +5,7 @@ However, some code was reused with kind permission from:
 (http://resnet.uoregon.edu/~gurney_j/jmpc/fib.html)
 - Guy Slater, for his memory management routines 
 (http://www.ebi.ac.uk/~guy/exonerate/) 
-- Ewan Birney, for his hashing function
-(ftp://ftp.ebi.ac.uk/pub/software/unix/wise2/)
+- Ewan Birney
 - John Marshall, for the streamlined error handling (utility.*),
 - Sylvain Foret, for memory reduction (allocArray.* and other corrections).
 

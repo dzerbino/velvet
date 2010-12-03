@@ -23,7 +23,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 void exploitShortReadPairs(Graph * graph, ReadSet * reads,
 			   boolean * dubious, boolean force_jumps);
-void detachImprobablePairs(ReadSet * sequences, Graph * graph);
 void handicapNode(Node * node);
 NodeList *getMarkedNodeList();
 

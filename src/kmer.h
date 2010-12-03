@@ -71,5 +71,3 @@ struct kmer_st {
 }  ATTRIBUTE_PACKED;
 
 #endif 
-
-void testKmers();

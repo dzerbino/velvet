@@ -24,11 +24,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 void readCoherentGraph(Graph * graph, boolean(*isUnique) (Node * node),
 		       double coverage, ReadSet * reads);
 
-boolean isUniqueBasic(Node * node);
-
 boolean isUniqueSolexa(Node * node);
-
-void setBaseCoverage(double coverage);
 
 void setMultiplicityCutoff(int value);
 #endif

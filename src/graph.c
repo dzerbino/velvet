@@ -320,14 +320,6 @@ void createAnalogousArc(Node * originNode, Node * destinationNode,
 	}
 }
 
-void changeMultiplicity(Arc * arc, IDnum variation)
-{
-	if (arc == NULL)
-		return;
-	arc->multiplicity += variation;
-	arc->twinArc->multiplicity += variation;
-}
-
 Arc *getArcBetweenNodes(Node * originNode, Node * destinationNode,
 			Graph * graph)
 {
@@ -568,67 +560,6 @@ Nucleotide getNucleotideInNode(Node * node, Coordinate index) {
         return getNucleotideInDescriptor(node->descriptor, index);
 }
 
-char *readNode(Node * node)
-{
-	char *s = callocOrExit(1000000, char);
-	char tmpString[100000];
-	Descriptor *descriptor = node->descriptor;
-	Nucleotide nucleotide;
-	Coordinate i;
-
-	sprintf(s, "NODE %li :", (long) node->ID);
-
-	for (i = 0; i < node->length; i++) {
-		nucleotide = getNucleotideInDescriptor(descriptor, i);
-		switch (nucleotide) {
-		case ADENINE:
-			tmpString[i] = 'A';
-			break;
-		case CYTOSINE:
-			tmpString[i] = 'C';
-			break;
-		case GUANINE:
-			tmpString[i] = 'G';
-			break;
-		case THYMINE:
-			tmpString[i] = 'T';
-			break;
-		}
-	}
-
-	tmpString[i] = '\0';
-	strcat(s, tmpString);
-
-	/*
-	   while (arc != NULL) {
-	   sprintf(tmpString, " %d(%dx);", arc->destination->ID,
-	   arc->multiplicity);
-	   strcat(s, tmpString);
-	   arc = arc->next;
-	   }
-
-	   sprintf(tmpString, " lgth: %d", node->length);
-	   strcat(s, tmpString);
-	 */
-
-	return s;
-}
-
-void displayGraph(Graph * graph)
-{
-	Node *currentNode;
-	IDnum nodeIndex;
-
-	velvetLog("%li sequences\n", (long) graph->sequenceCount);
-	velvetLog("%li*2 nodes\n", (long) graph->nodeCount);
-
-	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
-		currentNode = graph->nodes[nodeIndex];
-		velvetLog("%s\n", readNode(currentNode));
-		velvetLog("%s\n", readNode(currentNode->twinNode));
-	}
-}
-
 PassageMarkerI getMarker(Node * node)
 {
 	return node->marker;
@@ -689,23 +620,6 @@ void resetNodeStatus(Graph * graph)
 
 		node->status = false;
 		node->twinNode->status = false;
-	}
-}
-
-void resetPassageMarkersStatus(Graph * graph)
-{
-	IDnum nodeIndex;
-	Node *node;
-	PassageMarkerI marker;
-
-	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
-		node = graph->nodes[nodeIndex];
-		if (node == NULL)
-			continue;
-
-		for (marker = node->marker; marker != NULL_IDX;
-		     marker = getNextInNode(marker))
-			setPassageMarkerStatus(marker, false);
 	}
 }
 
@@ -1372,117 +1286,6 @@ void reduceNode(Node * node)
 	node->twinNode->length = 0;
 }
 
-void checkPassageMarkersStatus(Graph * graph)
-{
-	IDnum nodeIndex;
-	Node *node;
-	PassageMarkerI marker;
-
-	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
-		node = graph->nodes[nodeIndex];
-		if (node == NULL)
-			continue;
-
-		for (marker = node->marker; marker != NULL_IDX;
-		     marker = getNextInNode(marker)) {
-			if (getPassageMarkerStatus(marker)) {
-				velvetLog("TRUE marker %s\n",
-				       readPassageMarker(marker));
-#ifdef DEBUG 
-				abort();
-#endif 
-				exit(-1);
-			}
-
-			if (getNextInSequence(marker) != NULL_IDX
-			    && getArcBetweenNodes(node,
-						  getNode(getNextInSequence
-							  (marker)),
-						  graph) == NULL) {
-				velvetLog
-				    ("Missing arc %li -> %li (for %li)\n",
-				     (long) getNodeID(node),
-				     (long) getNodeID(getNode
-					       (getNextInSequence
-						(marker))),
-				     (long) getPassageMarkerSequenceID(marker));
-				abort();
-			}
-			if (getPreviousInSequence(marker) != NULL_IDX
-			    &&
-			    getArcBetweenNodes(getNode
-					       (getPreviousInSequence
-						(marker)), node,
-					       graph) == NULL) {
-				velvetLog
-				    ("Missing arc %li -> %li (for %li)\n",
-				     (long) getNodeID(getNode
-					       (getNextInSequence
-						(marker))),
-				     (long) getNodeID(node),
-				     (long) getPassageMarkerSequenceID(marker));
-				abort();
-			}
-		}
-	}
-}
-
-void reassessArcMultiplicities(Graph * graph)
-{
-	IDnum index;
-	Node *node, *twin;
-	Arc *arc;
-	PassageMarkerI marker;
-
-	for (index = 1; index <= graph->nodeCount; index++) {
-		node = getNodeInGraph(graph, index);
-
-		if (node == NULL)
-			continue;
-
-		for (arc = getArc(node); arc != NULL;
-		     arc = getNextArc(arc))
-			setMultiplicity(arc, 0);
-		for (arc = getArc(getTwinNode(node)); arc != NULL;
-		     arc = getNextArc(arc))
-			setMultiplicity(arc, 0);
-	}
-
-	for (index = 1; index <= graph->nodeCount; index++) {
-		node = getNodeInGraph(graph, index);
-
-		if (node == NULL)
-			continue;
-
-		twin = getTwinNode(node);
-
-		for (marker = getMarker(node); marker != NULL_IDX;
-		     marker = getNextInNode(marker)) {
-			if (getPassageMarkerSequenceID(marker) > 0
-			    && !isTerminal(marker)) {
-				arc = getArcBetweenNodes(node,
-							 getNode
-							 (getNextInSequence
-							  (marker)),
-							 graph);
-				if (arc != NULL)
-					changeMultiplicity(arc, 1);
-			} else if (getPassageMarkerSequenceID(marker) < 0
-				   && !isInitial(marker)) {
-				arc = getArcBetweenNodes(twin,
-							 getTwinNode
-							 (getNode
-							  (getPreviousInSequence
-							   (marker))),
-							 graph);
-				if (arc != NULL)
-					changeMultiplicity(arc, 1);
-			}
-		}
-
-	}
-}
-
 // Allocate memory for an empty graph created with sequenceCount different sequences
 Graph *emptyGraph(IDnum sequenceCount, int wordLength)
 {
@@ -1623,11 +1426,6 @@ void allocateNodeSpace(Graph * graph, IDnum nodeCount)
 	graph->nodeCount = nodeCount;
 }
 
-void addNodeToGraph(Graph * graph, Node * node)
-{
-	graph->nodes[node->ID] = node;
-}
-
 boolean getUniqueness(Node * node)
 {
 	return node->uniqueness;
@@ -1729,54 +1527,6 @@ void incrementOriginalVirtualCoverage(Node * node, Category category,
 Coordinate getOriginalVirtualCoverage(Node * node, Category category)
 {
 	return node->originalVirtualCoverage[category];
-}
-
-void clipNodeLength(Node * node, Coordinate startClip,
-		    Coordinate finishClip)
-{
-	Descriptor *descriptor;
-	Coordinate finalLength =
-	    getNodeLength(node) - startClip - finishClip;
-	Coordinate index;
-	Node *twin = getTwinNode(node);
-	Nucleotide nucleotide;
-
-	if (finalLength < 0) {
-		velvetLog("Can't clip node that much!!\n");
-#ifdef DEBUG 
-		abort();
-#endif 
-		exit(-1);
-	}
-
-	if (getNodeLength(node) == 0) {
-		velvetLog("Short enough as is\n");
-#ifdef DEBUG 
-		abort();
-#endif 
-		exit(-1);
-	}
-	// One way
-	descriptor = node->descriptor;
-	for (index = 0; index < finalLength; index++) {
-		nucleotide =
-		    getNucleotideInDescriptor(descriptor,
-					      index + startClip);
-		writeNucleotideInDescriptor(nucleotide, descriptor, index);
-	}
-
-	// Same thing in the other direction
-	descriptor = twin->descriptor;
-	for (index = 0; index < finalLength; index++) {
-		nucleotide =
-		    getNucleotideInDescriptor(descriptor,
-					      index + finishClip);
-		writeNucleotideInDescriptor(nucleotide, descriptor, index);
-	}
-
-	// Length
-	node->length = finalLength;
-	node->twinNode->length = node->length;
 }
 
 boolean hasSingleArc(Node * node)
@@ -2434,238 +2184,6 @@ Graph *importGraph(char *filename)
 	return graph;
 }
 
-Graph *importSimplifiedGraph(char *filename)
-{
-	FILE *file = fopen(filename, "r");
-	const int maxline = MAXLINE;
-	char line[MAXLINE];
-	Graph *graph;
-	Coordinate coverage, originalCoverage;
-	IDnum nodeCounter, sequenceCount;
-	Node *node, *twin;
-	PassageMarkerI newMarker, marker;
-	IDnum nodeID, seqID;
-	Coordinate index;
-	Coordinate start, finish;
-	Coordinate startOffset, finishOffset;
-	boolean finished = false;
-	size_t arrayLength;
-	IDnum readCount;
-	ShortReadMarker *array = NULL;
-	int wordLength, sCount;
-	ShortLength length;
-	Category cat;
-	long long_var, long_var2;
-	long long longlong_var, longlong_var2, longlong_var3, longlong_var4;
-	short short_var;
-	char c;
-
-	if (file == NULL) 
-		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
-
-	velvetLog("Reading graph file %s\n", filename);
-
-	// First  line
-	if (!fgets(line, maxline, file))
-		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-	sscanf(line, "%ld\t%ld\t%i\t%hi\n", &long_var, &long_var2,
-	       &wordLength, &short_var);
-	nodeCounter = (IDnum) long_var;
-	sequenceCount = (IDnum) long_var2;
-	graph = emptyGraph(sequenceCount, wordLength);
-	graph->double_stranded = (boolean) short_var;
-	resetWordFilter(wordLength);
-	allocateNodeSpace(graph, nodeCounter);
-	velvetLog("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
-	       (long) sequenceCount);
-
-	if (nodeCounter == 0)
-		return graph;
-
-	// Read nodes
-	if (!fgets(line, maxline, file))
-		exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-	while (strncmp(line, "NODE", 4) == 0) {
-		strtok(line, "\t\n");
-		sscanf(strtok(NULL, "\t\n"), "%ld", &long_var);
-		nodeID = (IDnum) long_var;
-		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
-
-		if (longlong_var < 50) {
-			if (fgets(line, maxline, file) == NULL)
-				finished = true;
-			if (fgets(line, maxline, file) == NULL)
-				finished = true;
-			if (fgets(line, maxline, file) == NULL)
-				finished = true;
-			continue;
-		}
-		
-		node = addEmptyNodeToGraph(graph, nodeID);
-		node->length = (Coordinate) longlong_var;
-		for (cat = 0; cat < CATEGORIES; cat++) {
-			sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
-			coverage = (Coordinate) longlong_var;
-			setVirtualCoverage(node, cat, coverage);
-			sscanf(strtok(NULL, "\t\n"), "%lld",
-			       &longlong_var);
-			originalCoverage = (Coordinate) longlong_var;
-			setOriginalVirtualCoverage(node, cat,
-						   originalCoverage);
-		}
-
-		arrayLength = node->length / 4;
-		if (node->length % 4 > 0)
-			arrayLength++;
-		node->descriptor =
-		    callocOrExit(arrayLength, Descriptor);
-
-		index = 0;
-		while ((c = fgetc(file)) != '\n' && c != EOF) {
-			if (c == 'A')
-				writeNucleotideInDescriptor(ADENINE,
-							    node->
-							    descriptor,
-							    index++);
-			else if (c == 'C')
-				writeNucleotideInDescriptor(CYTOSINE,
-							    node->
-							    descriptor,
-							    index++);
-			else if (c == 'G')
-				writeNucleotideInDescriptor(GUANINE,
-							    node->
-							    descriptor,
-							    index++);
-			else if (c == 'T')
-				writeNucleotideInDescriptor(THYMINE,
-							    node->
-							    descriptor,
-							    index++);
-		}
-
-		twin = node->twinNode;
-		twin->length = node->length;
-		twin->descriptor =
-		    callocOrExit(arrayLength, Descriptor);
-		index = 0;
-		while ((c = fgetc(file)) != '\n' && c != EOF) {
-			if (c == 'A')
-				writeNucleotideInDescriptor(ADENINE,
-							    twin->
-							    descriptor,
-							    index++);
-			else if (c == 'C')
-				writeNucleotideInDescriptor(CYTOSINE,
-							    twin->
-							    descriptor,
-							    index++);
-			else if (c == 'G')
-				writeNucleotideInDescriptor(GUANINE,
-							    twin->
-							    descriptor,
-							    index++);
-			else if (c == 'T')
-				writeNucleotideInDescriptor(THYMINE,
-							    twin->
-							    descriptor,
-							    index++);
-		}
-
-		if (fgets(line, maxline, file) == NULL)
-			finished = true;
-	}
-
-	// Read arcs
-	while (!finished && line[0] == 'A')
-		if (fgets(line, maxline, file) == NULL)
-			finished = true;
-
-	// Read sequences
-	while (!finished && line[0] != 'N') {
-		sscanf(line, "SEQ\t%ld\n", &long_var);
-		seqID = (IDnum) long_var;
-		marker = NULL_IDX;
-		if (!fgets(line, maxline, file))
-			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-
-		while (!finished && line[0] != 'N' && line[0] != 'S') {
-			sCount =
-			    sscanf(line, "%ld\t%lld\t%lld\t%lld\t%lld\n",
-				   &long_var, &longlong_var, &longlong_var2, &longlong_var3,
-				   &longlong_var4);
-			nodeID = (IDnum) long_var;
-			startOffset = (Coordinate) longlong_var;
-			start = (Coordinate) longlong_var2;
-			finish = (Coordinate) longlong_var3;
-			finishOffset = (Coordinate) longlong_var4;
-			if (sCount != 5) {
-				velvetLog
-				    ("ERROR: reading in graph - only %d items read for line '%s'",
-				     sCount, line);
-#ifdef DEBUG 
-				abort();
-#endif 
-				exit(1);
-			}
-			if (getNodeInGraph(graph, nodeID)) {
-				newMarker =
-				    newPassageMarker(seqID, start, finish,
-						     startOffset, finishOffset);
-				transposePassageMarker(newMarker,
-						       getNodeInGraph(graph,
-								      nodeID));
-				connectPassageMarkers(marker, newMarker, graph);
-				marker = newMarker;
-			}
-			if (fgets(line, maxline, file) == NULL)
-				finished = true;
-		}
-	}
-
-	// Node reads
-	while (!finished) {
-		sscanf(line, "NR\t%ld\t%ld\n", &long_var, &long_var2);
-		nodeID = (IDnum) long_var;
-		readCount = (IDnum) long_var2;
-		if (!readStartsAreActivated(graph))
-			activateReadStarts(graph);
-
-		if (getNodeInGraph(graph, nodeID)) {
-			graph->nodeReadCounts[nodeID + graph->nodeCount] =
-			    readCount;
-			array = mallocOrExit(readCount, ShortReadMarker);
-			graph->nodeReads[nodeID + graph->nodeCount] = array;
-		}
-
-		readCount = 0;
-		if (!fgets(line, maxline, file))
-			exitErrorf(EXIT_FAILURE, true, "Graph file incomplete");
-		while (!finished && line[0] != 'N') {
-			if (getNodeInGraph(graph, nodeID)) {
-				sscanf(line, "%ld\t%lld\t%hd\n", &long_var,
-				       &longlong_var, &short_var);
-				seqID = (IDnum) long_var;
-				startOffset = (Coordinate) longlong_var;
-				length = (ShortLength) short_var;
-				array[readCount].readID = seqID;
-				array[readCount].position = startOffset;
-				array[readCount].offset = length;
-				readCount++;
-			}
-			if (fgets(line, maxline, file) == NULL)
-				finished = true;
-		}
-	}
-
-	//velvetLog("New graph has %d nodes\n", graph->nodeCount);
-
-	fclose(file);
-	//velvetLog("Done, exiting\n");
-	renumberNodes(graph);
-	return graph;
-}
-
 Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 {
 	FILE *file = fopen(preGraphFilename, "r");
@@ -2865,32 +2383,6 @@ void DOTNode(Node * node, FILE * outfile)
 			velvetFprintf(outfile, "\t%li:left -> %li:right\n", (long) ID,
 				(long) -otherNode->ID);
 	}
-}
-
-// Exports the topology of a graph into a new file (designated by its filename)
-void exportDOTGraph(char *filename, Graph * graph)
-{
-	IDnum nodeIndex;
-	Node *currentNode;
-
-	FILE *outfile = fopen(filename, "w");
-	if (outfile == NULL) {
-		velvetLog("Couldn't open file, sorry\n");
-		return;
-	} else
-		velvetLog("Writing into file...\n");
-
-	velvetFprintf(outfile, "digraph G {\n");
-	velvetFprintf(outfile, "\tRANKDIR=LR\n");
-	velvetFprintf(outfile, "\tnode [shape=record]\n");
-
-	for (nodeIndex = 1; nodeIndex <= graph->nodeCount; nodeIndex++) {
-		currentNode = getNodeInGraph(graph, nodeIndex);
-		DOTNode(currentNode, outfile);
-	}
-
-	velvetFprintf(outfile, "}\n");
-	fclose(outfile);
 }
 
 TightString *expandNode(Node * node, int WORDLENGTH)
@@ -3987,20 +3479,6 @@ int getWordLength(Graph * graph)
 	return graph->wordLength;
 }
 
-void displayArcMemory()
-{
-	velvetLog("ARC MEMORY %lld allocated %lld free\n",
-	       (long long) RecycleBin_memory_usage(arcMemory),
-	       (long long) recycleBinFreeSpace(arcMemory));
-}
-
-void displayNodeMemory()
-{
-	velvetLog("NODE MEMORY %lld allocated %lld free\n",
-	       (long long) RecycleBin_memory_usage(nodeMemory),
-	       (long long) recycleBinFreeSpace(nodeMemory));
-}
-
 ShortReadMarker *getNodeReads(Node * node, Graph * graph)
 {
 	IDnum id = node->ID + graph->nodeCount;
@@ -4054,31 +3532,6 @@ void destroyGraph(Graph * graph)
 	free(graph->nodeReads);
 	free(graph->nodeReadCounts);
 	free(graph);
-}
-
-void checkNodeReads(IDnum index, Graph * graph)
-{
-	IDnum ref = index + graph->nodeCount;
-	IDnum arrayLength = graph->nodeReadCounts[ref];
-	ShortReadMarker *array = graph->nodeReads[ref];
-	IDnum i;
-
-	//return;
-
-	if (arrayLength > graph->sequenceCount)
-		abort();
-
-	//if (arrayLength > 10000)
-	//      velvetLog("Array length %d %d\n", arrayLength, index);
-
-	for (i = 1; i < arrayLength; i++) {
-		if (array[i].readID <= array[i - 1].readID)
-			abort();
-		if (array[i].position >= 0 && array[i].offset < 0)
-			abort();
-		if (array[i - 1].position >= 0 && array[i - 1].offset < 0)
-			abort();
-	}
 }
 
 void setInsertLengths(Graph * graph, Category cat, Coordinate insertLength,
@@ -4249,8 +3702,4 @@ void reallocateNodeDescriptor(Node * node, Coordinate length) {
 	
 	free(twin->descriptor);
 	twin->descriptor = array;
-}
-
-boolean doubleStrandedGraph(Graph * graph) {
-	return graph->double_stranded;
 }

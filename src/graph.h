@@ -49,8 +49,6 @@ void appendDescriptors(Node * target, Node * source);
 void directlyAppendDescriptors(Node * target, Node * sourcei, Coordinate totalLength);
 void appendSequence(Node * node, TightString * reads,
 		    PassageMarkerI guide, Graph * graph);
-void clipNodeLength(Node * node, Coordinate startClip,
-		    Coordinate finishClip);
 void splitNodeDescriptor(Node * source, Node * target, Coordinate offset);
 void reduceNode(Node * node);
 void reallocateNodeDescriptor(Node * node, Coordinate length);
@@ -90,7 +88,6 @@ void spreadReadIDs(ShortReadMarker * reads, IDnum readCount, Node * node,
 void injectShortReads(ShortReadMarker * sourceArray, IDnum sourceLength,
 		      Node * target, Graph * graph);
 void mergeNodeReads(Node * target, Node * source, Graph * graph);
-void checkNodeReads(IDnum nodeIndex, Graph * graph);
 
 // Virtual coverage
 void setVirtualCoverage(Node * node, Category category,
@@ -120,7 +117,6 @@ void appendGap(Node * node, Coordinate length, Graph * graph);
 void appendNodeGaps(Node * destination, Node * source, Graph * graph);
 
 // IO
-char *readNode(Node * node);
 TightString *expandNode(Node * node, int WORDLENGTH);
 void appendNodeSequence(Node * node, TightString * sequence,
 			Coordinate writeIndex);
@@ -140,7 +136,6 @@ void destroyArc(Arc * arc, Graph * graph);
 // Multiplicity
 void setMultiplicity(Arc * arc, IDnum mult);
 IDnum getMultiplicity(Arc * arc);
-void changeMultiplicity(Arc * arc, IDnum variation);
 
 // Extremities
 Node *getOrigin(Arc * arc);
@@ -187,7 +182,6 @@ Coordinate getGapFinish(GapMarker * marker);
 // Memory allocation
 Graph *emptyGraph(IDnum sequenceCount, int wordLength);
 void allocateNodeSpace(Graph * graph, IDnum nodeCount);
-void addNodeToGraph(Graph * graph, Node * node);
 Node *addEmptyNodeToGraph(Graph * graph, IDnum nodeID);
 void destroyGraph(Graph * graph);
 
@@ -196,21 +190,13 @@ IDnum nodeCount(Graph * graph);
 IDnum sequenceCount(Graph * graph);
 void renumberNodes(Graph * graph);
 int getWordLength(Graph * graph);
-boolean doubleStrandedGraph(Graph * graph);
 
 // Element status 
 void resetNodeStatus(Graph * graph);
-void resetPassageMarkersStatus(Graph * graph);
-
-// Arc mults
-void reassessArcMultiplicities(Graph * graph);
 
 // File IO
-void displayGraph(Graph * graph);
 Graph *importGraph(char *filename);
-Graph *importSimplifiedGraph(char *filename);
 void exportGraph(char *filename, Graph * graph, TightString * sequences);
-void exportDOTGraph(char *filename, Graph * graph);
 Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand);
 
 // Read starts
@@ -230,8 +216,4 @@ void activateGapMarkers(Graph * graph);
 void deactivateGapMarkers(Graph * graph);
 void sortGapMarkers(Graph * graph);
 
-void displayArcMemory();
-void displayNodeMemory();
-
-void checkPassageMarkersStatus(Graph * graph);
 #endif

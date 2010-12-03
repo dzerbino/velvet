@@ -35,7 +35,5 @@ void replaceValueInDHeap(DFibHeapNode * node, Node * newValue);
 
 void *destroyNodeInDHeap(DFibHeapNode * node, DFibHeap * heap);
 
-IDnum getDFibHeapSize(DFibHeap * heap);
-
 Time getKey(DFibHeapNode * node);
 #endif

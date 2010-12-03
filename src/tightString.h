@@ -29,8 +29,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 TightString *newTightString(Coordinate size);
 
-TightString *newTightStringFromString(char *sequence);
-
 void destroyTightString(TightString * tString);
 
 ///////////////////////////////////////////////////////////////
@@ -46,16 +44,8 @@ Nucleotide getNucleotide(Coordinate nucleotideIndex,
 
 char getNucleotideChar(Coordinate nucleotideIndex, TightString * tString);
 
-Nucleotide getNucleotideFromString(Coordinate nucleotideIndex,
-				   char *string);
-
-char getInverseNucleotideChar(Coordinate nucleotideIndex,
-			      TightString * tString);
-
 void readTightStringFragment(TightString * tString, Coordinate start,
 			     Coordinate finish, char *string);
-
-Nucleotide charToNucleotide(char c);
 
 TightString *getTightStringInArray(TightString * tString,
 				   IDnum	 position);
@@ -77,30 +67,9 @@ TightString *newTightStringArrayFromStringArray(char **sequences,
 						IDnum sequenceCount,
 						char **tSeqMem);
 
-TightString **concatenateTightStringArrays(TightString ** array1,
-					   TightString ** array2,
-					   IDnum size1, IDnum size2);
-
-void destroyTightStringArray(TightString ** array, IDnum arrayLength);
-
 ///////////////////////////////////////////////////////////////
 // Misc
 ///////////////////////////////////////////////////////////////
 
-void trimTightString(TightString * tString, Coordinate length);
-
-void trimTightStringArray(TightString ** tStringArray, IDnum arrayLength,
-			  Coordinate maxLength);
-
-void trimTightStringArraySanger(TightString ** tStringArray,
-				IDnum arrayLength, Coordinate minLength,
-				Coordinate maxLength);
-
-void clipTightString(TightString * sequence, Coordinate start,
-		     Coordinate finish);
-
-// Exports an array of sequences under FastA format
-void exportSequenceArray(char *filename, TightString ** array,
-			 IDnum sequenceCount);
 void exportTightString(FILE * outfile, TightString * sequence, IDnum index);
 #endif

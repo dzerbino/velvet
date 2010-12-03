@@ -257,13 +257,6 @@ void createAnalogousPreArc_pg(IDnum originPreNodeID,
 	addPreArcToPreNode_pg(preArc, -destinationPreNodeID, preGraph);
 }
 
-void changeMultiplicity_pg(PreArcI preArc, IDnum variation)
-{
-	if (preArc == NULL_IDX)
-		return;
-	PREARC_FI2P (preArc)->multiplicity += variation;
-}
-
 static void setNextPreArc_pg(PreArcI preArc, IDnum preNodeID,
 			     PreArcI nextPreArc)
 {
@@ -1231,10 +1224,6 @@ void exportPreGraph_pg(char *filename, PreGraph * preGraph)
 int getWordLength_pg(PreGraph * preGraph)
 {
 	return preGraph->wordLength;
-}
-
-void displayPreArcMemory_pg()
-{
 }
 
 boolean hasSinglePreArc_pg(IDnum preNodeID, PreGraph * preGraph)

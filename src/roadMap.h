@@ -47,15 +47,12 @@ IDnum getStartID(Annotation * annot);
 void setFinishID(Annotation * annot, IDnum nodeID);
 IDnum getFinishID(Annotation * annot);
 
-char *readAnnotation(Annotation * annot);
-
 Annotation *getNextAnnotation(Annotation * annot);
 Annotation *getAnnotationInArray(Annotation * annot, Coordinate index);
 
 ////////////////////////////////////////////////////////////////////
 //      RoadMap stuff
 ////////////////////////////////////////////////////////////////////
-RoadMap *newRoadMap();
 
 IDnum getAnnotationCount(RoadMap * rdmap);
 

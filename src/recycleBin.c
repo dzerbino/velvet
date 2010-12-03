@@ -166,44 +166,6 @@ void deallocatePointer(RecycleBin * recycle_bin, void *data)
 	return;
 }
 
-size_t RecycleBin_memory_usage(RecycleBin * recycle_bin)
-{
-	int chunk_count = 0;
-	Chunk *chunk;
-
-	for (chunk = recycle_bin->chunk_list; chunk != NULL;
-	     chunk = chunk->next)
-		chunk_count++;
-
-	return recycle_bin->node_size
-	    * recycle_bin->nodes_per_chunk * chunk_count;
-}
-
-size_t recycleBinFreeSpace(RecycleBin * bin)
-{
-	RecycleBin_Node *freeNode = bin->recycle;
-	size_t result = 0;
-	while (freeNode != NULL) {
-		freeNode = freeNode->next;
-		result++;
-	}
-
-	return bin->node_size * (result +
-				 (bin->nodes_per_chunk - bin->chunk_pos));
-}
-
-size_t recycleBinAvailablePointers(RecycleBin * bin)
-{
-	Chunk *chunk = bin->chunk_list;
-	size_t result = 0;
-	while (chunk != NULL) {
-		chunk = chunk->next;
-		result++;
-	}
-
-	return result * bin->nodes_per_chunk;
-}
-
 #ifdef OPENMP
 RecycleBin *newRecycleBinArray(unsigned int n,
 			       size_t node_size, int nodes_per_chunk)

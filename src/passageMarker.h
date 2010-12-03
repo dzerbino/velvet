@@ -42,8 +42,6 @@ void deallocatePassageMarkerList(PassageMarkerList * list);
 PassageMarkerI addPassageMarker(IDnum sequenceID, Coordinate start,
 				Node * node);
 
-PassageMarkerI copyPassageMarker(PassageMarkerI marker);
-
 PassageMarkerI addUncertainPassageMarker(IDnum sequenceID, Node * node);
 
 PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
@@ -76,10 +74,6 @@ void exportMarker(FILE * outfile, PassageMarkerI marker,
 
 // General info for debugging
 char *readPassageMarker(PassageMarkerI marker);
-
-// String description
-char *readPassageMarkerSequence(PassageMarkerI marker,
-				TightString ** sequences, int WORDLENGTH);
 
 // Sequence ID associated to the passage marker
 IDnum getPassageMarkerSequenceID(PassageMarkerI marker);
