@@ -1729,6 +1729,7 @@ void destroyReadSet(ReadSet * reads)
 	free(reads->kmerProbabilities);
 	free(reads->mateReads);
 	free(reads->categories);
+	free(reads->secondInPair);
 	free(reads);
 }
 

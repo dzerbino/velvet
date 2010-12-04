@@ -667,8 +667,8 @@ static void measureCoOccurences(IDnum ** coOccurences,
 }
 
 int compareReadOccurences(const void *A, const void * B) {
-	Coordinate * cA = (Coordinate *) A;
-	Coordinate * cB = (Coordinate *) B;
+	IDnum * cA = (IDnum *) A;
+	IDnum * cB = (IDnum *) B;
 
 	if (*cA > *cB)
 		return 1;
