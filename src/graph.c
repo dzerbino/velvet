@@ -3703,3 +3703,7 @@ void reallocateNodeDescriptor(Node * node, Coordinate length) {
 	free(twin->descriptor);
 	twin->descriptor = array;
 }
+
+boolean doubleStrandedGraph(Graph * graph) {
+	return graph->double_stranded;
+}
