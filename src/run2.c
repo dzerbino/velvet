@@ -508,10 +508,6 @@ int main(int argc, char **argv)
 		remove(graphFilename);	
 
 		strcpy(graphFilename, directory);
-		strcat(graphFilename, "/Sequences");
-		remove(graphFilename);	
-
-		strcpy(graphFilename, directory);
 		strcat(graphFilename, "/LastGraph");
 		remove(graphFilename);	
 	} 
