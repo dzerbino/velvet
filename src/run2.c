@@ -52,7 +52,7 @@ static void printUsage()
 	puts("\t-max_branch_length <integer>\t: maximum length in base pair of bubble (default: 100)");
 	puts("\t-max_divergence <floating-point>: maximum divergence rate between two branches in a bubble (default: 0.2)");
 	puts("\t-max_gap_count <integer>\t: maximum number of gaps allowed in the alignment of the two branches of a bubble (default: 3)");
-	puts("\t-min_pair_count <integer>\t: minimum number of paired end connections to justify the scaffolding of two long contigs (default: 10)");
+	puts("\t-min_pair_count <integer>\t: minimum number of paired end connections to justify the scaffolding of two long contigs (default: 5)");
 	puts("\t-max_coverage <floating point>\t: removal of high coverage nodes AFTER tour bus (default: no removal)");
 	puts("\t-long_mult_cutoff <int>\t\t: minimum number of long reads required to merge contigs (default: 2)");
 	puts("\t-unused_reads <yes|no>\t\t: export unused reads in UnusedReads.fa file (default: no)");
@@ -60,6 +60,7 @@ static void printUsage()
 	puts("\t-exportFiltered <yes|no>\t: export the long nodes which were eliminated by the coverage filters (default: no)");
 	puts("\t-clean <yes|no>\t\t: remove all the intermediary files which are useless for recalculation (default : no)");
 	puts("\t-very_clean <yes|no>\t\t: remove all the intermediary files (no recalculation possible) (default: no)");
+	puts("\t-paired_exp_fraction <double>\t: remove all the paired end connections which less than the specified fraction of the expected count (default: 0.1)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -80,7 +81,6 @@ int main(int argc, char **argv)
 	double longCoverageCutoff = -1;
 	double maxCoverageCutoff = -1;
 	double expectedCoverage = -1;
-	int longMultCutoff = -1;
 	Coordinate minContigLength = -1;
 	Coordinate minContigKmerLength;
 	boolean *dubious = NULL;
@@ -288,8 +288,11 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-max_coverage") == 0) {
 			sscanf(argv[arg_index], "%lf", &maxCoverageCutoff);
 		} else if (strcmp(arg, "-long_mult_cutoff") == 0) {
-			sscanf(argv[arg_index], "%i", &longMultCutoff);
-			setMultiplicityCutoff(longMultCutoff);
+			sscanf(argv[arg_index], "%i", &arg_int);
+			setMultiplicityCutoff(arg_int);
+		} else if (strcmp(arg, "-paired_exp_fraction") == 0) {
+			sscanf(argv[arg_index], "%f", &arg_double);
+			setPairedExpFraction(arg_double);
 		} else if (strcmp(arg, "-clean") == 0) {
 			if (strcmp(argv[arg_index], "yes") == 0)
 				clean = 1;
@@ -514,15 +517,15 @@ int main(int argc, char **argv)
 		remove(graphFilename);	
 
 		strcpy(graphFilename, directory);
-		strcat(graphFilename, "/Sequences");
-		remove(graphFilename);	
-
-		strcpy(graphFilename, directory);
 		strcat(graphFilename, "/LastGraph");
 		remove(graphFilename);	
 	} 
 
 	if (clean > 1) {
+		strcpy(graphFilename, directory);
+		strcat(graphFilename, "/Sequences");
+		remove(graphFilename);	
+
 		strcpy(graphFilename, directory);
 		strcat(graphFilename, "/Graph2.txt");
 		remove(graphFilename);	

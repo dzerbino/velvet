@@ -39,6 +39,7 @@ void destroyConnection(Connection * connect, IDnum nodeID);
 void cleanScaffoldMemory();
 
 void setUnreliableConnectionCutoff(int val);
+void setPairedExpFraction(double x);
 
 void printConnections(ReadSet * reads);
 

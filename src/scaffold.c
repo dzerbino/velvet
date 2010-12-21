@@ -37,6 +37,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define LN2 1.4
 
 typedef struct readOccurence_st ReadOccurence;
+static double paired_exp_fraction = 0.1;
 
 struct connection_st {
 	Node *destination;
@@ -218,7 +219,7 @@ static boolean testConnection(IDnum IDA, Connection * connect,
 		    expectedNumberOfConnections(IDA, connect, counts, cat);
 
 	// Remove inconsistent connections
-	return connect->paired_count >= total / 10;
+	return connect->paired_count >= total * paired_exp_fraction;
 }
 
 static IDnum *computeReadToNodeCounts()
@@ -696,6 +697,9 @@ static void projectFromSingleRead(Node * node,
 	if (target == getTwinNode(node) || target == node)
 		return;
 
+	if (getUniqueness(target) && getNodeID(target) < getNodeID(node))
+		return;
+
 	if (position < 0) {
 		variance += getNodeLength(node) * getNodeLength(node) / 16;
 		// distance += 0;
@@ -1140,4 +1144,8 @@ void cleanScaffoldMemory() {
 	destroyRecycleBin(connectionMemory);
 	free(scaffold);
 	connectionMemory = NULL;
+}
+
+void setPairedExpFraction(double x) {
+	paired_exp_fraction = x;
 }
