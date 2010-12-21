@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 	else
 	{
 		hashLength = atoi(argv[2]);
-		hashLengthMax = hashLength;
+		hashLengthMax = hashLength + 1;
 		hashLengthStep = 2;
 	}
 
