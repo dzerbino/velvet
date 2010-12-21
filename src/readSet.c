@@ -1264,6 +1264,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 	IDnum sequenceIndex = 1;
 	short short_var;
 	ReferenceCoordinateTable * refCoords = newReferenceCoordinateTable();
+	boolean reuseSequences = false;
 
 	if (argc < 2) {
 		printUsage();
@@ -1272,6 +1273,18 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 #endif 
 		exit(1);
 	}
+
+	for (argIndex = 1; argIndex < argc; argIndex++) {
+		if (strcmp(argv[argIndex], "-strand_specific") == 0) {
+			*double_strand = false;
+			reference_coordinate_double_strand = false;
+		} else if (strcmp(argv[argIndex], "-reuse_Sequences") == 0) {
+			reuseSequences = true;
+		}
+	}
+
+	if (reuseSequences) 
+		return;
 
 	for (argIndex = 1; argIndex < argc; argIndex++) {
 		if (argv[argIndex][0] == '-' && strlen(argv[argIndex]) > 1) {
@@ -1341,19 +1354,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			else if (strcmp(argv[argIndex], "-reference") ==
 				 0)
 				cat = CATEGORIES * 2 + 2;
-			else if (strcmp(argv[argIndex], "-strand_specific")
-				 == 0) {
-				if (argIndex != 1) {
-					velvetLog("Error: if using the -strand_specific flag, it must be placed right after the hash length\n");
-					velvetLog("Sorry for the inconvenience\n");
-#ifdef DEBUG 
-					abort();
-#endif 
-					exit(1);
-				}
-				*double_strand = false;
-				reference_coordinate_double_strand = false;
-			} else {
+			else {
 				velvetLog("Unknown option: %s\n",
 				       argv[argIndex]);
 #ifdef DEBUG 

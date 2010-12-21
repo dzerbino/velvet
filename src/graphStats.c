@@ -1854,7 +1854,7 @@ struct referenceCoord_st {
 static ReferenceCoord * collectReferenceCoords(char * sequencesFilename, IDnum referenceCount) {
 	FILE * file = fopen(sequencesFilename, "r");
 	char line[MAXLINE];
-	char name[500];
+	char name[5000];
 	Coordinate start, finish;
 	long long longlongvar;
 	IDnum refIndex = 0;
@@ -1887,8 +1887,8 @@ static ReferenceCoord * collectReferenceCoords(char * sequencesFilename, IDnum r
 					line[i] = '\0';
 				}
 
-				refCoords[refIndex].name = callocOrExit(strlen(name) + 1, char);  
 				strcpy(name, line + 1);
+				refCoords[refIndex].name = callocOrExit(strlen(name) + 1, char);  
 				strcpy(refCoords[refIndex].name, name);
 				refCoords[refIndex].start = 1;
 				refCoords[refIndex].finish = -1;
