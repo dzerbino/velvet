@@ -291,7 +291,7 @@ int main(int argc, char **argv)
 			sscanf(argv[arg_index], "%i", &arg_int);
 			setMultiplicityCutoff(arg_int);
 		} else if (strcmp(arg, "-paired_exp_fraction") == 0) {
-			sscanf(argv[arg_index], "%f", &arg_double);
+			sscanf(argv[arg_index], "%lf", &arg_double);
 			setPairedExpFraction(arg_double);
 		} else if (strcmp(arg, "-clean") == 0) {
 			if (strcmp(argv[arg_index], "yes") == 0)
