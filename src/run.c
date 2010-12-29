@@ -37,7 +37,7 @@ static void printUsage()
 	puts("");
 	puts("\tdirectory\t: directory name for output files");
 	printf("\thash_length\t: EITHER an odd integer (if even, it will be decremented) <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
-	printf("\t\t\t: OR: m,s,p where m and p are odd integer (if even, it will be decremented) with m < M <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
+	printf("\t\t\t: OR: m,M,s where m and M are odd integers and s is an even integer (if not, they will be decremented) with m < M <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
 	puts("\t\t\t\tand s is a step (even number). Velvet will then hash from k=m to k=M with a step of s");
 	puts("\tfilename\t: path to sequence file or - for standard input");	
 	puts("");

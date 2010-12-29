@@ -348,3 +348,4 @@ V 1.0.16
 V 1.0.17
 - Reverted working directory name in case of single k-mer mode
 - Bugs in multiple k-mer iteration
+- Correction of online help message
