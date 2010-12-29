@@ -88,6 +88,7 @@ int main(int argc, char **argv)
 	int hashLength, hashLengthStep, hashLengthMax, h;
 	char *directory, *filename, *seqFilename, *buf;
 	boolean double_strand = true;
+	boolean multiple_kmers = false;
 	DIR *dir;
 
 	setProgramName("velveth");
@@ -110,6 +111,7 @@ int main(int argc, char **argv)
 	if ( strstr(argv[2],"," ) )
 	{
 		sscanf(argv[2],"%d,%d,%d",&hashLength,&hashLengthMax,&hashLengthStep);
+		multiple_kmers = true;
 	}
 	else
 	{
@@ -153,7 +155,7 @@ int main(int argc, char **argv)
 
 		buf = mallocOrExit(strlen(argv[1]) + 100, char);
 
-		if ( hashLength != hashLengthMax ) {
+		if ( multiple_kmers ) {
 			sprintf(buf,"%s_%d",argv[1],h);
 			directory = mallocOrExit(strlen(buf) + 100, char);
 			strcpy(directory,buf);
@@ -189,7 +191,7 @@ int main(int argc, char **argv)
 		if ( h == hashLength ) {
 			parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand);
 		} else {
-			sprintf(buf,"ln -s %s_%d/Sequences %s",argv[1],hashLength,seqFilename);
+			sprintf(buf,"ln -s ../%s_%d/Sequences %s",argv[1],hashLength,seqFilename);
 			system(buf);
 		}
 
