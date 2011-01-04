@@ -1021,8 +1021,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	if (seqFile)
 		fclose(seqFile);
 
-	free(reads->tSequences);
-	reads->tSequences = NULL;
-	destroyReadSet(reads);
+	//free(reads->tSequences);
+	//reads->tSequences = NULL;
+	//destroyReadSet(reads);
 	velvetLog("Done inputting sequences\n");
 }
