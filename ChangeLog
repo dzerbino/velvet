@@ -344,3 +344,8 @@ V 1.0.16
 - Sequences data reuse 
 - Memory corruption bug
 - Sequences file no longer deleted with -clean option but -very_clean
+
+V 1.0.17
+- Reverted working directory name in case of single k-mer mode
+- Bugs in multiple k-mer iteration
+- Correction of online help message
