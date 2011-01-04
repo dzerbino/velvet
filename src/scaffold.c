@@ -1323,15 +1323,11 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 
 	// Check if a conflicting PE connection already exists
 	if (doMatePairs) {
-		Connection *connect = findConnection(getNodeID(node), getNodeID(target));
 		Connection *reverseConnect = findConnection(-getNodeID(node), -getNodeID(target));
-		if (connect == NULL && reverseConnect != NULL &&
+
+		if (reverseConnect != NULL &&
 		    reverseConnect->paired_count +
 		    reverseConnect->direct_count >= UNRELIABLE_CONNECTION_CUTOFF)
-			return;
-		else if (connect != NULL && reverseConnect != NULL &&
-			 connect->paired_count + connect->direct_count <
-			 reverseConnect->paired_count + reverseConnect->direct_count)
 			return;
 	}
 
