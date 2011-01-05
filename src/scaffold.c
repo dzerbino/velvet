@@ -1314,16 +1314,29 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 	Coordinate distance = insertLength;
 	Coordinate variance = insertVariance;
 	Node *target = getNodeInGraph(graph, readOccurence->nodeID);
+	IDnum nodeID;
+	IDnum node2ID;
 
 	if (target == getTwinNode(node) || target == node)
 		return;
 
-	if (getUniqueness(target) && getNodeID(target) < getNodeID(node))
+	nodeID  = getNodeID(node);
+	node2ID = getNodeID(target);
+
+	if (getUniqueness(target) && node2ID < nodeID)
 		return;
 
 	// Check if a conflicting PE connection already exists
 	if (doMatePairs) {
-		Connection *reverseConnect = findConnection(-getNodeID(node), -getNodeID(target));
+		Connection *reverseConnect;
+
+#ifdef OPENMP
+		lockTwoNodes(nodeID, node2ID);
+#endif
+		reverseConnect = findConnection(-nodeID, -node2ID);
+#ifdef OPENMP
+		unLockTwoNodes(nodeID, node2ID);
+#endif
 
 		if (reverseConnect != NULL &&
 		    reverseConnect->paired_count +
@@ -1355,7 +1368,7 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 	else if (distance < getNodeLength(node)/2 + getNodeLength(target)/2)
 		distance = getNodeLength(node)/2 + getNodeLength(target)/2;
 
-	createConnection(getNodeID(node), getNodeID(target), 0, 1,
+	createConnection(nodeID, node2ID, 0, 1,
 			 distance, variance);
 }
 
