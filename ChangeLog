@@ -349,3 +349,8 @@ V 1.0.17
 - Reverted working directory name in case of single k-mer mode
 - Bugs in multiple k-mer iteration
 - Correction of online help message
+
+V 1.0.18
+- Consistency of hairpin arc multiplicity
+- Bug in reuse_Sequences option
+- Bug strand_specific option

@@ -1568,7 +1568,7 @@ static void printUsage()
 void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand)
 {
 	int argIndex = 1;
-	FILE *outfile = fopen(filename, "w");
+	FILE *outfile;
 	int filetype = FASTA;
 	Category cat = 0;
 	IDnum sequenceIndex = 1;
@@ -1595,6 +1595,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 
 	if (reuseSequences) 
 		return;
+
+	outfile = fopen(filename, "w");
 
 	for (argIndex = 1; argIndex < argc; argIndex++) {
 		if (argv[argIndex][0] == '-' && strlen(argv[argIndex]) > 1) {
@@ -1664,6 +1666,10 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			else if (strcmp(argv[argIndex], "-reference") ==
 				 0)
 				cat = CATEGORIES * 2 + 2;
+			else if (strcmp(argv[argIndex], "-strand_specific") == 0) {
+				*double_strand = false;
+				reference_coordinate_double_strand = false;
+			} 
 			else {
 				velvetLog("Unknown option: %s\n",
 				       argv[argIndex]);
