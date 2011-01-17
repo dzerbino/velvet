@@ -963,6 +963,29 @@ static Connection* findOrCreateConnection(IDnum nodeID,
 	return newConnection;
 }
 
+static Connection* findConnection(IDnum nodeID,
+				  IDnum node2ID)
+{
+	Connection **T;
+	IDnum nodeIndex;
+
+	nodeIndex = nodeID + nodeCount(graph);
+	T = scaffold + nodeIndex;
+
+	if (*T == NULL)
+		return NULL;
+	else
+	{
+		IDnum destID;
+
+		*T = splayConnection(*T, node2ID);
+		destID = getNodeID((*T)->destination);
+		if (destID == node2ID)
+			return *T;
+	}
+	return NULL;
+}
+
 RecycleBin *connectionStackMemory = NULL;
 
 typedef struct ConnectionStack_st ConnectionStack;
@@ -1285,17 +1308,41 @@ static void projectFromSingleRead(Node * node,
 static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 				Coordinate position, Coordinate offset,
 				Coordinate insertLength,
-				double insertVariance)
+				double insertVariance,
+				boolean doMatePairs)
 {
 	Coordinate distance = insertLength;
 	Coordinate variance = insertVariance;
 	Node *target = getNodeInGraph(graph, readOccurence->nodeID);
+	IDnum nodeID;
+	IDnum node2ID;
 
 	if (target == getTwinNode(node) || target == node)
 		return;
 
-	if (getUniqueness(target) && getNodeID(target) < getNodeID(node))
+	nodeID  = getNodeID(node);
+	node2ID = getNodeID(target);
+
+	if (getUniqueness(target) && node2ID < nodeID)
 		return;
+
+	// Check if a conflicting PE connection already exists
+	if (doMatePairs) {
+		Connection *reverseConnect;
+
+#ifdef OPENMP
+		lockTwoNodes(nodeID, node2ID);
+#endif
+		reverseConnect = findConnection(-nodeID, -node2ID);
+#ifdef OPENMP
+		unLockTwoNodes(nodeID, node2ID);
+#endif
+
+		if (reverseConnect != NULL &&
+		    reverseConnect->paired_count +
+		    reverseConnect->direct_count >= UNRELIABLE_CONNECTION_CUTOFF)
+			return;
+	}
 
 	if (position < 0) {
 		variance += getNodeLength(node) * getNodeLength(node) / 16;
@@ -1321,7 +1368,7 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 	else if (distance < getNodeLength(node)/2 + getNodeLength(target)/2)
 		distance = getNodeLength(node)/2 + getNodeLength(target)/2;
 
-	createConnection(getNodeID(node), getNodeID(target), 0, 1,
+	createConnection(nodeID, node2ID, 0, 1,
 			 distance, variance);
 }
 
@@ -1330,7 +1377,8 @@ static void projectFromShortRead(Node * node,
 				 IDnum * readPairs, Category * cats,
 				 ReadOccurence ** readNodes,
 				 IDnum * readNodeCounts,
-				 IDnum * lengths)
+				 IDnum * lengths,
+				 boolean doMatePairs)
 {
 	IDnum index;
 	IDnum readIndex = getShortReadMarkerID(shortMarker);
@@ -1344,7 +1392,7 @@ static void projectFromShortRead(Node * node,
 	double insertVariance;
 
 	// Going through single-read information
-	if (readNodeCounts[readIndex] > 1) {
+	if (!doMatePairs && readNodeCounts[readIndex] > 1) {
 		readArray = readNodes[readIndex];
 		for (index = 0; index < readNodeCounts[readIndex]; index++)
 			projectFromSingleRead(node, &readArray[index],
@@ -1363,10 +1411,18 @@ static void projectFromShortRead(Node * node,
 	insertLength = getInsertLength(graph, cat);
 	insertVariance = getInsertLength_var(graph, cat);
 
-	readArray = readNodes[readPairIndex];
-	for (index = 0; index < readNodeCounts[readPairIndex]; index++)
-		projectFromReadPair(node, &readArray[index], position,
-				    offset, insertLength, insertVariance);
+	if (insertLength < 1000 && !doMatePairs) {
+		readArray = readNodes[readPairIndex];
+		for (index = 0; index < readNodeCounts[readPairIndex]; index++)
+			projectFromReadPair(node, &readArray[index], position,
+					offset, insertLength, insertVariance, false);
+	}
+	else if (insertLength >= 1000 && doMatePairs) {
+		readArray = readNodes[readPairIndex];
+		for (index = 0; index < readNodeCounts[readPairIndex]; index++)
+			projectFromReadPair(node, &readArray[index], position,
+					offset, insertLength, insertVariance, true);
+	}
 
 }
 
@@ -1411,7 +1467,7 @@ static void projectFromLongRead(Node * node, PassageMarkerI marker,
 	readArray = readNodes[readPairIndex];
 	for (index = 0; index < readNodeCounts[readPairIndex]; index++)
 		projectFromReadPair(node, &readArray[index], position,
-				    offset, insertLength, insertVariance);
+				    offset, insertLength, insertVariance, false);
 
 }
 
@@ -1419,7 +1475,8 @@ static void projectFromNode(IDnum nodeID,
 			    ReadOccurence ** readNodes,
 			    IDnum * readNodeCounts,
 			    IDnum * readPairs, Category * cats,
-			    boolean * dubious, IDnum * lengths)
+			    boolean * dubious, IDnum * lengths,
+			    boolean doMatePairs)
 {
 	IDnum index;
 	ShortReadMarker *nodeArray, *shortMarker;
@@ -1439,16 +1496,18 @@ static void projectFromNode(IDnum nodeID,
 		if (dubious[getShortReadMarkerID(shortMarker) - 1])
 			continue;
 		projectFromShortRead(node, shortMarker, readPairs, cats,
-				     readNodes, readNodeCounts, lengths);
+				     readNodes, readNodeCounts, lengths,
+				     doMatePairs);
 	}
 
-	for (marker = getMarker(node); marker != NULL_IDX;
-	     marker = getNextInNode(marker)) {
-		if (getPassageMarkerSequenceID(marker) > 0)
-			projectFromLongRead(node, marker, readPairs, cats,
-					    readNodes, readNodeCounts,
-					    lengths);
-	}
+	if (!doMatePairs)
+		for (marker = getMarker(node); marker != NULL_IDX;
+				marker = getNextInNode(marker)) {
+			if (getPassageMarkerSequenceID(marker) > 0)
+				projectFromLongRead(node, marker, readPairs, cats,
+						readNodes, readNodeCounts,
+						lengths);
+		}
 }
 
 static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
@@ -1482,7 +1541,19 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 			velvetLog("Scaffolding node %li\n", (long) nodeID);
 
 		projectFromNode(nodeID, readNodes, readNodeCounts,
-				readPairs, cats, dubious, lengths);
+				readPairs, cats, dubious, lengths, false);
+	}
+	/* SF TODO We should only do this if there is any MP lib */
+#ifdef OPENMP
+	#pragma omp parallel for
+#endif 
+	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
+	{
+		if (nodeID % 10000 == 0)
+			velvetLog("Scaffolding node (MP) %li\n", (long) nodeID);
+
+		projectFromNode(nodeID, readNodes, readNodeCounts,
+				readPairs, cats, dubious, lengths, true);
 	}
 #ifdef OPENMP
 	initConnectionStackMemory();
