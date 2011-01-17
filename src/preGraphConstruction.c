@@ -145,6 +145,9 @@ orderInsertionMarkers(InsertionMarker ** insMarkers,
 	IDnum sequenceCounter = rdmaps->length;
 
 	velvetLog("Ordering insertion markers\n");
+#ifdef OPENMP
+	#pragma omp parallel for
+#endif
 	for (sequenceIndex = 1; sequenceIndex <= sequenceCounter;
 	     sequenceIndex++) {
 		qsort(insMarkers[sequenceIndex],
@@ -707,7 +710,11 @@ static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
 #endif
 
 #ifdef OPENMP
-	#pragma omp parallel for
+	int threads = omp_get_max_threads();
+	if (threads > 8)
+		threads = 8;
+
+	#pragma omp parallel for num_threads(threads)
 #endif
 	for (sequenceIndex = 1;
 	     sequenceIndex <= referenceCount;
@@ -796,7 +803,11 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		allocatePreMarkerCountSpace_pg(preGraph);
 
 #ifdef OPENMP
-	#pragma omp parallel for
+	int threads = omp_get_max_threads();
+	if (threads > 8)
+		threads = 8;
+
+	#pragma omp parallel for num_threads(threads)
 #endif
 	for (sequenceIndex = 1;
 	     sequenceIndex <= sequenceCount_pg(preGraph);

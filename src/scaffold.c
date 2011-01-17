@@ -1469,7 +1469,12 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 	gettimeofday(&start, NULL);
 #ifdef OPENMP
 	createNodeLocks(graph);
-	#pragma omp parallel for
+
+	int threads = omp_get_max_threads();
+	if (threads > 32)
+		threads = 32;
+
+	#pragma omp parallel for num_threads(threads)
 #endif 
 	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
 	{

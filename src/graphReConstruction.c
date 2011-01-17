@@ -1130,7 +1130,11 @@ static void fillUpGraph(ReadSet * reads,
 
 	gettimeofday(&start, NULL);
 #ifdef OPENMP
-	#pragma omp parallel for
+	int threads = omp_get_max_threads();
+	if (threads > 32)
+		threads = 32;
+
+	#pragma omp parallel for num_threads(threads)
 #endif
 	for (readIndex = 0; readIndex < reads->readCount; readIndex++)
 	{

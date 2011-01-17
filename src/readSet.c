@@ -1258,7 +1258,7 @@ static void printUsage()
 void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand)
 {
 	int argIndex = 1;
-	FILE *outfile = fopen(filename, "w");
+	FILE *outfile;
 	int filetype = FASTA;
 	Category cat = 0;
 	IDnum sequenceIndex = 1;
@@ -1285,6 +1285,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 
 	if (reuseSequences) 
 		return;
+
+	outfile = fopen(filename, "w");
 
 	for (argIndex = 1; argIndex < argc; argIndex++) {
 		if (argv[argIndex][0] == '-' && strlen(argv[argIndex]) > 1) {
