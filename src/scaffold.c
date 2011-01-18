@@ -1378,6 +1378,7 @@ static void projectFromShortRead(Node * node,
 				 ReadOccurence ** readNodes,
 				 IDnum * readNodeCounts,
 				 IDnum * lengths,
+				 boolean * shadows,
 				 boolean doMatePairs)
 {
 	IDnum index;
@@ -1411,13 +1412,13 @@ static void projectFromShortRead(Node * node,
 	insertLength = getInsertLength(graph, cat);
 	insertVariance = getInsertLength_var(graph, cat);
 
-	if (insertLength < 1000 && !doMatePairs) {
+	if (!shadows[cat] && !doMatePairs) {
 		readArray = readNodes[readPairIndex];
 		for (index = 0; index < readNodeCounts[readPairIndex]; index++)
 			projectFromReadPair(node, &readArray[index], position,
 					offset, insertLength, insertVariance, false);
 	}
-	else if (insertLength >= 1000 && doMatePairs) {
+	else if (shadows[cat] && doMatePairs) {
 		readArray = readNodes[readPairIndex];
 		for (index = 0; index < readNodeCounts[readPairIndex]; index++)
 			projectFromReadPair(node, &readArray[index], position,
@@ -1476,6 +1477,7 @@ static void projectFromNode(IDnum nodeID,
 			    IDnum * readNodeCounts,
 			    IDnum * readPairs, Category * cats,
 			    boolean * dubious, IDnum * lengths,
+			    boolean * shadows,
 			    boolean doMatePairs)
 {
 	IDnum index;
@@ -1497,6 +1499,7 @@ static void projectFromNode(IDnum nodeID,
 			continue;
 		projectFromShortRead(node, shortMarker, readPairs, cats,
 				     readNodes, readNodeCounts, lengths,
+				     shadows,
 				     doMatePairs);
 	}
 
@@ -1515,11 +1518,14 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 					      IDnum * readPairs,
 					      Category * cats,
 					      boolean * dubious,
+					      boolean * shadows,
 					      IDnum * lengths)
 {
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
 	struct timeval start, end, diff;
+	Category cat;
+	boolean hasShadow;
 
 	scaffold = callocOrExit(2 * nodes + 1, Connection *);
 
@@ -1541,19 +1547,30 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 			velvetLog("Scaffolding node %li\n", (long) nodeID);
 
 		projectFromNode(nodeID, readNodes, readNodeCounts,
-				readPairs, cats, dubious, lengths, false);
+				readPairs, cats, dubious, lengths, shadows, false);
 	}
-	/* SF TODO We should only do this if there is any MP lib */
-#ifdef OPENMP
-	#pragma omp parallel for
-#endif 
-	for (nodeID = -nodes; nodeID <= nodes; nodeID++)
-	{
-		if (nodeID % 10000 == 0)
-			velvetLog("Scaffolding node (MP) %li\n", (long) nodeID);
 
-		projectFromNode(nodeID, readNodes, readNodeCounts,
-				readPairs, cats, dubious, lengths, true);
+	hasShadow = false;
+	for (cat = 0; cat < CATEGORIES; cat++)
+		if (shadows[cat])
+		{
+			hasShadow = true;
+			break;
+		}
+
+	if (hasShadow)
+	{
+#ifdef OPENMP
+		#pragma omp parallel for
+#endif 
+		for (nodeID = -nodes; nodeID <= nodes; nodeID++)
+		{
+			if (nodeID % 10000 == 0)
+				velvetLog("Scaffolding node (MP) %li\n", (long) nodeID);
+
+			projectFromNode(nodeID, readNodes, readNodeCounts,
+					readPairs, cats, dubious, lengths, shadows, true);
+		}
 	}
 #ifdef OPENMP
 	initConnectionStackMemory();
@@ -1640,7 +1657,11 @@ static void removeUnreliableConnections(ReadSet * reads)
 	free(counts);
 }
 
-void buildScaffold(Graph * argGraph, ReadSet * reads, boolean * dubious) {
+void buildScaffold(Graph * argGraph,
+		   ReadSet * reads,
+		   boolean * dubious,
+		   boolean * shadows)
+{
 	IDnum *readPairs;
 	Category *cats;
 	IDnum *readNodeCounts;
@@ -1660,7 +1681,7 @@ void buildScaffold(Graph * argGraph, ReadSet * reads, boolean * dubious) {
 	estimateMissingInsertLengths(readNodes, readNodeCounts, readPairs, cats);
 
 	scaffold = computeNodeToNodeMappings(readNodes, readNodeCounts,
-				      readPairs, cats, dubious, lengths);
+				      readPairs, cats, dubious, shadows, lengths);
 	removeUnreliableConnections(reads);
 
 	free(readNodesArray);

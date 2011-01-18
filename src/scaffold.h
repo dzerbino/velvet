@@ -24,8 +24,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 typedef struct connection_st Connection;
 
 //General scaffold function
-void buildScaffold(Graph * graph, ReadSet * reads, boolean * dubious);
-
+void buildScaffold(Graph * graph,
+		   ReadSet * reads,
+		   boolean * dubious,
+		   boolean * shadows);
 Connection *createNewConnection(IDnum nodeID, IDnum node2ID,
 				       IDnum direct_count,
 				       IDnum paired_count,

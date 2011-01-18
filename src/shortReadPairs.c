@@ -1160,8 +1160,11 @@ static void cleanMemory()
 	free(localScaffold);
 }
 
-void exploitShortReadPairs(Graph * argGraph, ReadSet * reads,
-			   boolean * dubious, boolean force_jumps)
+void exploitShortReadPairs(Graph * argGraph,
+			   ReadSet * reads,
+			   boolean * dubious,
+			   boolean * shadows,
+			   boolean force_jumps)
 {
 	boolean modified = true;
 
@@ -1175,7 +1178,7 @@ void exploitShortReadPairs(Graph * argGraph, ReadSet * reads,
 	resetNodeStatus(graph);
 
 	// Prepare scaffold
-	buildScaffold(graph, reads, dubious);
+	buildScaffold(graph, reads, dubious, shadows);
 
 	// Prepare graph
 	prepareGraphForLocalCorrections(graph);

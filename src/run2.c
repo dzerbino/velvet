@@ -58,9 +58,10 @@ static void printUsage()
 	puts("\t-unused_reads <yes|no>\t\t: export unused reads in UnusedReads.fa file (default: no)");
 	puts("\t-alignments <yes|no>\t\t: export a summary of contig alignment to the reference sequences (default: no)");
 	puts("\t-exportFiltered <yes|no>\t: export the long nodes which were eliminated by the coverage filters (default: no)");
-	puts("\t-clean <yes|no>\t\t: remove all the intermediary files which are useless for recalculation (default : no)");
+	puts("\t-clean <yes|no>\t\t\t: remove all the intermediary files which are useless for recalculation (default : no)");
 	puts("\t-very_clean <yes|no>\t\t: remove all the intermediary files (no recalculation possible) (default: no)");
 	puts("\t-paired_exp_fraction <double>\t: remove all the paired end connections which less than the specified fraction of the expected count (default: 0.1)");
+	puts("\t-shadow* <yes|no>\t\t: for mate-pair libraries, indicate that the library might be contaminated with paired-end reads (default no)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -107,12 +108,14 @@ int main(int argc, char **argv)
 	short int short_var;
 	boolean exportFilteredNodes = false;
 	int clean = 0;
+	boolean shadows[CATEGORIES];
 
 	setProgramName("velvetg");
 
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		insertLength[cat] = -1;
 		std_dev[cat] = -1;
+		shadows[cat] = false;
 	}
 
 	// Error message
@@ -304,9 +307,22 @@ int main(int argc, char **argv)
 			    (strcmp(argv[arg_index], "yes") == 0);
 			if (unusedReads)
 				readTracking = true;
+		} else if (strcmp(arg, "-shadow") == 0) {
+			shadows[0] = (strcmp(argv[arg_index], "yes") == 0);
+		} else if (strncmp(arg, "-shadow", 7) == 0) {
+			sscanf(arg, "-shadow%hi", &short_var);
+			cat = (Category) short_var;
+			if (cat < 1 || cat > CATEGORIES) {
+				velvetLog("Unknown option: %s\n", arg);
+#ifdef DEBUG
+				abort();
+#endif
+				exit(1);
+			}
+			shadows[cat - 1] = (strcmp(argv[arg_index], "yes") == 0);
 		} else if (strcmp(arg, "--help") == 0) {
 			printUsage();
-			return 0;	
+			return 0;
 		} else {
 			velvetLog("Unknown option: %s;\n", arg);
 			printUsage();
@@ -457,7 +473,7 @@ int main(int argc, char **argv)
 		detachDubiousReads(sequences, dubious);
 		activateGapMarkers(graph);
 		for ( ;pebbleRounds > 0; pebbleRounds--)
-			exploitShortReadPairs(graph, sequences, dubious, scaffolding);
+			exploitShortReadPairs(graph, sequences, dubious, shadows, scaffolding);
 	} else {
 		velvetLog("WARNING: NO EXPECTED COVERAGE PROVIDED\n");
 		velvetLog("Velvet will be unable to resolve any repeats\n");

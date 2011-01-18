@@ -21,8 +21,11 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _SHORTREADPAIRS_H_
 #define _SHORTREADPAIRS_H_
 
-void exploitShortReadPairs(Graph * graph, ReadSet * reads,
-			   boolean * dubious, boolean force_jumps);
+void exploitShortReadPairs(Graph * graph,
+			   ReadSet * reads,
+			   boolean * dubious,
+			   boolean * shadows,
+			   boolean force_jumps);
 void handicapNode(Node * node);
 NodeList *getMarkedNodeList();
 
