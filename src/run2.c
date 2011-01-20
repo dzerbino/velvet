@@ -61,7 +61,7 @@ static void printUsage()
 	puts("\t-clean <yes|no>\t\t\t: remove all the intermediary files which are useless for recalculation (default : no)");
 	puts("\t-very_clean <yes|no>\t\t: remove all the intermediary files (no recalculation possible) (default: no)");
 	puts("\t-paired_exp_fraction <double>\t: remove all the paired end connections which less than the specified fraction of the expected count (default: 0.1)");
-	puts("\t-shadow* <yes|no>\t\t: for mate-pair libraries, indicate that the library might be contaminated with paired-end reads (default no)");
+	puts("\t-shortMatePaired* <yes|no>\t: for mate-pair libraries, indicate that the library might be contaminated with paired-end reads (default no)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -307,9 +307,9 @@ int main(int argc, char **argv)
 			    (strcmp(argv[arg_index], "yes") == 0);
 			if (unusedReads)
 				readTracking = true;
-		} else if (strcmp(arg, "-shadow") == 0) {
+		} else if (strcmp(arg, "-shortMatePaired") == 0) {
 			shadows[0] = (strcmp(argv[arg_index], "yes") == 0);
-		} else if (strncmp(arg, "-shadow", 7) == 0) {
+		} else if (strncmp(arg, "-shortMatePaired", 16) == 0) {
 			sscanf(arg, "-shadow%hi", &short_var);
 			cat = (Category) short_var;
 			if (cat < 1 || cat > CATEGORIES) {
