@@ -310,7 +310,7 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-shortMatePaired") == 0) {
 			shadows[0] = (strcmp(argv[arg_index], "yes") == 0);
 		} else if (strncmp(arg, "-shortMatePaired", 16) == 0) {
-			sscanf(arg, "-shadow%hi", &short_var);
+			sscanf(arg, "-shortMatePaired%hi", &short_var);
 			cat = (Category) short_var;
 			if (cat < 1 || cat > CATEGORIES) {
 				velvetLog("Unknown option: %s\n", arg);
