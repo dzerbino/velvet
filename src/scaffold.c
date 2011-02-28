@@ -1408,7 +1408,7 @@ static void projectFromShortRead(Node * node,
 	if (readPairIndex == 0)
 		return;
 
-	cat = cats[readIndex - 1];
+	cat = cats[readIndex - 1] / 2;
 	insertLength = getInsertLength(graph, cat);
 	insertVariance = getInsertLength_var(graph, cat);
 
