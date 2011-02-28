@@ -1379,7 +1379,8 @@ static void projectFromShortRead(Node * node,
 				 IDnum * readNodeCounts,
 				 IDnum * lengths,
 				 boolean * shadows,
-				 boolean doMatePairs)
+				 boolean doMatePairs,
+				 Category thisCat)
 {
 	IDnum index;
 	IDnum readIndex = getShortReadMarkerID(shortMarker);
@@ -1408,7 +1409,7 @@ static void projectFromShortRead(Node * node,
 	if (readPairIndex == 0)
 		return;
 
-	cat = cats[readIndex - 1];
+	cat = cats[readIndex - 1] / 2;
 	insertLength = getInsertLength(graph, cat);
 	insertVariance = getInsertLength_var(graph, cat);
 
@@ -1418,7 +1419,7 @@ static void projectFromShortRead(Node * node,
 			projectFromReadPair(node, &readArray[index], position,
 					offset, insertLength, insertVariance, false);
 	}
-	else if (shadows[cat] && doMatePairs) {
+	else if (shadows[cat] && doMatePairs && cat == thisCat) {
 		readArray = readNodes[readPairIndex];
 		for (index = 0; index < readNodeCounts[readPairIndex]; index++)
 			projectFromReadPair(node, &readArray[index], position,
@@ -1478,7 +1479,8 @@ static void projectFromNode(IDnum nodeID,
 			    IDnum * readPairs, Category * cats,
 			    boolean * dubious, IDnum * lengths,
 			    boolean * shadows,
-			    boolean doMatePairs)
+			    boolean doMatePairs,
+			    Category thisCat)
 {
 	IDnum index;
 	ShortReadMarker *nodeArray, *shortMarker;
@@ -1500,7 +1502,8 @@ static void projectFromNode(IDnum nodeID,
 		projectFromShortRead(node, shortMarker, readPairs, cats,
 				     readNodes, readNodeCounts, lengths,
 				     shadows,
-				     doMatePairs);
+				     doMatePairs,
+				     thisCat);
 	}
 
 	if (!doMatePairs)
@@ -1547,7 +1550,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 			velvetLog("Scaffolding node %li\n", (long) nodeID);
 
 		projectFromNode(nodeID, readNodes, readNodeCounts,
-				readPairs, cats, dubious, lengths, shadows, false);
+				readPairs, cats, dubious, lengths, shadows, false, 0);
 	}
 
 	hasShadow = false;
@@ -1560,16 +1563,17 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 
 	if (hasShadow)
 	{
-#ifdef OPENMP
-		#pragma omp parallel for
-#endif 
-		for (nodeID = -nodes; nodeID <= nodes; nodeID++)
+		for (cat = 0; cat < CATEGORIES; cat++)
 		{
-			if (nodeID % 10000 == 0)
-				velvetLog("Scaffolding node (MP) %li\n", (long) nodeID);
-
-			projectFromNode(nodeID, readNodes, readNodeCounts,
-					readPairs, cats, dubious, lengths, shadows, true);
+			if (!shadows[cat])
+				continue;
+			velvetLog("Scaffolding MP library %i\n", cat);
+#ifdef OPENMP
+			#pragma omp parallel for
+#endif 
+			for (nodeID = -nodes; nodeID <= nodes; nodeID++)
+				projectFromNode(nodeID, readNodes, readNodeCounts,
+						readPairs, cats, dubious, lengths, shadows, true, cat);
 		}
 	}
 #ifdef OPENMP
