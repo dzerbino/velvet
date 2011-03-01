@@ -236,6 +236,28 @@ If you are using a strand specific transcriptome sequencing protocol, you may wi
 > ./velveth output_directory/ 21 (...data files...) -strand_specific
 \end{verbatim}
 
+\subsubsection{Multiple k-mers}
+
+If you wish for Velvet to efficiently test various k-mer lengths without doing redundant computations, you can request all k-mer lengths such that $m \le k \le M$ with a step of s:
+
+\begin{verbatim}
+> ./velveth output_directory/ m,M,s (..data files..)
+\end{verbatim}
+
+\subsubsection{Preprocessing the Sequences file}
+
+It can often be interesting to pre-process the Sequences file before running the hashing. During this phase, Velvet simply reads the input files and prepares a file which contains them all. This can be done on a very small computer, thus not wasting cycles on a powerful computer. To do so, simply invoke the -noHash option:
+
+\begin{verbatim}
+> ./velveth output_directory/ 21 (..data files..) -noHash
+\end{verbatim}
+
+Once the Sequences file is prepared you can run velveth on the same directory, or any directory which contains a link to the same file (or a copy of that file if necessary):
+
+\begin{verbatim}
+> ./velveth output_directory/ 21 -reuse_Sequences
+\end{verbatim}
+
 \subsection{Running velvetg}
 
 Velvetg is the core of Velvet where the de Bruijn graph is built then manipulated. Note that although velvetg saves some files during the process to avoid useless recalculations, the parameters are \textbf{not} saved from one run to the next. Therefore:

@@ -56,7 +56,7 @@ ReadSet *importReadSet(char *filename);
 void exportReadSet(char *filename, ReadSet * reads);
 
 // The overall argument parser and file reader for the hash function
-void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand);
+void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand, boolean * noHash);
 
 void logInstructions(int argc, char **argv, char *directory);
 

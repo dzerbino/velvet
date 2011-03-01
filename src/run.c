@@ -60,6 +60,7 @@ static void printUsage()
 	puts("Options:");
 	puts("\t-strand_specific\t: for strand specific transcriptome sequencing data (default: off)");
 	puts("\t-reuse_Sequences\t: reuse Sequences file (or link) already in directory (no need to provide original filenames in this case (default: off)");
+	puts("\t-noHash\t\t\t: simply prepare Sequences file, do not hash reads or prepare Roadmaps file (default: off)");
 	puts("");
 	puts("Synopsis:");
 	puts("");
@@ -88,6 +89,7 @@ int main(int argc, char **argv)
 	int hashLength, hashLengthStep, hashLengthMax, h;
 	char *directory, *filename, *seqFilename, *buf;
 	boolean double_strand = true;
+	boolean noHash = false;
 	boolean multiple_kmers = false;
 	DIR *dir;
 
@@ -189,11 +191,14 @@ int main(int argc, char **argv)
 		strcpy(seqFilename, directory);
 		strcat(seqFilename, "/Sequences");
 		if ( h == hashLength ) {
-			parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand);
+			parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand, &noHash);
 		} else {
 			sprintf(buf,"ln -s ../%s_%d/Sequences %s",argv[1],hashLength,seqFilename);
 			system(buf);
 		}
+
+		if (noHash)
+			continue;
 
 		splayTable = newSplayTable(h, double_strand);
 

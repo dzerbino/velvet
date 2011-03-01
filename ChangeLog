@@ -354,3 +354,8 @@ V 1.0.18
 - Consistency of hairpin arc multiplicity
 - Bug in reuse_Sequences option
 - Bug strand_specific option
+
+V 1.0.19
+- -noHash option
+- Solaris files added
+- Bug in coverage cutoff
