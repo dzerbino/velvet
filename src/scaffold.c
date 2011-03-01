@@ -1125,7 +1125,7 @@ static void setAllConnectionsClean(void)
 
 		connect = scaffold + nodeID;
 		if (*connect == NULL)
-			return;
+			continue;
 
 		for (current = *connect; current != NULL; current = popConnectionStack(&stack))
 		{
