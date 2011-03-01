@@ -53,6 +53,7 @@ struct connection_st {
 	float variance;
 	IDnum direct_count;
 	IDnum paired_count;
+	unsigned char clean;
 }  ATTRIBUTE_PACKED;
 
 struct readOccurence_st {
@@ -171,6 +172,7 @@ static Connection *allocateConnection()
 	}
 #endif
 	connect->destination = NULL;
+	connect->clean = false;
 	return connect;
 }
 
@@ -1107,6 +1109,40 @@ static void splayToList(Connection **connection)
 	*connection = list;
 }
 
+static void setAllConnectionsClean(void)
+{
+	IDnum nodeID;
+	IDnum nodes = nodeCount(graph);
+
+#ifdef OPENMP
+	#pragma omp parallel for
+#endif
+	for (nodeID = 2 * nodes; nodeID >= 0; nodeID--)
+	{
+		ConnectionStack *stack = NULL;
+		Connection **connect;
+		Connection *current;
+
+		connect = scaffold + nodeID;
+		if (*connect == NULL)
+			return;
+
+		for (current = *connect; current != NULL; current = popConnectionStack(&stack))
+		{
+			Connection *right;
+			Connection *left;
+
+			current->clean = true;
+			right = current->right;
+			if (right != NULL)
+				pushConnectionStack(&stack, right);
+			left = current->left;
+			if (left != NULL)
+				pushConnectionStack(&stack, left);
+		}
+	}
+}
+
 static void fillNewConnectionInTree(Connection *connect,
 				    Node *destination,
 				    IDnum direct_count,
@@ -1326,7 +1362,8 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 	if (getUniqueness(target) && node2ID < nodeID)
 		return;
 
-	// Check if a conflicting PE connection already exists
+	// Check if a conflicting PE (or MP from a smaller size lib) connection
+	// already exists
 	if (doMatePairs) {
 		Connection *reverseConnect;
 
@@ -1339,6 +1376,7 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 #endif
 
 		if (reverseConnect != NULL &&
+		    reverseConnect->clean &&
 		    reverseConnect->paired_count +
 		    reverseConnect->direct_count >= UNRELIABLE_CONNECTION_CUTOFF)
 			return;
@@ -1554,6 +1592,10 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 				readPairs, cats, dubious, lengths, shadows, false, 0);
 	}
 
+#ifdef OPENMP
+	initConnectionStackMemory();
+#endif
+
 	hasShadow = false;
 	for (cat = 0; cat < CATEGORIES; cat++)
 		if (shadows[cat])
@@ -1566,6 +1608,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 	{
 		for (cat = 0; cat < CATEGORIES; cat++)
 		{
+			setAllConnectionsClean();
 			if (!shadows[cat])
 				continue;
 			velvetLog("Scaffolding MP library %i\n", cat);
@@ -1574,11 +1617,11 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 #endif 
 			for (nodeID = -nodes; nodeID <= nodes; nodeID++)
 				projectFromNode(nodeID, readNodes, readNodeCounts,
-						readPairs, cats, dubious, lengths, shadows, true, cat);
+						readPairs, cats, dubious, lengths,
+						shadows, true, cat);
 		}
 	}
 #ifdef OPENMP
-	initConnectionStackMemory();
 	#pragma omp parallel for
 #endif
 	for (nodeID = 2 * nodes; nodeID >= 0; nodeID--)
