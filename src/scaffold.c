@@ -41,6 +41,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define BLOCK_SIZE  100000
 #define LN2 1.4
 
+static int PEBBLE_ROUND_NUM = 0;
+
 typedef struct readOccurence_st ReadOccurence;
 static double paired_exp_fraction = 0.1;
 
@@ -316,7 +318,7 @@ static boolean testConnection(IDnum IDA, Connection * connect,
 	    UNRELIABLE_CONNECTION_CUTOFF)
 		return false;
 
-	for (cat = 0; cat <= CATEGORIES; cat++)
+	for (cat = 0; cat <= CATEGORIES && cat <= PEBBLE_ROUND_NUM; cat++)
 		total +=
 		    expectedNumberOfConnections(IDA, connect, counts, cat);
 
@@ -1451,6 +1453,8 @@ static void projectFromShortRead(Node * node,
 	insertLength = getInsertLength(graph, cat);
 	insertVariance = getInsertLength_var(graph, cat);
 	cat /= 2;
+	if (cat > PEBBLE_ROUND_NUM)
+		return;
 
 	if (!shadows[cat] && !doMatePairs) {
 		readArray = readNodes[readPairIndex];
@@ -1636,6 +1640,8 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
 	velvetLog(" === Nodes Scaffolded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
+
+	PEBBLE_ROUND_NUM++;
 
 	return scaffold;
 }
