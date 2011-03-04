@@ -470,11 +470,11 @@ int main(int argc, char **argv)
 		velvetLog("See manual for instructions on how to set the expected coverage parameter\n");
 	}
 
-	removeLowCoverageReferenceNodes(graph, coverageCutoff, longCoverageCutoff, sequences);
-
 	free(dubious);
 
 	concatenateGraph(graph);
+
+	removeLowCoverageReferenceNodes(graph, coverageCutoff, longCoverageCutoff, sequences);
 
 	strcpy(graphFilename, directory);
 	strcat(graphFilename, "/contigs.fa");

@@ -359,3 +359,4 @@ V 1.0.19
 - -noHash option
 - Solaris files added
 - Bug in coverage cutoff
+- Removal of the layout script
