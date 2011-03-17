@@ -484,6 +484,8 @@ int main(int argc, char **argv)
 
 	concatenateGraph(graph);
 
+	removeLowCoverageReferenceNodes(graph, coverageCutoff, longCoverageCutoff, sequences);
+
 	strcpy(graphFilename, directory);
 	strcat(graphFilename, "/contigs.fa");
 	exportLongNodeSequences(graphFilename, graph, minContigKmerLength); 

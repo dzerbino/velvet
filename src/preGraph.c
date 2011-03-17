@@ -199,6 +199,8 @@ PreArcI createPreArc_pg(IDnum originPreNodeID, IDnum destinationPreNodeID,
 
 	if (preArc != NULL_IDX) {
 		PREARC_FI2P (preArc)->multiplicity++;
+		if (destinationPreNodeID == -originPreNodeID) 
+			PREARC_FI2P (preArc)->multiplicity++;
 		return preArc;
 	}
 	// If not found
@@ -249,10 +251,8 @@ void createAnalogousPreArc_pg(IDnum originPreNodeID,
 	addPreArcToPreNode_pg(preArc, originPreNodeID, preGraph);
 
 	// Hairpin case
-	if (destinationPreNodeID == -originPreNodeID) {
-		preArcVal->multiplicity++;
+	if (destinationPreNodeID == -originPreNodeID)
 		return;
-	}
 
 	addPreArcToPreNode_pg(preArc, -destinationPreNodeID, preGraph);
 }

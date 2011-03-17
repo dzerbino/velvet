@@ -78,13 +78,13 @@ boolean isUniqueSolexa(Node * node)
 {
 
 	Coordinate nodeLength = getNodeLength(node);
-	Coordinate nodeCoverage =
-	    (getVirtualCoverage(node, 0) + getVirtualCoverage(node, 1));
+	Coordinate nodeCoverage = 0;
 	double nodeDensity, probability;
+	Category cat;
 
-	if (nodeLength == 0) {
-		return false;
-	}
+	for (cat = 0; cat < CATEGORIES; cat++)
+		nodeCoverage += getVirtualCoverage(node, cat);
+
 	if (nodeLength > LONG_NODE_CUTOFF) {
 		nodeDensity = nodeCoverage / (double) nodeLength;
 
@@ -94,12 +94,8 @@ boolean isUniqueSolexa(Node * node)
 		    (expected_coverage * expected_coverage -
 		     nodeDensity * nodeDensity / 2);
 		return probability > PROBABILITY_CUTOFF;
-	} else {
-		return false;
-		probability =
-		    expected_coverage * nodeLength - nodeCoverage / LN2;
-		return probability > 0;
 	}
+	return false;
 }
 
 static void identifyUniqueNodes(boolean(*isUniqueFunction) (Node *))
