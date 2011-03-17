@@ -1255,7 +1255,7 @@ static void printUsage()
 
 // General argument parser for most functions
 // Basically a reused portion of toplevel code dumped into here
-void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand)
+void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand, boolean * noHash)
 {
 	int argIndex = 1;
 	FILE *outfile;
@@ -1280,6 +1280,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			reference_coordinate_double_strand = false;
 		} else if (strcmp(argv[argIndex], "-reuse_Sequences") == 0) {
 			reuseSequences = true;
+		} else if (strcmp(argv[argIndex], "-noHash") == 0) {
+			*noHash = true;
 		}
 	}
 
@@ -1356,6 +1358,10 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			else if (strcmp(argv[argIndex], "-reference") ==
 				 0)
 				cat = CATEGORIES * 2 + 2;
+			else if (strcmp(argv[argIndex], "-strand_specific") == 0) {
+				*double_strand = false;
+				reference_coordinate_double_strand = false;
+			} 
 			else {
 				velvetLog("Unknown option: %s\n",
 				       argv[argIndex]);
@@ -1623,7 +1629,7 @@ ReadSet *importReadSet(char *filename)
 			if (sizeof(ShortLength) == sizeof(int16_t) && bpCount > SHRT_MAX) {
 				velvetLog("Read %li of length %lli, longer than limit %i\n",
 				       (long) sequenceIndex + 1, (long long) bpCount, SHRT_MAX);
-				velvetLog("You should modify ShortLength to int32_t in globals.h (around) line 84, recompile and re-run\n");
+				velvetLog("You should modify recompile with the LONGSEQUENCES option (cf. manual)\n");
 				exit(1);
 			}
 		}

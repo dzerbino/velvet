@@ -1134,6 +1134,39 @@ static Coordinate getLongCoverage(Node * node) {
 	return total;
 }
 
+void removeLowCoverageReferenceNodes(Graph * graph, double minCov, double minLongCov, ReadSet * reads)
+{
+	IDnum index;
+	Node *node;
+	PassageMarkerI marker;
+
+	velvetLog("Removing reference contigs with coverage < %f...\n", minCov);
+
+	for (index = 1; index <= nodeCount(graph); index++) {
+		node = getNodeInGraph(graph, index);
+
+		if (getNodeLength(node) == 0)
+			continue;
+
+		if ((getTotalCoverage(node) / getNodeLength(node) < minCov 
+		    || getLongCoverage(node) / getNodeLength(node) < minLongCov)
+		    && hasReferenceMarker(node, reads)) {
+			while ((marker = getMarker(node))) {
+				if (!isInitial(marker)
+				    && !isTerminal(marker))
+					disconnectNextPassageMarker
+					    (getPreviousInSequence(marker),
+					     graph);
+				destroyPassageMarker(marker);
+			}
+
+			destroyNode(node, graph);
+		}
+	}
+
+	concatenateGraph(graph);
+}
+
 void removeLowLongCoverageNodesAndDenounceDubiousReads(Graph * graph,
 						       double minCov,
 						       ReadSet * reads,

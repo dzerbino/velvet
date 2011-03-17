@@ -50,6 +50,8 @@ void removeLowLongCoverageNodesAndDenounceDubiousReads(Graph * graph,
 						       Coordinate minLength,
 						       char *filename);
 
+void removeLowCoverageReferenceNodes(Graph * graph, double minCov, double minLongCov, ReadSet * reads);
+
 void exportAMOSContigs(char *filename, Graph * graph,
 		       Coordinate cutoff_length, ReadSet * reads);
 

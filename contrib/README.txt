@@ -13,11 +13,6 @@ These two scripts allow you to examine the (generally) large .afg files which ca
 
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-- layout by Paul Harrison (pfh@logarithmic.net)
-
-This script converts a (Last)Graph file into a .dot file, which can then be converted into an image by GraphViz (www.graphviz.org). This allows you to directly observe the topology of a graph. 
-
->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 - VelvetOptimiser by Simon Gladman (Simon.Gladman@csiro.au)
 
 This script automatically finds the optimal parameter settings for Velvet. 
