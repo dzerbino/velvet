@@ -18,6 +18,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -190,8 +191,13 @@ compareSequences(TightString * sequence1, TightString * sequence2)
 
 	maxScore = Fmatrix[length1][length2];
 
-	if (maxScore < maxLength - MAXGAPS)
-		return false;
+	if (maxLength < 100) {
+		if (maxScore < maxLength - MAXGAPS)
+			return false;
+	} else {
+		if (roundf((float)(MAXGAPS * maxLength) / 100.) < maxLength - maxScore)
+			return false;
+	}
 
 	if ((1 - maxScore / maxLength) > MAXDIVERGENCE)
 		return false;

@@ -18,6 +18,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -558,7 +559,7 @@ extractSequence(PassageMarkerI path, TightString * sequence)
 	return true;
 }
 
-static Time max(Time A, Time B, Time C)
+static Time max3(Time A, Time B, Time C)
 {
 	if (A >= B && A >= C)
 		return A;
@@ -585,9 +586,8 @@ compareSequences(TightString * sequence1, TightString * sequence2)
 
 	if (length1 < WORDLENGTH || length2 < WORDLENGTH) {
 		if (maxLength - length1 > MAXGAPS
-		    || maxLength - length2 > MAXGAPS)
-			return false;
-		if (WORDLENGTH - length1 > MAXGAPS
+		    || maxLength - length2 > MAXGAPS
+		    || WORDLENGTH - length1 > MAXGAPS
 		    || WORDLENGTH - length2 > MAXGAPS)
 			return false;
 	}
@@ -605,14 +605,19 @@ compareSequences(TightString * sequence1, TightString * sequence2)
 			    [(int) getNucleotide(j - 1, sequence2)];
 			Choice2 = Fmatrix[i - 1][j] + INDEL;
 			Choice3 = Fmatrix[i][j - 1] + INDEL;
-			Fmatrix[i][j] = max(Choice1, Choice2, Choice3);
+			Fmatrix[i][j] = max3(Choice1, Choice2, Choice3);
 		}
 	}
 
 	maxScore = Fmatrix[length1][length2];
 
-	if (maxScore < maxLength - MAXGAPS)
-		return false;
+	if (maxLength < 100) {
+		if (maxScore < maxLength - MAXGAPS)
+			return false;
+	} else {
+		if (roundf((float)(MAXGAPS * maxLength) / 100.) < maxLength - maxScore)
+			return false;
+	}
 
 	if ((1 - maxScore / maxLength) > MAXDIVERGENCE)
 		return false;
