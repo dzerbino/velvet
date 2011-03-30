@@ -1,6 +1,9 @@
 Most of the code in this package was written by myself (Daniel Zerbino).
 
-However, some code was reused with kind permission from:
+Sylvain Foret led the parallelization of the code and implemented
+modifications in the use of mate-pair reads.
+
+Some code was reused with kind permission from:
 - John-Mark Gurney, for his Fibonacci heap implementation 
 (http://resnet.uoregon.edu/~gurney_j/jmpc/fib.html)
 - Guy Slater, for his memory management routines 

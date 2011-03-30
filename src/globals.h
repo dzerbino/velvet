@@ -37,8 +37,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #endif
 
 #define VERSION_NUMBER 1
-#define RELEASE_NUMBER 0
-#define UPDATE_NUMBER 19
+#define RELEASE_NUMBER 1
+#define UPDATE_NUMBER 01
 
 #define MAXLINE 5000 
 
