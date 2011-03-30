@@ -364,3 +364,8 @@ V 1.0.19
 V 1.1.01
 - OMP multi-threading
 - MetaVelvet
+
+V 1.1.02
+- Corrected MetaVelvet Makefile
+- Reverted untested code
+- Updated Manual

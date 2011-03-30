@@ -1453,7 +1453,7 @@ static void projectFromShortRead(Node * node,
 	insertLength = getInsertLength(graph, cat);
 	insertVariance = getInsertLength_var(graph, cat);
 	cat /= 2;
-	if (cat > PEBBLE_ROUND_NUM)
+	if (shadows[cat] && cat > PEBBLE_ROUND_NUM)
 		return;
 
 	if (!shadows[cat] && !doMatePairs) {

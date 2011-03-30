@@ -7,7 +7,7 @@ MAXKMERLENGTH=31
 CATEGORIES=2
 DEF = -D MAXKMERLENGTH=$(MAXKMERLENGTH) -D CATEGORIES=$(CATEGORIES)
 
-Z_LIB_DIR=third-party/zlib-1.2.3
+Z_LIB_DIR=../../third-party/zlib-1.2.3
 Z_LIB_FILES=$(Z_LIB_DIR)/*.o
 
 # Mac OS users: uncomment the following lines
