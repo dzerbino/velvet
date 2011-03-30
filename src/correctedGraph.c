@@ -18,10 +18,10 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 #include "globals.h"
 #include "graph.h"
@@ -35,6 +35,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "utility.h"
 
 #define TICKET_BLOCK_SIZE 10000
+
+extern float roundf(float);
 
 static const Time INDEL = 0;
 static const Time SIM[4][4] = {

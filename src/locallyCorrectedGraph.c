@@ -32,6 +32,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "locallyCorrectedGraph.h"
 #include "utility.h"
 
+extern float roundf(float);
+
 static const Time INDEL = 0;
 static const Time SIM[4][4] = {
 	{1, 0, 0, 0},

@@ -360,3 +360,7 @@ V 1.0.19
 - Solaris files added
 - Bug in coverage cutoff
 - Removal of the layout script
+
+V 1.1.01
+- OMP multi-threading
+- MetaVelvet
