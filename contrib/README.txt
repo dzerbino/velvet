@@ -11,7 +11,6 @@ These two scripts allow you to examine the (generally) large .afg files which ca
 
 	snp_view produces an ASCII pileup display of the reads above a given locus
 
-
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 - VelvetOptimiser by Simon Gladman (Simon.Gladman@csiro.au)
 
@@ -67,3 +66,8 @@ Utility scripts used to prepare Columbus reference sequences.
 - select_paired by Konrad Paszkiewicz (K.H.Paszkiewicz@exeter.ac.uk)
 
 Separates paired reads from unpaired read after filtering step
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- MetaVelvet by Yasumbumi Sakakibara et al (yasu@bio.keio.ac.jp)
+
+Modification of Velvet to analyze metagenomic data
