@@ -841,7 +841,7 @@ Coordinate n50(Graph * graph)
 	return getNodeLength(node);
 }
 
-static Coordinate getTotalCoverage(Node * node)
+Coordinate getTotalCoverage(Node * node)
 {
 	Category cat;
 	Coordinate coverage = 0;

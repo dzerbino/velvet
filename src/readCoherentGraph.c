@@ -78,12 +78,10 @@ boolean isUniqueSolexa(Node * node)
 {
 
 	Coordinate nodeLength = getNodeLength(node);
-	Coordinate nodeCoverage = 0;
+	Coordinate nodeCoverage;
 	double nodeDensity, probability;
-	Category cat;
 
-	for (cat = 0; cat < CATEGORIES; cat++)
-		nodeCoverage += getVirtualCoverage(node, cat);
+	nodeCoverage = getTotalCoverage(node);
 
 	if (nodeLength > LONG_NODE_CUTOFF) {
 		nodeDensity = nodeCoverage / (double) nodeLength;
