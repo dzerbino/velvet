@@ -722,9 +722,7 @@ static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
 	tString = expandNode(node, WORDLENGTH);
 	velvetFprintf(outfile, ">NODE_%ld_length_%lld_cov_%f\n",
 		(long) nodeIndex, (long long) getNodeLength(node),
-		(getVirtualCoverage(node, 0)
-		 + getVirtualCoverage(node, 1)
-		 + readCoverage(node)) /
+		(getTotalCoverage(node) + readCoverage(node)) /
 		(float) getNodeLength(node));
 
 	gap = getGap(node, graph);
