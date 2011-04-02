@@ -25,6 +25,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #include "globals.h"
 #include "graph.h"
+#include "graphStats.h"
 #include "readSet.h"
 #include "tightString.h"
 #include "passageMarker.h"
