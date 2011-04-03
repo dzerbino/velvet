@@ -29,8 +29,6 @@ void exportLongNodeSequences(char *filename, Graph * graph,
 
 Coordinate readCoverage(Node * node);
 
-Coordinate getTotalCoverage(Node * node);
-
 Coordinate n50(Graph * graph);
 
 double estimated_cov(Graph * graph, char * directory);

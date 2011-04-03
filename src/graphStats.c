@@ -840,17 +840,6 @@ Coordinate n50(Graph * graph)
 	return getNodeLength(node);
 }
 
-Coordinate getTotalCoverage(Node * node)
-{
-	Category cat;
-	Coordinate coverage = 0;
-
-	for (cat = 0; cat < CATEGORIES; cat++)
-		coverage += getVirtualCoverage(node, cat);
-
-	return coverage;
-}
-
 int compareNodeCovs(const void * A, const void * B) {
 	Node * nodeA = *((Node **) A);
 	Node * nodeB = *((Node **) B);

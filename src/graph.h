@@ -95,6 +95,7 @@ void setVirtualCoverage(Node * node, Category category,
 void incrementVirtualCoverage(Node * node, Category category,
 			      Coordinate coverage);
 Coordinate getVirtualCoverage(Node * node, Category category);
+Coordinate getTotalCoverage(Node * node);
 
 // Original virtual coverage
 void setOriginalVirtualCoverage(Node * node, Category category,
