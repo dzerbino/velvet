@@ -50,8 +50,12 @@ struct node_st {
 	Descriptor *descriptor;	// 64
 	PassageMarkerI marker;	// 32
 	IDnum length;	// 32
+#ifdef FULL_COVERAGE_INFO
 	IDnum virtualCoverage[CATEGORIES];	// 32 * 2
 	IDnum originalVirtualCoverage[CATEGORIES];	// 32 * 2
+#else
+	IDnum virtualCoverage;	// 32 * 2
+#endif
 	IDnum ID;		// 32
 	IDnum arcCount;		// 32
 	boolean status;		// 1
@@ -1378,7 +1382,6 @@ Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
 {
 	Node *newnd = allocateNode();
 	Node *antiNode = allocateNode();
-	Category cat;
 
 	newnd->ID = ID;
 	newnd->descriptor =
@@ -1388,10 +1391,16 @@ Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
 	newnd->arcCount = 0;
 	newnd->marker = NULL_IDX;
 	newnd->status = false;
+
+#ifdef FULL_COVERAGE_INFO
+	Category cat;
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		newnd->virtualCoverage[cat] = 0;
 		newnd->originalVirtualCoverage[cat] = 0;
 	}
+#else
+	newnd->virtualCoverage = 0;
+#endif
 
 	antiNode->ID = -ID;
 	antiNode->descriptor =
@@ -1401,10 +1410,15 @@ Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
 	antiNode->arcCount = 0;
 	antiNode->marker = NULL_IDX;
 	antiNode->status = false;
+
+#ifdef FULL_COVERAGE_INFO
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		antiNode->virtualCoverage[cat] = 0;
 		antiNode->originalVirtualCoverage[cat] = 0;
 	}
+#else
+	antiNode->virtualCoverage = 0;
+#endif
 
 	newnd->twinNode = antiNode;
 	antiNode->twinNode = newnd;
@@ -1441,7 +1455,6 @@ Node *emptyNode()
 {
 	Node *newnd = allocateNode();
 	Node *antiNode = allocateNode();
-	Category cat;
 
 	newnd->ID = 0;
 	newnd->descriptor = NULL;
@@ -1450,10 +1463,16 @@ Node *emptyNode()
 	newnd->marker = NULL_IDX;
 	newnd->length = 0;
 	newnd->uniqueness = false;
+
+#ifdef FULL_COVERAGE_INFO
+	Category cat;
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		newnd->virtualCoverage[cat] = 0;
 		newnd->originalVirtualCoverage[cat] = 0;
 	}
+#else
+	newnd->virtualCoverage = 0;
+#endif
 
 	antiNode->ID = 0;
 	antiNode->descriptor = NULL;
@@ -1462,10 +1481,15 @@ Node *emptyNode()
 	antiNode->marker = NULL_IDX;
 	antiNode->length = 0;
 	antiNode->uniqueness = false;
+
+#ifdef FULL_COVERAGE_INFO
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		antiNode->virtualCoverage[cat] = 0;
 		antiNode->originalVirtualCoverage[cat] = 0;
 	}
+#else
+	antiNode->virtualCoverage = 0;
+#endif
 
 	newnd->twinNode = antiNode;
 	antiNode->twinNode = newnd;
@@ -1486,6 +1510,8 @@ Node *addEmptyNodeToGraph(Graph * graph, IDnum ID)
 	return newnd;
 
 }
+
+#ifdef FULL_COVERAGE_INFO
 
 void setVirtualCoverage(Node * node, Category category,
 			Coordinate coverage)
@@ -1540,6 +1566,34 @@ Coordinate getOriginalVirtualCoverage(Node * node, Category category)
 	return node->originalVirtualCoverage[category];
 }
 
+#else
+
+void setVirtualCoverage(Node * node,
+			Coordinate coverage)
+{
+	node->virtualCoverage = coverage;
+	node->twinNode->virtualCoverage = coverage;
+}
+
+void incrementVirtualCoverage(Node * node,
+			      Coordinate coverage)
+{
+	node->virtualCoverage += coverage;
+	node->twinNode->virtualCoverage += coverage;
+}
+
+Coordinate getVirtualCoverage(Node * node)
+{
+	return node->virtualCoverage;
+}
+
+Coordinate getTotalCoverage(Node * node)
+{
+	return node->virtualCoverage;
+}
+
+#endif
+
 boolean hasSingleArc(Node * node)
 {
 	return node->arcCount == 1;
@@ -1592,16 +1646,21 @@ static void exportNode(FILE * outfile, Node * node, void *withSequence)
 {
 	Coordinate index;
 	Nucleotide nucleotide;
-	Category cat;
 
 	if (node == NULL)
 		return;
 
 	velvetFprintf(outfile, "NODE\t%ld\t%lld", (long) node->ID, (long long) node->length);
+
+#ifdef FULL_COVERAGE_INFO
+	Category cat;
 	for (cat = 0; cat < CATEGORIES; cat++)
 		velvetFprintf(outfile, "\t%lld\t%lld", (long long) node->virtualCoverage[cat],
 			(long long) node->originalVirtualCoverage[cat]);
 	velvetFprintf(outfile, "\n");
+#else
+	velvetFprintf(outfile, "\t%lld\n", (long long) node->virtualCoverage);
+#endif
 
 	if (withSequence == NULL)
 		return;
@@ -1974,7 +2033,7 @@ Graph *importGraph(char *filename)
 	const int maxline = MAXLINE;
 	char line[MAXLINE];
 	Graph *graph;
-	Coordinate coverage, originalCoverage;
+	Coordinate coverage;
 	IDnum nodeCounter, sequenceCount;
 	Node *node, *twin;
 	Arc *arc;
@@ -1990,7 +2049,6 @@ Graph *importGraph(char *filename)
 	ShortReadMarker *array;
 	int wordLength, sCount;
 	ShortLength length;
-	Category cat;
 	long long_var, long_var2, long_var3;
 	long long longlong_var, longlong_var2, longlong_var3, longlong_var4;
 	short short_var;
@@ -2029,6 +2087,10 @@ Graph *importGraph(char *filename)
 		node = addEmptyNodeToGraph(graph, nodeID);
 		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
 		node->length = (Coordinate) longlong_var;
+
+#ifdef FULL_COVERAGE_INFO
+		Category cat;
+		Coordinate originalCoverage;
 		for (cat = 0; cat < CATEGORIES; cat++) {
 			sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
 			coverage = (Coordinate) longlong_var;
@@ -2039,6 +2101,11 @@ Graph *importGraph(char *filename)
 			setOriginalVirtualCoverage(node, cat,
 						   originalCoverage);
 		}
+#else
+		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
+		coverage = (Coordinate) longlong_var;
+		setVirtualCoverage(node, coverage);
+#endif
 
 		arrayLength = node->length / 4;
 		if (node->length % 4 > 0)

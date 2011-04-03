@@ -884,7 +884,6 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 	Node *candidate;
 	Node *lastCandidate = NULL;
 	Coordinate oldLength = getNodeLength(node);
-	Category cat;
 	MiniConnection *localConnect;
 	NodeList *path, *tmp;
 
@@ -912,16 +911,17 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 				absorbExtensionInScaffold(node, candidate);
 
 				// Read coverage
+#ifdef FULL_COVERAGE_INFO
+				Category cat;
 				for (cat = 0; cat < CATEGORIES; cat++) {
 					incrementVirtualCoverage(node, cat,
-								 getVirtualCoverage
-								 (candidate,
-								  cat));
-					incrementOriginalVirtualCoverage
-					    (node, cat,
-					     getOriginalVirtualCoverage
-					     (candidate, cat));
+								 getVirtualCoverage(candidate, cat));
+					incrementOriginalVirtualCoverage(node, cat,
+									 getOriginalVirtualCoverage(candidate, cat));
 				}
+#else
+				incrementVirtualCoverage(node, getVirtualCoverage(candidate));
+#endif
 
 				if (getNodeStatus(candidate)) {
 					localConnect =
@@ -1006,10 +1006,14 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 		absorbExtensionInScaffold(node, oppositeNode);
 
 		// Read coverage
+#ifdef FULL_COVERAGE_INFO
+		Category cat;
 		for (cat = 0; cat < CATEGORIES; cat++)
 			incrementVirtualCoverage(node, cat,
-						 getVirtualCoverage
-						 (oppositeNode, cat));
+						 getVirtualCoverage(oppositeNode, cat));
+#else
+		incrementVirtualCoverage(node, getVirtualCoverage(oppositeNode));
+#endif
 
 		if (getNodeStatus(oppositeNode)) {
 			localConnect =

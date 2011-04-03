@@ -490,20 +490,28 @@ void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads)
 			velvetFprintf(outfile, "\t%f",
 				readCoverage(node) /
 				(double) getNodeLength(node));
+#ifdef FULL_COVERAGE_INFO
 			for (cat = 0; cat < CATEGORIES; cat++) {
 				velvetFprintf(outfile, "\t%f",
-					getVirtualCoverage(node,
-							   cat) /
+					getVirtualCoverage(node, cat) /
 					(double) getNodeLength(node));
 				velvetFprintf(outfile, "\t%f",
-					getOriginalVirtualCoverage(node,
-								   cat) /
+					getOriginalVirtualCoverage(node, cat) /
 					(double) getNodeLength(node));
 			}
+#else
+			velvetFprintf(outfile, "\t%f",
+					getVirtualCoverage(node) /
+					(double) getNodeLength(node));
+#endif
 		} else {
 			velvetFprintf(outfile, "\tInf");
+#ifdef FULL_COVERAGE_INFO
 			for (cat = 0; cat < CATEGORIES; cat++)
 				velvetFprintf(outfile, "\tInf\tInf");
+#else
+			velvetFprintf(outfile, "\tInf");
+#endif
 		}
 
 		velvetFprintf(outfile, "\t%li", (long) markerCount(node));

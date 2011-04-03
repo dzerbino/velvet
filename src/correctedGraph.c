@@ -727,7 +727,6 @@ static void remapNodeMarkersOntoNeighbour(Node * source,
 	IDnum sourceLength, index;
 	ShortReadMarker *sourceArray, *shortMarker;
 	Coordinate position;
-	Category cat;
 
 	Coordinate targetStart = getPassageMarkerStart(targetMarker);
 	Coordinate targetFinish = getPassageMarkerFinish(targetMarker);
@@ -866,9 +865,14 @@ static void remapNodeMarkersOntoNeighbour(Node * source,
 			       graph);
 	}
 	// Virtual reads
+#ifdef FULL_COVERAGE_INFO
+	Category cat;
 	for (cat = 0; cat < CATEGORIES; cat++)
 		incrementVirtualCoverage(target, cat,
 					 getVirtualCoverage(source, cat));
+#else
+	incrementVirtualCoverage(target, getVirtualCoverage(source));
+#endif
 }
 
 static void remapBackOfNodeArcsOntoNeighbour(Node * source, Node * target)
@@ -891,8 +895,6 @@ remapBackOfNodeMarkersOntoNeighbour(Node * source,
 	PassageMarkerI marker, newMarker, previousMarker, nextMarker;
 	Coordinate halfwayPoint, halfwayPointOffset, breakpoint,
 	    newStartOffset, newFinishOffset;
-	Category cat;
-	Coordinate coverage;
 	Coordinate *targetToSourceMapping, *sourceToTargetMapping;
 	ShortReadMarker *selectedShortReads, *shortRead;
 	IDnum selectedShortReadCount, shortReadIndex;
@@ -1186,6 +1188,9 @@ remapBackOfNodeMarkersOntoNeighbour(Node * source,
 	}
 	// Virtual coverage
 	if (alignedSourceLength != 0) {
+		Coordinate coverage;
+#ifdef FULL_COVERAGE_INFO
+		Category cat;
 		for (cat = 0; cat < CATEGORIES; cat++) {
 			coverage = getVirtualCoverage(source, cat);
 			coverage *= halfwayPoint;
@@ -1199,6 +1204,13 @@ remapBackOfNodeMarkersOntoNeighbour(Node * source,
 			incrementOriginalVirtualCoverage(source, cat,
 							 -coverage);
 		}
+#else
+		coverage = getVirtualCoverage(source);
+		coverage *= halfwayPoint;
+		coverage /= alignedSourceLength;
+		incrementVirtualCoverage(target, coverage);
+		incrementVirtualCoverage(source, -coverage);
+#endif
 	}
 
 	return halfwayPointOffset;
@@ -1994,7 +2006,6 @@ static void concatenateNodesAndVaccinate(Node * nodeA, Node * nodeB,
 	Node *twinA = getTwinNode(nodeA);
 	Node *twinB = getTwinNode(nodeB);
 	Arc *arc;
-	Category cat;
 
 	//velvetLog("Concatenating nodes %ld and %ld\n", getNodeID(nodeA), getNodeID(nodeB));
 	// Arc management:
@@ -2041,16 +2052,19 @@ static void concatenateNodesAndVaccinate(Node * nodeA, Node * nodeB,
 	// Update uniqueness:
 	setUniqueness(nodeA, getUniqueness(nodeA) || getUniqueness(nodeB));
 
-	// Update virtual coverage
-	for (cat = 0; cat < CATEGORIES; cat++)
+#ifdef FULL_COVERAGE_INFO
+	Category cat;
+	for (cat = 0; cat < CATEGORIES; cat++) {
+		// Update virtual coverage
 		incrementVirtualCoverage(nodeA, cat,
 					 getVirtualCoverage(nodeB, cat));
-
-	// Update virtual coverage
-	for (cat = 0; cat < CATEGORIES; cat++)
+		// Update virtual coverage
 		incrementOriginalVirtualCoverage(nodeA, cat,
-						 getOriginalVirtualCoverage
-						 (nodeB, cat));
+						 getOriginalVirtualCoverage(nodeB, cat));
+	}
+#else
+	incrementVirtualCoverage(nodeA, getVirtualCoverage(nodeB));
+#endif
 
 	// Freeing gobbled node
 	destroyNode(nodeB, graph);

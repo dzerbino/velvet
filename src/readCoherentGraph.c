@@ -373,7 +373,6 @@ static Node *bypass()
 	Node *bypass = getNode(path);
 	Node *next = NULL;
 	Arc *arc;
-	Category cat;
 	PassageMarkerI nextMarker;
 
 	// Remove unwanted arcs
@@ -401,19 +400,20 @@ static Node *bypass()
 				       getNextInSequence(path), graph);
 		} else {
 			concatenateReadStarts(bypass, next, graph);
-			// Update virtual coverage
-			for (cat = 0; cat < CATEGORIES; cat++)
-				incrementVirtualCoverage(bypass, cat,
-							 getVirtualCoverage
-							 (next, cat));
 
-			// Update original virtual coverage
-			for (cat = 0; cat < CATEGORIES; cat++)
-				incrementOriginalVirtualCoverage(bypass,
-								 cat,
-								 getOriginalVirtualCoverage
-								 (next,
-								  cat));
+#ifdef FULL_COVERAGE_INFO
+			Category cat;
+			for (cat = 0; cat < CATEGORIES; cat++) {
+				// Update virtual coverage
+				incrementVirtualCoverage(bypass, cat,
+							 getVirtualCoverage(next, cat));
+				// Update original virtual coverage
+				incrementOriginalVirtualCoverage(bypass, cat,
+								 getOriginalVirtualCoverage(next, cat));
+			}
+#else
+			incrementVirtualCoverage(bypass, getVirtualCoverage(next));
+#endif
 			appendDescriptors(bypass, next);
 		}
 

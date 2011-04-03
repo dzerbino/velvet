@@ -89,6 +89,7 @@ void injectShortReads(ShortReadMarker * sourceArray, IDnum sourceLength,
 		      Node * target, Graph * graph);
 void mergeNodeReads(Node * target, Node * source, Graph * graph);
 
+#ifdef FULL_COVERAGE_INFO
 // Virtual coverage
 void setVirtualCoverage(Node * node, Category category,
 			Coordinate coverage);
@@ -103,6 +104,16 @@ void setOriginalVirtualCoverage(Node * node, Category category,
 void incrementOriginalVirtualCoverage(Node * node, Category category,
 				      Coordinate coverage);
 Coordinate getOriginalVirtualCoverage(Node * node, Category category);
+
+#else
+// Virtual coverage
+void setVirtualCoverage(Node * node,
+			Coordinate coverage);
+void incrementVirtualCoverage(Node * node,
+			      Coordinate coverage);
+Coordinate getVirtualCoverage(Node * node);
+Coordinate getTotalCoverage(Node * node);
+#endif
 
 // Status
 void setNodeStatus(Node * node, boolean status);

@@ -83,7 +83,6 @@ void concatenateStringOfNodes(Node * nodeA, Graph * graph)
 	Coordinate totalLength = 0;
 	PassageMarkerI marker, tmpMarker;
 	Arc *arc;
-	Category cat;
 
 	while (simpleArcCount(nodeB) == 1
 	       &&
@@ -134,16 +133,21 @@ void concatenateStringOfNodes(Node * nodeA, Graph * graph)
 		// Update uniqueness:
 		setUniqueness(nodeA, getUniqueness(nodeA) || getUniqueness(currentNode));
 
-		// Update virtual coverage
-		for (cat = 0; cat < CATEGORIES; cat++)
+#ifdef FULL_COVERAGE_INFO
+		Category cat;
+		for (cat = 0; cat < CATEGORIES; cat++) {
+			// Update virtual coverage
 			incrementVirtualCoverage(nodeA, cat,
 						 getVirtualCoverage(currentNode, cat));
-
-		// Update original virtual coverage
-		for (cat = 0; cat < CATEGORIES; cat++)
+			// Update original virtual coverage
 			incrementOriginalVirtualCoverage(nodeA, cat,
-							 getOriginalVirtualCoverage
-							 (currentNode, cat));
+							 getOriginalVirtualCoverage(currentNode, cat));
+		}
+#else
+		// Update virtual coverage
+		incrementVirtualCoverage(nodeA, getVirtualCoverage(currentNode));
+#endif
+
 		// Descriptor management (node)
 		directlyAppendDescriptors(nodeA, currentNode, totalLength);
 	}
