@@ -82,7 +82,6 @@ static Coordinate *slowToFastMapping;
 static Coordinate *fastToSlowMapping;
 
 static RecycleBin *ticketMemory;
-static Ticket *ticketQueue;
 
 static Ticket **todoLists;
 static Ticket **todo;
@@ -131,15 +130,6 @@ static Ticket *newTicket()
 		    newRecycleBin(sizeof(Ticket), TICKET_BLOCK_SIZE);
 
 	return allocatePointer(ticketMemory);
-}
-
-static void newQueueTicket(IDnum id_a, IDnum id_b)
-{
-	Ticket *tkt = newTicket();
-	tkt->id_a = id_a;
-	tkt->id_b = id_b;
-	tkt->next = ticketQueue;
-	ticketQueue = tkt;
 }
 
 static boolean isPreviousToNode(Node * previous, Node * target)
@@ -679,18 +669,6 @@ static void mapSlowOntoFast()
 	    getLength(slowSequence);
 }
 
-static void createAnalogousArcAndVaccinate(Node * nodeA, Node * nodeB,
-					   Arc * arc)
-{
-	boolean aNull = (getNodeLength(nodeA) == 0);
-	boolean bNull = (getNodeLength(nodeB) == 0);
-
-	createAnalogousArc(nodeA, nodeB, arc, graph);
-
-	if (aNull && bNull)
-		newQueueTicket(getNodeID(nodeA), getNodeID(nodeB));
-}
-
 static void remapNodeArcsOntoTarget(Node * source, Node * target)
 {
 	Arc *arc;
@@ -704,8 +682,7 @@ static void remapNodeArcsOntoTarget(Node * source, Node * target)
 
 	arc = getArc(source);
 	while (arc != NULL) {
-		createAnalogousArcAndVaccinate(target, getDestination(arc),
-					       arc);
+		createAnalogousArc(target, getDestination(arc), arc, graph);
 		destroyArc(arc, graph);
 		arc = getArc(source);
 	}
@@ -881,7 +858,7 @@ static void remapBackOfNodeArcsOntoNeighbour(Node * source, Node * target)
 
 	remapNodeArcsOntoTarget(getTwinNode(source), getTwinNode(target));
 	for (arc = getArc(source); arc != NULL; arc = getNextArc(arc))
-		createAnalogousArcAndVaccinate(target, source, arc);
+		createAnalogousArc(target, source, arc, graph);
 
 }
 
@@ -1606,12 +1583,11 @@ static void remapEmptyPathArcsOntoMiddlePathSimple(PassageMarkerI emptyPath,
 	for (pathMarker = targetPath; getNode(pathMarker) != finish;
 	     pathMarker = getNextInSequence(pathMarker)) {
 		currentNode = getNode(pathMarker);
-		createAnalogousArcAndVaccinate(previousNode, currentNode,
-					       originalArc);
+		createAnalogousArc(previousNode, currentNode, originalArc, graph);
 		previousNode = currentNode;
 	}
 
-	createAnalogousArcAndVaccinate(previousNode, finish, originalArc);
+	createAnalogousArc(previousNode, finish, originalArc, graph);
 
 	destroyArc(originalArc, graph);
 }
@@ -1879,17 +1855,12 @@ static void destroyPaths()
 
 	while (slowPath != NULL_IDX) {
 		marker = slowPath;
-		getNodeTime(getNode(marker));
-		getNodeTime(getTwinNode(getNode(marker)));
-
 		slowPath = getNextInSequence(marker);
 		destroyPassageMarker(marker);
 	}
 
 	while (fastPath != NULL_IDX) {
 		marker = fastPath;
-		getNodeTime(getNode(marker));
-		getNodeTime(getTwinNode(getNode(marker)));
 		fastPath = getNextInSequence(marker);
 		destroyPassageMarker(marker);
 	}
@@ -2016,11 +1987,9 @@ static void concatenateNodesAndVaccinate(Node * nodeA, Node * nodeB,
 	// Correct arcs
 	for (arc = getArc(nodeB); arc != NULL; arc = getNextArc(arc)) {
 		if (getDestination(arc) != twinB)
-			createAnalogousArcAndVaccinate(nodeA,
-						       getDestination(arc),
-						       arc);
+			createAnalogousArc(nodeA, getDestination(arc), arc, graph);
 		else
-			createAnalogousArcAndVaccinate(nodeA, twinA, arc);
+			createAnalogousArc(nodeA, twinA, arc, graph);
 	}
 
 	// Passage marker management in node A:
@@ -2549,6 +2518,7 @@ void correctGraph(Graph * argGraph, IDnum * argSequenceLengths, Category * argSe
 {
 	IDnum nodes;
 	IDnum index;
+	double *FmatrixMem;
 
 	//Setting global params
 	graph = argGraph;
@@ -2579,9 +2549,10 @@ void correctGraph(Graph * argGraph, IDnum * argSequenceLengths, Category * argSe
 	slowSequence = newTightString(MAXREADLENGTH);
 	fastToSlowMapping = callocOrExit(MAXREADLENGTH + 1, Coordinate);
 	slowToFastMapping = callocOrExit(MAXREADLENGTH + 1, Coordinate);
-	Fmatrix = callocOrExit(MAXREADLENGTH + 1, double *);
+	Fmatrix = mallocOrExit(MAXREADLENGTH + 1, double *);
+	FmatrixMem = callocOrExit((MAXREADLENGTH + 1) * (MAXREADLENGTH + 1), double *);
 	for (index = 0; index < MAXREADLENGTH + 1; index++)
-		Fmatrix[index] = callocOrExit(MAXREADLENGTH + 1, double);
+		Fmatrix[index] = FmatrixMem + index * (MAXREADLENGTH + 1);
 
 	eligibleStartingPoints = mallocOrExit(2 * nodes + 1, IDnum);
 	progressStatus = callocOrExit(2 * nodes + 1, boolean);
@@ -2614,9 +2585,8 @@ void correctGraph(Graph * argGraph, IDnum * argSequenceLengths, Category * argSe
 	destroyTightString(slowSequence);
 	free(fastToSlowMapping);
 	free(slowToFastMapping);
-	for (index = 0; index < MAXREADLENGTH + 1; index++)
-		free(Fmatrix[index]);
 	free(Fmatrix);
+	free(FmatrixMem);
 
 	free(eligibleStartingPoints);
 	free(progressStatus);
