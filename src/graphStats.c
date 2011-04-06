@@ -465,10 +465,14 @@ void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads)
 
 	velvetFprintf(outfile, "ID\tlgth\tout\tin\tlong_cov");
 
+#ifdef FULL_COVERAGE_INFO
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		velvetFprintf(outfile, "\tshort%i_cov", (int) (cat + 1));
 		velvetFprintf(outfile, "\tshort%i_Ocov", (int) (cat + 1));
 	}
+#else
+	velvetFprintf(outfile, "\tshort_cov");
+#endif
 
 	velvetFprintf(outfile, "\tlong_nb");
 	for (cat = 0; cat < CATEGORIES; cat++) {
