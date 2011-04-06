@@ -1508,6 +1508,17 @@ Coordinate getVirtualCoverage(Node * node, Category category)
 	return node->virtualCoverage[category];
 }
 
+Coordinate getTotalCoverage(Node * node)
+{
+	Category cat;
+	Coordinate coverage = 0;
+
+	for (cat = 0; cat < CATEGORIES; cat++)
+		coverage += node->virtualCoverage[cat];
+
+	return coverage;
+}
+
 void setOriginalVirtualCoverage(Node * node, Category category,
 				Coordinate coverage)
 {

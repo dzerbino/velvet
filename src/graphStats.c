@@ -25,6 +25,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #include "globals.h"
 #include "graph.h"
+#include "graphStats.h"
 #include "readSet.h"
 #include "tightString.h"
 #include "passageMarker.h"
@@ -722,9 +723,7 @@ static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
 	tString = expandNode(node, WORDLENGTH);
 	velvetFprintf(outfile, ">NODE_%ld_length_%lld_cov_%f\n",
 		(long) nodeIndex, (long long) getNodeLength(node),
-		(getVirtualCoverage(node, 0)
-		 + getVirtualCoverage(node, 1)
-		 + readCoverage(node)) /
+		(getTotalCoverage(node) + readCoverage(node)) /
 		(float) getNodeLength(node));
 
 	gap = getGap(node, graph);
@@ -839,17 +838,6 @@ Coordinate n50(Graph * graph)
 
 	destroyHeap(heap);
 	return getNodeLength(node);
-}
-
-static Coordinate getTotalCoverage(Node * node)
-{
-	Category cat;
-	Coordinate coverage = 0;
-
-	for (cat = 0; cat < CATEGORIES; cat++)
-		coverage += getVirtualCoverage(node, cat);
-
-	return coverage;
 }
 
 int compareNodeCovs(const void * A, const void * B) {
