@@ -369,3 +369,6 @@ V 1.1.02
 - Corrected MetaVelvet Makefile
 - Reverted untested code
 - Updated Manual
+
+V 1.1.03
+- Help message displays all compilation settings
