@@ -55,7 +55,6 @@ static TightString *fastSequence;
 static TightString *slowSequence;
 
 static int WORDLENGTH;
-static int SELF_LOOP_CUTOFF;
 static Graph *graph;
 static Node *start;
 
@@ -205,17 +204,12 @@ static void destroyPaths()
 
 	while (slowPath != NULL_IDX) {
 		marker = slowPath;
-		getNodeTime(getNode(marker));
-		getNodeTime(getTwinNode(getNode(marker)));
-
 		slowPath = getNextInSequence(marker);
 		destroyPassageMarker(marker);
 	}
 
 	while (fastPath != NULL_IDX) {
 		marker = fastPath;
-		getNodeTime(getNode(marker));
-		getNodeTime(getTwinNode(getNode(marker)));
 		fastPath = getNextInSequence(marker);
 		destroyPassageMarker(marker);
 	}
@@ -483,7 +477,6 @@ void prepareGraphForLocalCorrections(Graph * argGraph)
 	//Setting global params
 	graph = argGraph;
 	WORDLENGTH = getWordLength(graph);;
-	SELF_LOOP_CUTOFF = WORDLENGTH;
 	// Done with global params
 
 	velvetLog("Preparing to correct graph with cutoff %f\n",
