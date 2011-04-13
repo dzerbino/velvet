@@ -48,7 +48,6 @@ typedef struct tkt_st Ticket;
 struct tkt_st {
 	Ticket *next;
 	IDnum id_a;
-	IDnum id_b;
 } ATTRIBUTE_PACKED;
 
 //Global variables used throughout this procedure(internal use only !)

@@ -760,16 +760,6 @@ static NodeList *pathIsClear(Node * node, Node * oppositeNode,
 			}
 		}
 
-		if (candidate != NULL && repeatEntrance) {
-			for (arc = getArc(node); arc != NULL;
-			     arc = getNextArc(arc)) {
-				dest = getDestination(arc);
-				if (dest != candidate
-				    && getNodeStatus(dest)) {
-					break;
-				}
-			}
-		}
 		// In case of failure   
 		if (candidate == NULL) {
 			for (arc = getArc(current); arc != NULL;
