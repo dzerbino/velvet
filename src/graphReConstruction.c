@@ -994,7 +994,7 @@ static void threadSequenceThroughGraph(TightString * tString,
 							getNodeLength(node)
 							- coord - 1);
 				} else {
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 					incrementVirtualCoverage(node, category / 2, 1);
 					incrementOriginalVirtualCoverage(node, category / 2, 1);
 #else
@@ -1035,7 +1035,7 @@ static void threadSequenceThroughGraph(TightString * tString,
 						}
 					}
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 					incrementVirtualCoverage(node, category / 2, 1);
 					incrementOriginalVirtualCoverage(node, category / 2, 1);
 #else

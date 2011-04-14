@@ -905,7 +905,7 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 				absorbExtensionInScaffold(node, candidate);
 
 				// Read coverage
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 				Category cat;
 				for (cat = 0; cat < CATEGORIES; cat++) {
 					incrementVirtualCoverage(node, cat,
@@ -1000,7 +1000,7 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 		absorbExtensionInScaffold(node, oppositeNode);
 
 		// Read coverage
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 		Category cat;
 		for (cat = 0; cat < CATEGORIES; cat++)
 			incrementVirtualCoverage(node, cat,

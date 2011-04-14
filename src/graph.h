@@ -89,7 +89,7 @@ void injectShortReads(ShortReadMarker * sourceArray, IDnum sourceLength,
 		      Node * target, Graph * graph);
 void mergeNodeReads(Node * target, Node * source, Graph * graph);
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 // Virtual coverage
 void setVirtualCoverage(Node * node, Category category,
 			Coordinate coverage);

@@ -401,7 +401,7 @@ static Node *bypass()
 		} else {
 			concatenateReadStarts(bypass, next, graph);
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 			Category cat;
 			for (cat = 0; cat < CATEGORIES; cat++) {
 				// Update virtual coverage

@@ -50,7 +50,7 @@ struct node_st {
 	Descriptor *descriptor;	// 64
 	PassageMarkerI marker;	// 32
 	IDnum length;	// 32
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 	IDnum virtualCoverage[CATEGORIES];	// 32 * 2
 	IDnum originalVirtualCoverage[CATEGORIES];	// 32 * 2
 #else
@@ -1392,7 +1392,7 @@ Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
 	newnd->marker = NULL_IDX;
 	newnd->status = false;
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 	Category cat;
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		newnd->virtualCoverage[cat] = 0;
@@ -1411,7 +1411,7 @@ Node *newNode(IDnum sequenceID, Coordinate start, Coordinate finish,
 	antiNode->marker = NULL_IDX;
 	antiNode->status = false;
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		antiNode->virtualCoverage[cat] = 0;
 		antiNode->originalVirtualCoverage[cat] = 0;
@@ -1464,7 +1464,7 @@ Node *emptyNode()
 	newnd->length = 0;
 	newnd->uniqueness = false;
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 	Category cat;
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		newnd->virtualCoverage[cat] = 0;
@@ -1482,7 +1482,7 @@ Node *emptyNode()
 	antiNode->length = 0;
 	antiNode->uniqueness = false;
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		antiNode->virtualCoverage[cat] = 0;
 		antiNode->originalVirtualCoverage[cat] = 0;
@@ -1511,7 +1511,7 @@ Node *addEmptyNodeToGraph(Graph * graph, IDnum ID)
 
 }
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 
 void setVirtualCoverage(Node * node, Category category,
 			Coordinate coverage)
@@ -1652,7 +1652,7 @@ static void exportNode(FILE * outfile, Node * node, void *withSequence)
 
 	velvetFprintf(outfile, "NODE\t%ld\t%lld", (long) node->ID, (long long) node->length);
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 	Category cat;
 	for (cat = 0; cat < CATEGORIES; cat++)
 		velvetFprintf(outfile, "\t%lld\t%lld", (long long) node->virtualCoverage[cat],
@@ -2088,7 +2088,7 @@ Graph *importGraph(char *filename)
 		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
 		node->length = (Coordinate) longlong_var;
 
-#ifdef FULL_COVERAGE_INFO
+#ifndef SINGLE_COV_CAT
 		Category cat;
 		Coordinate originalCoverage;
 		for (cat = 0; cat < CATEGORIES; cat++) {

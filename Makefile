@@ -33,8 +33,8 @@ override DEF := $(DEF) -D OPENMP
 endif
 
 # Per library coverage
-ifdef FULL_COVERAGE_INFO
-override DEF := $(DEF) -D FULL_COVERAGE_INFO
+ifdef SINGLE_COV_CAT
+override DEF := $(DEF) -D SINGLE_COV_CAT
 endif
 
 OBJ = obj/tightString.o obj/run.o obj/splay.o obj/splayTable.o obj/graph.o obj/run2.o obj/fibHeap.o obj/fib.o obj/concatenatedGraph.o obj/passageMarker.o obj/graphStats.o obj/correctedGraph.o obj/dfib.o obj/dfibHeap.o obj/recycleBin.o obj/readSet.o obj/shortReadPairs.o obj/locallyCorrectedGraph.o obj/graphReConstruction.o obj/roadMap.o obj/preGraph.o obj/preGraphConstruction.o obj/concatenatedPreGraph.o obj/readCoherentGraph.o obj/utility.o obj/kmer.o obj/scaffold.o obj/kmerOccurenceTable.o obj/allocArray.o
