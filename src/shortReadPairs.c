@@ -588,8 +588,10 @@ static void adjustShortReads(Node * target, Node * source)
 	for (index = 0; index < targetLength; index++) {
 		marker = getShortReadMarkerAtIndex(targetArray, index);
 		position = getShortReadMarkerPosition(marker);
-		position += nodeLength;
-		setShortReadMarkerPosition(marker, position);
+		if (position != -1) {
+			position += nodeLength;
+			setShortReadMarkerPosition(marker, position);
+		}
 	}
 }
 
@@ -695,8 +697,10 @@ static void adjustShortReadsByLength(Node * target, Coordinate nodeLength)
 	for (index = 0; index < targetLength; index++) {
 		marker = getShortReadMarkerAtIndex(targetArray, index);
 		position = getShortReadMarkerPosition(marker);
-		position += nodeLength;
-		setShortReadMarkerPosition(marker, position);
+		if (position != -1) {
+			position += nodeLength;
+			setShortReadMarkerPosition(marker, position);
+		}
 	}
 }
 
