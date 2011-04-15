@@ -30,9 +30,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "utility.h"
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include "../third-party/zlib-1.2.3/Win32/include/zlib.h"
+#include "../../third-party/zlib-1.2.3/Win32/include/zlib.h"
 #else
-#include "../third-party/zlib-1.2.3/zlib.h"
+#include "../../third-party/zlib-1.2.3/zlib.h"
 #endif
 
 #if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)

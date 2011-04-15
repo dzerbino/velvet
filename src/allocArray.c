@@ -37,6 +37,11 @@ Copyright 2009 Sylvain Foret (sylvain.foret@anu.edu.au)
 #define BLOCKS_ALLOC_SIZE 128
 #endif
 
+#ifndef VBIGASSEMBLY
+#define INDEX_LENGTH 32
+#else
+#define INDEX_LENGTH 64
+#endif
 
 struct AllocArrayFreeElement_st
 {
@@ -130,18 +135,22 @@ allocArrayAllocate (AllocArray *array)
 		array->currentElements = 0;
 	}
 	array->currentElements++;
+#ifndef VBIGASSEMBLY
 	if (array->maxElements * (array->currentBlocks - 1) + array->currentElements == UINT32_MAX)
 	{
 #ifdef DEBUG
-		velvetLog (">>> Reached maximum `%s' addressable with 32 bits\n", array->name);
+		velvetLog (">>> Reached maximum `%s' addressable with %i bits\n", array->name, INDEX_LENGTH);
 #else
-		velvetLog (">>> Reached maximum elements addressable with 32 bits\n");
+		velvetLog (">>> Reached maximum elements addressable with %i bits\n", INDEX_LENGTH);
 #endif
 		abort();
 	}
+#endif
+
 #ifdef DEBUG
 	array->elementsAllocated++;
 #endif
+
 	return array->maxElements * (array->currentBlocks - 1) + array->currentElements;
 }
 
@@ -211,7 +220,7 @@ AllocArray *newAllocArrayArray(unsigned int n,
 	int i;
 
 	allocArray = callocOrExit (n + 1, AllocArray);
-	nbBlocks = (1 << (32 - BLOCKS_ALLOC_SHIFT));
+	nbBlocks = (1 << (INDEX_LENGTH - BLOCKS_ALLOC_SHIFT));
 	blocks = callocOrExit(nbBlocks, void*);
 	for (i = 0; i < n; i++)
 		initAllocArrayArray(allocArray + i,
@@ -264,10 +273,10 @@ ArrayIdx allocArrayArrayAllocate(AllocArray *array)
 		if ((array->currentBlocks + array->nbThreads) >= array->maxBlocks)
 		{
 #ifdef DEBUG
-			velvetLog(">>> Reached maximum `%s' addressable with 32 bits\n",
-				  array->name);
+			velvetLog(">>> Reached maximum `%s' addressable with %i bits\n",
+				  array->name, INDEX_LENGTH);
 #else
-			velvetLog(">>> Reached maximum elements addressable with 32 bits\n");
+			velvetLog(">>> Reached maximum elements addressable with %i bits\n", INDEX_LENGTH);
 #endif
 			abort();
 		}

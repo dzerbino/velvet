@@ -94,7 +94,11 @@ typedef double Time;
 typedef uint8_t Quality;
 typedef double Probability;
 typedef int8_t Category;
+#ifndef VBIGASSEMBLY
 typedef uint32_t ArrayIdx;
+#else
+typedef uint64_t ArrayIdx;
+#endif
 
 // Atomic word
 typedef struct kmer_st Kmer;

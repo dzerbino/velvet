@@ -495,7 +495,8 @@ int main(int argc, char **argv)
 		velvetLog("See manual for instructions on how to set the expected coverage parameter\n");
 	}
 
-	free(dubious);
+	if (dubious)
+		free(dubious);
 
 	concatenateGraph(graph);
 

@@ -156,6 +156,11 @@ To turn on multithreading, simply use the OPENMP option at compilation. This sho
 make 'OPENMP=1'
 \end{verbatim}
 
+OpenMP allows a program to make use of multiple CPU cores on the same machine. You might have to set the environment variables OMP\_NUM\_THREADS and OMP\_THREAD\_LIMIT. Velvet will the use up to $OMP\_NUM\_THREADS + 1$ or $OMP\_THREAD\_LIMIT$ threads. More information at \\
+\href{ http://www.ats.ucla.edu/clusters/common/computing/parallel/using_openmp.htm}{http://www.ats.ucla.edu/clusters/common/computing/parallel/using\_openmp.htm}
+
+Only parts of the Velvet algorithm make use of OpenMP, so don't expect a linear increase in run time with respect to CPUs.
+
 \section{Running instructions}
 
 \subsection{Running velveth}

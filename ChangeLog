@@ -372,3 +372,7 @@ V 1.1.02
 
 V 1.1.03
 - Help message displays all compilation settings
+- Updated Manual on OPENMP
+- Crashing bug in run2
+- Makefile error in bundled MetaVelvet
+- Bug in Columbus mappings

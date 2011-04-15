@@ -22,6 +22,11 @@ ifdef BIGASSEMBLY
 override DEF := $(DEF) -D BIGASSEMBLY
 endif 	
 
+ifdef VBIGASSEMBLY
+override DEF := $(DEF) -D BIGASSEMBLY -D VBIGASSEMBLY
+endif 	
+
+
 ifdef LONGSEQUENCES
 override DEF := $(DEF) -D LONGSEQUENCES
 endif 	
