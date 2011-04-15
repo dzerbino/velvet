@@ -465,10 +465,14 @@ void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads)
 
 	velvetFprintf(outfile, "ID\tlgth\tout\tin\tlong_cov");
 
+#ifndef SINGLE_COV_CAT
 	for (cat = 0; cat < CATEGORIES; cat++) {
 		velvetFprintf(outfile, "\tshort%i_cov", (int) (cat + 1));
 		velvetFprintf(outfile, "\tshort%i_Ocov", (int) (cat + 1));
 	}
+#else
+	velvetFprintf(outfile, "\tshort_cov");
+#endif
 
 	velvetFprintf(outfile, "\tlong_nb");
 	for (cat = 0; cat < CATEGORIES; cat++) {
@@ -490,20 +494,28 @@ void displayGeneralStatistics(Graph * graph, char *filename, ReadSet * reads)
 			velvetFprintf(outfile, "\t%f",
 				readCoverage(node) /
 				(double) getNodeLength(node));
+#ifndef SINGLE_COV_CAT
 			for (cat = 0; cat < CATEGORIES; cat++) {
 				velvetFprintf(outfile, "\t%f",
-					getVirtualCoverage(node,
-							   cat) /
+					getVirtualCoverage(node, cat) /
 					(double) getNodeLength(node));
 				velvetFprintf(outfile, "\t%f",
-					getOriginalVirtualCoverage(node,
-								   cat) /
+					getOriginalVirtualCoverage(node, cat) /
 					(double) getNodeLength(node));
 			}
+#else
+			velvetFprintf(outfile, "\t%f",
+					getVirtualCoverage(node) /
+					(double) getNodeLength(node));
+#endif
 		} else {
 			velvetFprintf(outfile, "\tInf");
+#ifndef SINGLE_COV_CAT
 			for (cat = 0; cat < CATEGORIES; cat++)
 				velvetFprintf(outfile, "\tInf\tInf");
+#else
+			velvetFprintf(outfile, "\tInf");
+#endif
 		}
 
 		velvetFprintf(outfile, "\t%li", (long) markerCount(node));

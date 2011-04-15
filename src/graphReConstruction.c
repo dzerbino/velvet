@@ -995,11 +995,12 @@ static void threadSequenceThroughGraph(TightString * tString,
 							getNodeLength(node)
 							- coord - 1);
 				} else {
-					incrementVirtualCoverage(node,
-								 category /
-								 2, 1);
-					incrementOriginalVirtualCoverage
-					    (node, category / 2, 1);
+#ifndef SINGLE_COV_CAT
+					incrementVirtualCoverage(node, category / 2, 1);
+					incrementOriginalVirtualCoverage(node, category / 2, 1);
+#else
+					incrementVirtualCoverage(node, 1);
+#endif
 				}
 #ifdef OPENMP
 				unLockNode(node);
@@ -1035,11 +1036,12 @@ static void threadSequenceThroughGraph(TightString * tString,
 						}
 					}
 
-					incrementVirtualCoverage(node,
-								 category /
-								 2, 1);
-					incrementOriginalVirtualCoverage
-					    (node, category / 2, 1);
+#ifndef SINGLE_COV_CAT
+					incrementVirtualCoverage(node, category / 2, 1);
+					incrementOriginalVirtualCoverage(node, category / 2, 1);
+#else
+					incrementVirtualCoverage(node, 1);
+#endif
 				}
 #ifdef OPENMP
 				lockTwoNodes(node, previousNode);

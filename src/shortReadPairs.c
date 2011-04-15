@@ -588,8 +588,10 @@ static void adjustShortReads(Node * target, Node * source)
 	for (index = 0; index < targetLength; index++) {
 		marker = getShortReadMarkerAtIndex(targetArray, index);
 		position = getShortReadMarkerPosition(marker);
-		position += nodeLength;
-		setShortReadMarkerPosition(marker, position);
+		if (position != -1) {
+			position += nodeLength;
+			setShortReadMarkerPosition(marker, position);
+		}
 	}
 }
 
@@ -695,8 +697,10 @@ static void adjustShortReadsByLength(Node * target, Coordinate nodeLength)
 	for (index = 0; index < targetLength; index++) {
 		marker = getShortReadMarkerAtIndex(targetArray, index);
 		position = getShortReadMarkerPosition(marker);
-		position += nodeLength;
-		setShortReadMarkerPosition(marker, position);
+		if (position != -1) {
+			position += nodeLength;
+			setShortReadMarkerPosition(marker, position);
+		}
 	}
 }
 
@@ -760,16 +764,6 @@ static NodeList *pathIsClear(Node * node, Node * oppositeNode,
 			}
 		}
 
-		if (candidate != NULL && repeatEntrance) {
-			for (arc = getArc(node); arc != NULL;
-			     arc = getNextArc(arc)) {
-				dest = getDestination(arc);
-				if (dest != candidate
-				    && getNodeStatus(dest)) {
-					break;
-				}
-			}
-		}
 		// In case of failure   
 		if (candidate == NULL) {
 			for (arc = getArc(current); arc != NULL;
@@ -884,7 +878,6 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 	Node *candidate;
 	Node *lastCandidate = NULL;
 	Coordinate oldLength = getNodeLength(node);
-	Category cat;
 	MiniConnection *localConnect;
 	NodeList *path, *tmp;
 
@@ -912,16 +905,17 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 				absorbExtensionInScaffold(node, candidate);
 
 				// Read coverage
+#ifndef SINGLE_COV_CAT
+				Category cat;
 				for (cat = 0; cat < CATEGORIES; cat++) {
 					incrementVirtualCoverage(node, cat,
-								 getVirtualCoverage
-								 (candidate,
-								  cat));
-					incrementOriginalVirtualCoverage
-					    (node, cat,
-					     getOriginalVirtualCoverage
-					     (candidate, cat));
+								 getVirtualCoverage(candidate, cat));
+					incrementOriginalVirtualCoverage(node, cat,
+									 getOriginalVirtualCoverage(candidate, cat));
 				}
+#else
+				incrementVirtualCoverage(node, getVirtualCoverage(candidate));
+#endif
 
 				if (getNodeStatus(candidate)) {
 					localConnect =
@@ -1006,10 +1000,14 @@ static boolean pushNeighbours(Node * node, Node * oppositeNode,
 		absorbExtensionInScaffold(node, oppositeNode);
 
 		// Read coverage
+#ifndef SINGLE_COV_CAT
+		Category cat;
 		for (cat = 0; cat < CATEGORIES; cat++)
 			incrementVirtualCoverage(node, cat,
-						 getVirtualCoverage
-						 (oppositeNode, cat));
+						 getVirtualCoverage(oppositeNode, cat));
+#else
+		incrementVirtualCoverage(node, getVirtualCoverage(oppositeNode));
+#endif
 
 		if (getNodeStatus(oppositeNode)) {
 			localConnect =
