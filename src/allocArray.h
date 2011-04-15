@@ -55,7 +55,6 @@ AllocArray* newAllocArray (size_t elementSize, char *name);
 void destroyAllocArray (AllocArray *array);
 ArrayIdx allocArrayAllocate (AllocArray *array);
 void allocArrayFree (AllocArray *array, ArrayIdx idx);
-void* allocArrayGetElement (AllocArray *array, ArrayIdx idx);
 
 #define DECLARE_FAST_ACCESSORS(name, type, array) \
 /* Fast version, without null pointer checks */ \
@@ -80,8 +79,6 @@ AllocArray *newAllocArrayArray(unsigned int n,
 			       size_t elementSize,
 			       char * name);
 void destroyAllocArrayArray(AllocArray * allocArray);
-AllocArray *getAllocArrayInArray(AllocArray *allocArray,
-				 int position);
 ArrayIdx allocArrayArrayAllocate (AllocArray *array);
 void allocArrayArrayFree (AllocArray *array, ArrayIdx idx);
 #endif
