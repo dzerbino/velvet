@@ -7,12 +7,7 @@ MAXKMERLENGTH=31
 CATEGORIES=2
 DEF = -D MAXKMERLENGTH=$(MAXKMERLENGTH) -D CATEGORIES=$(CATEGORIES)
 
-Z_LIB_DIR=third-party/zlib-1.2.3
-Z_LIB_FILES=$(Z_LIB_DIR)/*.o
-
 # Mac OS users: uncomment the following lines
-# Z_LIB_FILES=
-# LDFLAGS = -lm -lz
 # CFLAGS = -Wall -m64
 
 # Sparc/Solaris users: uncomment the following line
@@ -47,17 +42,30 @@ OBJDBG = $(subst obj,obj/dbg,$(OBJ))
 
 default : cleanobj zlib obj velveth velvetg doc
 
-clean :
+clean : clean-zlib
 	-rm obj/*.o obj/dbg/*.o ./velvet* 
-	cd $(Z_LIB_DIR) && make clean
 	-rm -f doc/manual_src/Manual.toc doc/manual_src/Manual.aux doc/manual_src/Manual.out doc/manual_src/Manual.log
 	-rm -f doc/manual_src/Columbus_manual.aux doc/manual_src/Columbus_manual.out doc/manual_src/Columbus_manual.log
 
 cleanobj: 
 	-rm obj/*.o obj/dbg/*.o 
 
+ifdef BUNDLEDZLIB
+Z_LIB_DIR=third-party/zlib-1.2.3
+Z_LIB_FILES=$(Z_LIB_DIR)/*.o
+override DEF := $(DEF) -D BUNDLEDZLIB
+
 zlib : 
 	cd $(Z_LIB_DIR); ./configure; make; rm minigzip.o; rm example.o
+
+clean-zlib :
+	cd $(Z_LIB_DIR) && make clean
+else
+Z_LIB_FILES=-lz
+
+zlib :
+clean-zlib :
+endif
 
 velveth : obj 
 	$(CC) $(CFLAGS) $(OPT) $(LDFLAGS) -o velveth obj/tightString.o obj/run.o obj/recycleBin.o obj/splay.o obj/splayTable.o obj/readSet.o obj/utility.o obj/kmer.o obj/kmerOccurenceTable.o $(Z_LIB_FILES)

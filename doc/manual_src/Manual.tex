@@ -161,6 +161,14 @@ OpenMP allows a program to make use of multiple CPU cores on the same machine. Y
 
 Only parts of the Velvet algorithm make use of OpenMP, so don't expect a linear increase in run time with respect to CPUs.
 
+\subsubsection{BUNDLEDZLIB}
+
+By default, Velvet uses an existing zlib installed on your system. If there isn't one or if it is unsuitable for any reason, zlib source code is also distributed within the Velvet source package and Velvet can be compiled to use this bundled zlib by adding the following option to the make command:
+
+\begin{verbatim}
+make 'BUNDLEDZLIB=1'
+\end{verbatim}
+
 \section{Running instructions}
 
 \subsection{Running velveth}
