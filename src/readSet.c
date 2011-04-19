@@ -1520,7 +1520,7 @@ static void computeSecondInPair(ReadSet * reads)
 
 	if (reads->secondInPair)
 		free (reads->secondInPair);
-	reads->secondInPair = callocOrExit((reads->readCount + 7) / 8, char);
+	reads->secondInPair = callocOrExit((reads->readCount + 7) / 8, unsigned char);
 
 	for (index = 0; index < reads->readCount; index++)
 	{

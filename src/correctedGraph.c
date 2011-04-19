@@ -2549,7 +2549,7 @@ void correctGraph(Graph * argGraph, IDnum * argSequenceLengths, Category * argSe
 	fastToSlowMapping = callocOrExit(MAXREADLENGTH + 1, Coordinate);
 	slowToFastMapping = callocOrExit(MAXREADLENGTH + 1, Coordinate);
 	Fmatrix = mallocOrExit(MAXREADLENGTH + 1, double *);
-	FmatrixMem = callocOrExit((MAXREADLENGTH + 1) * (MAXREADLENGTH + 1), double *);
+	FmatrixMem = callocOrExit((MAXREADLENGTH + 1) * (MAXREADLENGTH + 1), double);
 	for (index = 0; index < MAXREADLENGTH + 1; index++)
 		Fmatrix[index] = FmatrixMem + index * (MAXREADLENGTH + 1);
 

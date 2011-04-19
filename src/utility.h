@@ -33,10 +33,22 @@ Copyright 2009 John Marshall (jm18@sanger.ac.uk)
 // These functions print an error message and exit on failure, rather than
 // requiring the calling function to check for NULL.  The arguments contain
 // the type itself -- mallocOrExit(n, Foo) rather than malloc(n * sizeof Foo)
-// -- mainly so that it can be shown in error messages.
-#define mallocOrExit(count, type)  (mallocOrExit3((count), sizeof(type), #type))
-#define callocOrExit(count, type)  (callocOrExit3((count), sizeof(type), #type))
+// -- to enable type checking and so that it can be shown in error messages.
+#define mallocOrExit(count, type) \
+               ((type *) mallocOrExit3((count), sizeof(type), #type))
+#define callocOrExit(count, type) \
+               ((type *) callocOrExit3((count), sizeof(type), #type))
 #define reallocOrExit(ptr, count, type) \
+               ((type *) reallocOrExit4((ptr), (count), sizeof(type), #type))
+
+// However there are types for which just appending a '*' produces the
+// wrong type or a syntax error, rather than a pointer-to-<type>.  These
+// less type-safe wrappers are provided for use in these unusual cases.
+#define mallocOrExitWithoutCast(count, type) \
+               (mallocOrExit3((count), sizeof(type), #type))
+#define callocOrExitWithoutCast(count, type) \
+               (callocOrExit3((count), sizeof(type), #type))
+#define reallocOrExitWithoutCast(ptr, count, type) \
                (reallocOrExit4((ptr), (count), sizeof(type), #type))
 
 // (Implementation functions -- use the macro wrappers above.)
