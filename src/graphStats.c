@@ -742,15 +742,8 @@ static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
 	for (position = 0; position < WORDLENGTH; position++) {
 		if (position % 60 == 0 && position > 0)
 			velvetFprintf(outfile, "\n"); 
-		if (gap && position >= getGapFinish(gap))
-			gap = getNextGap(gap);
-
-		if (gap == NULL || position < getGapStart(gap)) {
-			nucleotide =
-			    getNucleotideChar(position, tString);
-			velvetFprintf(outfile, "%c", nucleotide);
-		} else
-			velvetFprintf(outfile, "N");
+		nucleotide = getNucleotideChar(position, tString);
+		velvetFprintf(outfile, "%c", nucleotide);
 	}
 
 	gap = getGap(node, graph);

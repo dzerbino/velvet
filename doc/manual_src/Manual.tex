@@ -379,9 +379,11 @@ To activate the use of read pairs, you must specify two parameters: the \emph{ex
 If one of the libraries is a mate-pair library made by circularization, and you have reasons to suspect the presence of read pair contamination, then you can flag that library to velvetg:
 
 \begin{verbatim}
-> ./velvetg output_directory/ -shortMatePair yes 
+> ./velvetg output_directory/ -shortMatePaired yes 
 	          (... other parameters ...)
 \end{verbatim}
+
+Velvet will then use any available (short) paired-end library to filter out paired-end contamination within the mate-pair library.
 
 If you happen to have hashed paired long reads and you ordered them as explained in \ref{sec:pairedformat} you can also tell Velvet to use this information for scaffolding by indicating the corresponding insert length (remember that you still need to indicate the short-read k-mer coverage):
 

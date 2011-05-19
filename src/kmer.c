@@ -30,7 +30,9 @@ static const uint32_t longLeftFilter = (uint32_t) 3 << 30;
 static const uint16_t intLeftFilter = (uint16_t) 3 << 14; 
 static const uint8_t charLeftFilter = (uint8_t) 3 << 6; 
 
+#if KMER_LONGLONGS
 static uint64_t longLongWordFilter = (uint64_t) ((int64_t) -1); 
+#endif
 static uint32_t longWordFilter = (uint32_t) ((int32_t) -1); 
 static uint16_t intWordFilter = (uint16_t) ((int16_t) -1); 
 static uint8_t charWordFilter = (uint8_t) ((int8_t) -1); 
@@ -43,23 +45,27 @@ static uint8_t charWordFilter = (uint8_t) ((int8_t) -1);
 static int kmerFilterIndex = UNDEFINED;
 static int kmerFilterOffset = 0;
 static int kmerFilterLength = 0;
+#if KMER_LONGLONGS
 static int longLongKmerFilterIndex = KMER_LONGLONGS - 1;
 static uint64_t longLongKmerFilter = (uint64_t) ((int64_t) -1); 
+#endif
 
 static uint64_t keyFilter = 0;
 static int keyFilterIndex = UNDEFINED;
 static int keyFilterOffset = 0;
 static int keyFilterLength = 0;
+#if KMER_LONGLONGS
 static int longLongKeyFilterIndex = KMER_LONGLONGS - 1;
+#endif
 
 void resetWordFilter(int wordLength) {
 	int kmer_bit_size = wordLength * 2;
-	int i;
 
 	if (wordLength > MAXKMERLENGTH) 
 		exitErrorf(EXIT_FAILURE, true, "Word length %i greater than max allowed value (%i).\nRecompile Velvet to deal with this word length.", wordLength, MAXKMERLENGTH);
 
 #if KMER_LONGLONGS
+	int i;
 	for (i = 0; i < KMER_LONGLONGS; i++) {
 		if (kmer_bit_size > 64) {
 			kmer_bit_size -= 64;
@@ -242,7 +248,6 @@ void resetKeyFilter(int keyLength) {
 }
 
 static void shiftRight(Kmer * kmer) {
-	int i;
 	uint64_t leftBits = 0;
 	uint64_t rightBits;
 
@@ -291,6 +296,7 @@ static void shiftRight(Kmer * kmer) {
 #endif 
 
 #if KMER_LONGLONGS
+	int i;
 	for (i = KMER_LONGLONGS - 1; i >= 0; i--) {
 		rightBits = kmer->longlongs[i] & 3;
 		leftBits <<= 62;
@@ -302,9 +308,9 @@ static void shiftRight(Kmer * kmer) {
 }
 
 void copyKmers(Kmer* k1, Kmer* k2) {
-	int i;
 
 #if KMER_LONGLONGS
+	int i;
 	for (i = 0; i < KMER_LONGLONGS; i++)
 		k1->longlongs[i] = k2->longlongs[i];
 #endif
@@ -363,9 +369,8 @@ int compareKmers(Kmer* k1, Kmer* k2) {
 }
 
 void clearKmer(Kmer * kmer) {
-	int i;
-
 #if KMER_LONGLONGS
+	int i;
 	for (i = 0; i < KMER_LONGLONGS; i++)
 		kmer->longlongs[i] = 0;
 #endif
@@ -381,7 +386,6 @@ void clearKmer(Kmer * kmer) {
 }
 
 void printKmer(Kmer * kmer) {
-	int i;
 
 #if KMER_CHARS
 	velvetLog("%hx\t", kmer->chars);
@@ -393,6 +397,7 @@ void printKmer(Kmer * kmer) {
 	velvetLog("%x\t", kmer->longs);
 #endif
 #if KMER_LONGLONGS
+	int i;
 	for (i = KMER_LONGLONGS - 1; i >= 0; i--)
 		velvetLog("%llx\t", (long long) kmer->longlongs[i]);
 #endif
@@ -400,7 +405,6 @@ void printKmer(Kmer * kmer) {
 }
 
 void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
-	register int i;
 
 #if KMER_LONGLONGS
 	register uint64_t * ptr;
@@ -414,6 +418,7 @@ void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
 	ptr = kmer->longlongs;
 
 #if KMER_LONGLONGS > 1
+	register int i;
 	for (i = 0; i < longLongKmerFilterIndex; i++) {
 		leftBits = (*ptr & longLongLeftFilter);
 		leftBits >>= 62;

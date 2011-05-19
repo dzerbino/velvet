@@ -228,7 +228,7 @@ static KmerKey hash_kmer(Kmer * kmer)
 
 	return key % HASH_BUCKETS_NB;
 #elif KMER_LONGS
-	KmerKey key = kmer->longs[0];
+	KmerKey key = kmer->longs;
 
 	key += ~(key << 15);
 	key ^= (key >> 10);

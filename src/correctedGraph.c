@@ -2397,7 +2397,7 @@ static void tourBusNode(Node * node)
 
 	dbgCounter++;
 	if (dbgCounter % 10000 == 0) {
-		velvetLog("%li nodes visited\n", (long) dbgCounter);
+		velvetLog("%li / %li nodes visited\n", (long) dbgCounter, (long) nodeCount(graph));
 		fflush(stdout);
 	}
 

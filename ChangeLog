@@ -378,3 +378,11 @@ V 1.1.03
 - Bug in Columbus mappings
 - Merged in Sylvain's changes
 - Improved the allocation of blocks in allocArray
+
+V 1.1.04
+- Compilation problems for k < 32
+- Total node count provided in tour bus
+- Log is not squashed by velveth if pre-existing
+- Manual typo
+- Pairing bug
+- Node sequence export bug

@@ -1540,7 +1540,7 @@ static void computeSecondInPair(ReadSet * reads)
 				}
 			}
 			else
-				phase = 0;
+				phase = 1;
 		}
 		previousCat = currentCat;
 	}

@@ -197,8 +197,6 @@ int main(int argc, char **argv)
 			remove(buf);
 			sprintf(buf, "%s/Graph4", directory);
 			remove(buf);
-			sprintf(buf, "%s/Log", directory);
-			remove(buf);
 		}
 
 		logInstructions(argc, argv, directory);
