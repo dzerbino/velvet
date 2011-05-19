@@ -407,7 +407,8 @@ void printKmer(Kmer * kmer) {
 void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
 
 #if KMER_LONGLONGS
-	register uint64_t * ptr;
+	uint64_t * ptr;
+	int i;
 #endif
 #if KMER_LONGLONGS > 1 | KMER_LONGS | KMER_INTS | KMER_CHARS
 	uint64_t leftBits; 
@@ -418,7 +419,6 @@ void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
 	ptr = kmer->longlongs;
 
 #if KMER_LONGLONGS > 1
-	register int i;
 	for (i = 0; i < longLongKmerFilterIndex; i++) {
 		leftBits = (*ptr & longLongLeftFilter);
 		leftBits >>= 62;
@@ -487,7 +487,7 @@ void pushNucleotide(Kmer * kmer, Nucleotide nucleotide) {
 	if (kmer->longlongs[0] >= nucleotide)
 		return;
 
-	for (i = 1; i < KMER_LONGLONGS; i++) 
+	for (i = 1; i < KMER_LONGLONGS; i++)
 		if (++kmer->longlongs[i])
 			return;
 #if KMER_LONGS
