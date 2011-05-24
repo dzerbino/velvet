@@ -588,6 +588,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 	Nucleotide nucleotide;
 	KmerOccurence * hit;
 	char line[MAXLINE];
+    char* start;
 	char c;
 	
 	Coordinate mapCount = 0;
@@ -614,7 +615,8 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 #endif 
 			exit(1);
 		}
-		sscanf(line, "%*s\t%li\t", &long_var);
+        start = strchr(line, '\t');
+		sscanf(start, "\t%li\t", &long_var);
 		*seqID = (IDnum) long_var;
 		if (*seqID == 0)
 			abort();
