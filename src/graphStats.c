@@ -963,6 +963,65 @@ static boolean hasReferenceMarker(Node * node, ReadSet * reads) {
 	return false;
 }
 
+inline static void
+destroyNodePassageMarkers(Graph *graph,
+			     Node* node)
+{
+	PassageMarkerI marker;
+
+	while ((marker = getMarker(node)) != NULL_IDX) {
+		if (!isInitial(marker) && !isTerminal(marker))
+			disconnectNextPassageMarker(getPreviousInSequence(marker), graph);
+		destroyPassageMarker(marker);
+	}
+}
+
+inline static void
+removeNodeAndDenounceDubiousReads(Graph *graph,
+				  Node  *node,
+				  boolean denounceReads,
+				  boolean *res,
+				  Coordinate minLength,
+				  FILE *outfile)
+{
+	if (denounceReads) {
+		ShortReadMarker *nodeArray;
+		ShortReadMarker *shortMarker;
+		IDnum maxIndex;
+		IDnum index;
+		IDnum readID;
+
+		nodeArray = getNodeReads(node, graph);
+		maxIndex = getNodeReadCount(node, graph);
+		for (index = 0; index < maxIndex; index++) {
+			shortMarker = getShortReadMarkerAtIndex(nodeArray, index);
+			readID = getShortReadMarkerID(shortMarker);
+			if (readID > 0)
+				res[readID - 1] = true;
+			else
+				res[-readID - 1] = true;
+		}
+
+		nodeArray = getNodeReads(getTwinNode(node), graph);
+		maxIndex = getNodeReadCount(getTwinNode(node), graph);
+		for (index = 0; index < maxIndex; index++) {
+			shortMarker = getShortReadMarkerAtIndex(nodeArray, index);
+			readID = getShortReadMarkerID(shortMarker);
+			if (readID > 0)
+				res[readID - 1] = true;
+			else
+				res[-readID - 1] = true;
+		}
+	}
+
+	destroyNodePassageMarkers(graph, node);
+
+	if (outfile != NULL && getNodeLength(node) > minLength)
+		exportLongNodeSequence(outfile, node, graph);
+
+	destroyNode(node, graph);
+}
+
 boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 						       double minCov,
 						       ReadSet * reads,
@@ -974,11 +1033,6 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 	Node *node;
 	boolean denounceReads = readStartsAreActivated(graph);
 	boolean *res = NULL; 
-	ShortReadMarker *nodeArray, *shortMarker;
-	PassageMarkerI marker;
-	IDnum maxIndex;
-	IDnum readID;
-	IDnum index2;
 	FILE * outfile = NULL;
 
 	velvetLog("Removing contigs with coverage < %f...\n", minCov);
@@ -1005,52 +1059,13 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 			continue;
 
 		if (getTotalCoverage(node) / getNodeLength(node) < minCov 
-		    && !hasReferenceMarker(node, reads)) {
-			if (denounceReads) {
-				nodeArray = getNodeReads(node, graph);
-				maxIndex = getNodeReadCount(node, graph);
-				for (index2 = 0; index2 < maxIndex; index2++) {
-					shortMarker =
-					    getShortReadMarkerAtIndex(nodeArray,
-								      index2);
-					readID = getShortReadMarkerID(shortMarker);
-					//velvetLog("Dubious %d\n", readID);
-					if (readID > 0)
-						res[readID - 1] = true;
-					else
-						res[-readID - 1] = true;
-				}
-
-				nodeArray = getNodeReads(getTwinNode(node), graph);
-				maxIndex =
-				    getNodeReadCount(getTwinNode(node), graph);
-				for (index2 = 0; index2 < maxIndex; index2++) {
-					shortMarker =
-					    getShortReadMarkerAtIndex(nodeArray,
-								      index2);
-					readID = getShortReadMarkerID(shortMarker);
-					//velvetLog("Dubious %d\n", readID);
-					if (readID > 0)
-						res[readID - 1] = true;
-					else
-						res[-readID - 1] = true;
-				}
-			}
-
-			while ((marker = getMarker(node))) {
-				if (!isInitial(marker)
-				    && !isTerminal(marker))
-					disconnectNextPassageMarker
-					    (getPreviousInSequence(marker),
-					     graph);
-				destroyPassageMarker(marker);
-			}
-
-			if (export && getNodeLength(node) > minLength) 
-				exportLongNodeSequence(outfile, node, graph);
-
-			destroyNode(node, graph);
-		}
+		    && !hasReferenceMarker(node, reads))
+			removeNodeAndDenounceDubiousReads(graph,
+							  node,
+							  denounceReads,
+							  res,
+							  minLength,
+							  outfile);
 	}
 
 	concatenateGraph(graph);
@@ -1062,52 +1077,13 @@ boolean *removeLowCoverageNodesAndDenounceDubiousReads(Graph * graph,
 			continue;
 
 		if (getTotalCoverage(node) / getNodeLength(node) < minCov 
-		    && !terminalReferenceMarker(node, reads)) {
-			if (denounceReads) {
-				nodeArray = getNodeReads(node, graph);
-				maxIndex = getNodeReadCount(node, graph);
-				for (index2 = 0; index2 < maxIndex; index2++) {
-					shortMarker =
-					    getShortReadMarkerAtIndex(nodeArray,
-								      index2);
-					readID = getShortReadMarkerID(shortMarker);
-					//velvetLog("Dubious %d\n", readID);
-					if (readID > 0)
-						res[readID - 1] = true;
-					else
-						res[-readID - 1] = true;
-				}
-
-				nodeArray = getNodeReads(getTwinNode(node), graph);
-				maxIndex =
-				    getNodeReadCount(getTwinNode(node), graph);
-				for (index2 = 0; index2 < maxIndex; index2++) {
-					shortMarker =
-					    getShortReadMarkerAtIndex(nodeArray,
-								      index2);
-					readID = getShortReadMarkerID(shortMarker);
-					//velvetLog("Dubious %d\n", readID);
-					if (readID > 0)
-						res[readID - 1] = true;
-					else
-						res[-readID - 1] = true;
-				}
-			}
-
-			while ((marker = getMarker(node))) {
-				if (!isInitial(marker)
-				    && !isTerminal(marker))
-					disconnectNextPassageMarker
-					    (getPreviousInSequence(marker),
-					     graph);
-				destroyPassageMarker(marker);
-			}
-
-			if (export && getNodeLength(node) > minLength) 
-				exportLongNodeSequence(outfile, node, graph);
-
-			destroyNode(node, graph);
-		}
+		    && !terminalReferenceMarker(node, reads))
+			removeNodeAndDenounceDubiousReads(graph,
+							  node,
+							  denounceReads,
+							  res,
+							  minLength,
+							  outfile);
 	}
 
 	if (export)
@@ -1131,7 +1107,6 @@ void removeLowCoverageReferenceNodes(Graph * graph, double minCov, double minLon
 {
 	IDnum index;
 	Node *node;
-	PassageMarkerI marker;
 
 	velvetLog("Removing reference contigs with coverage < %f...\n", minCov);
 
@@ -1144,14 +1119,7 @@ void removeLowCoverageReferenceNodes(Graph * graph, double minCov, double minLon
 		if ((getTotalCoverage(node) / getNodeLength(node) < minCov 
 		    || getLongCoverage(node) / getNodeLength(node) < minLongCov)
 		    && hasReferenceMarker(node, reads)) {
-			while ((marker = getMarker(node))) {
-				if (!isInitial(marker)
-				    && !isTerminal(marker))
-					disconnectNextPassageMarker
-					    (getPreviousInSequence(marker),
-					     graph);
-				destroyPassageMarker(marker);
-			}
+			destroyNodePassageMarkers(graph, node);
 
 			destroyNode(node, graph);
 		}
@@ -1163,7 +1131,7 @@ void removeLowCoverageReferenceNodes(Graph * graph, double minCov, double minLon
 void removeLowLongCoverageNodesAndDenounceDubiousReads(Graph * graph,
 						       double minCov,
 						       ReadSet * reads,
-						       boolean * res, 
+						       boolean * res,
 						       boolean export,
 						       Coordinate minLength,
 						       char *filename)
@@ -1171,11 +1139,6 @@ void removeLowLongCoverageNodesAndDenounceDubiousReads(Graph * graph,
 	IDnum index;
 	Node *node;
 	boolean denounceReads = readStartsAreActivated(graph);
-	ShortReadMarker *nodeArray, *shortMarker;
-	PassageMarkerI marker;
-	IDnum maxIndex;
-	IDnum readID;
-	IDnum index2;
 	FILE * outfile = NULL;
 
 	if (minCov < 0)
@@ -1201,52 +1164,13 @@ void removeLowLongCoverageNodesAndDenounceDubiousReads(Graph * graph,
 			continue;
 
 		if (getLongCoverage(node) / getNodeLength(node) < minCov 
-		    && !hasReferenceMarker(node, reads)) {
-			if (denounceReads) {
-				nodeArray = getNodeReads(node, graph);
-				maxIndex = getNodeReadCount(node, graph);
-				for (index2 = 0; index2 < maxIndex; index2++) {
-					shortMarker =
-					    getShortReadMarkerAtIndex(nodeArray,
-								      index2);
-					readID = getShortReadMarkerID(shortMarker);
-					//velvetLog("Dubious %d\n", readID);
-					if (readID > 0)
-						res[readID - 1] = true;
-					else
-						res[-readID - 1] = true;
-				}
-
-				nodeArray = getNodeReads(getTwinNode(node), graph);
-				maxIndex =
-				    getNodeReadCount(getTwinNode(node), graph);
-				for (index2 = 0; index2 < maxIndex; index2++) {
-					shortMarker =
-					    getShortReadMarkerAtIndex(nodeArray,
-								      index2);
-					readID = getShortReadMarkerID(shortMarker);
-					//velvetLog("Dubious %d\n", readID);
-					if (readID > 0)
-						res[readID - 1] = true;
-					else
-						res[-readID - 1] = true;
-				}
-			}
-
-			while ((marker = getMarker(node))) {
-				if (!isInitial(marker)
-				    && !isTerminal(marker))
-					disconnectNextPassageMarker
-					    (getPreviousInSequence(marker),
-					     graph);
-				destroyPassageMarker(marker);
-			}
-
-			if (export && getNodeLength(node) > minLength) 
-				exportLongNodeSequence(outfile, node, graph);
-
-			destroyNode(node, graph);
-		}
+		    && !hasReferenceMarker(node, reads))
+			removeNodeAndDenounceDubiousReads(graph,
+							  node,
+							  denounceReads,
+							  res,
+							  minLength,
+							  outfile);
 	}
 
 	concatenateGraph(graph);
@@ -1258,52 +1182,13 @@ void removeLowLongCoverageNodesAndDenounceDubiousReads(Graph * graph,
 			continue;
 
 		if (getLongCoverage(node) / getNodeLength(node) < minCov 
-		    && !terminalReferenceMarker(node, reads)) {
-			if (denounceReads) {
-				nodeArray = getNodeReads(node, graph);
-				maxIndex = getNodeReadCount(node, graph);
-				for (index2 = 0; index2 < maxIndex; index2++) {
-					shortMarker =
-					    getShortReadMarkerAtIndex(nodeArray,
-								      index2);
-					readID = getShortReadMarkerID(shortMarker);
-					//velvetLog("Dubious %d\n", readID);
-					if (readID > 0)
-						res[readID - 1] = true;
-					else
-						res[-readID - 1] = true;
-				}
-
-				nodeArray = getNodeReads(getTwinNode(node), graph);
-				maxIndex =
-				    getNodeReadCount(getTwinNode(node), graph);
-				for (index2 = 0; index2 < maxIndex; index2++) {
-					shortMarker =
-					    getShortReadMarkerAtIndex(nodeArray,
-								      index2);
-					readID = getShortReadMarkerID(shortMarker);
-					//velvetLog("Dubious %d\n", readID);
-					if (readID > 0)
-						res[readID - 1] = true;
-					else
-						res[-readID - 1] = true;
-				}
-			}
-
-			while ((marker = getMarker(node))) {
-				if (!isInitial(marker)
-				    && !isTerminal(marker))
-					disconnectNextPassageMarker
-					    (getPreviousInSequence(marker),
-					     graph);
-				destroyPassageMarker(marker);
-			}
-
-			if (export && getNodeLength(node) > minLength) 
-				exportLongNodeSequence(outfile, node, graph);
-
-			destroyNode(node, graph);
-		}
+		    && !terminalReferenceMarker(node, reads))
+			removeNodeAndDenounceDubiousReads(graph,
+							  node,
+							  denounceReads,
+							  res,
+							  minLength,
+							  outfile);
 	}
 
 	if (export)
@@ -1316,7 +1201,6 @@ void removeHighCoverageNodes(Graph * graph, double maxCov, boolean export, Coord
 {
 	IDnum index;
 	Node *node;
-	PassageMarkerI marker;
 	FILE * outfile = NULL;
 
 	if (maxCov < 0)
@@ -1339,16 +1223,8 @@ void removeHighCoverageNodes(Graph * graph, double maxCov, boolean export, Coord
 		node = getNodeInGraph(graph, index);
 
 		if (getNodeLength(node) > 0
-		    && getTotalCoverage(node) / getNodeLength(node) >
-		    maxCov) {
-			while ((marker = getMarker(node)) != NULL_IDX) {
-				if (!isInitial(marker)
-				    && !isTerminal(marker))
-					disconnectNextPassageMarker
-					    (getPreviousInSequence(marker),
-					     graph);
-				destroyPassageMarker(marker);
-			}
+		    && getTotalCoverage(node) / getNodeLength(node) > maxCov) {
+			destroyNodePassageMarkers(graph, node);
 
 			if (export && getNodeLength(node) > minLength) 
 				exportLongNodeSequence(outfile, node, graph);
