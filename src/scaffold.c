@@ -303,8 +303,10 @@ void destroyConnection(Connection * connect, IDnum nodeID)
 	deallocateConnection(connect);
 }
 
-static boolean testConnection(IDnum IDA, Connection * connect,
-			      IDnum ** counts)
+static boolean testConnection(IDnum IDA,
+			      Connection *connect,
+			      IDnum **counts,
+			      boolean *shadows)
 {
 	IDnum total = 0;
 	Category cat;
@@ -318,9 +320,9 @@ static boolean testConnection(IDnum IDA, Connection * connect,
 	    UNRELIABLE_CONNECTION_CUTOFF)
 		return false;
 
-	for (cat = 0; cat <= CATEGORIES && cat <= PEBBLE_ROUND_NUM; cat++)
-		total +=
-		    expectedNumberOfConnections(IDA, connect, counts, cat);
+	for (cat = 0; cat <= CATEGORIES; cat++)
+		if (!shadows[cat] || cat <= PEBBLE_ROUND_NUM)
+			total += expectedNumberOfConnections(IDA, connect, counts, cat);
 
 	// Remove inconsistent connections
 	return connect->paired_count >= total * paired_exp_fraction;
@@ -1685,7 +1687,7 @@ static IDnum **countShortReads(Graph * graph, ReadSet * reads)
 	return counts;
 }
 
-static void removeUnreliableConnections(ReadSet * reads)
+static void removeUnreliableConnections(ReadSet * reads, boolean *shadows)
 {
 	IDnum maxNodeIndex = nodeCount(graph) * 2 + 1;
 	IDnum index;
@@ -1698,8 +1700,7 @@ static void removeUnreliableConnections(ReadSet * reads)
 		for (connect = scaffold[index]; connect != NULL;
 		     connect = next) {
 			next = connect->right;
-			if (!testConnection
-			    (index - nodes, connect, counts))
+			if (!testConnection(index - nodes, connect, counts, shadows))
 				destroyConnection(connect, index - nodes);
 		}
 	}
@@ -1736,7 +1737,7 @@ void buildScaffold(Graph * argGraph,
 
 	scaffold = computeNodeToNodeMappings(readNodes, readNodeCounts,
 				      readPairs, cats, dubious, shadows, lengths);
-	removeUnreliableConnections(reads);
+	removeUnreliableConnections(reads, shadows);
 
 	free(readNodesArray);
 	free(readNodes);
