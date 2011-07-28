@@ -140,7 +140,7 @@ void allocateKmerOccurences(IDnum kmerCount, KmerOccurenceTable * table) {
 void recordKmerOccurence(Kmer * kmer, IDnum nodeID, Coordinate position, KmerOccurenceTable * table) {
 	KmerOccurence * kmerOccurence;
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	#pragma omp critical
 #endif 
 	{

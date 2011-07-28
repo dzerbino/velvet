@@ -23,7 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <string.h>
 #include <ctype.h>
 
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -41,7 +41,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define GUANINE 2
 #define THYMINE 3
 
-#ifdef OPENMP
+#ifdef _OPENMP
 
 Coordinate *annotationOffset = NULL;
 
@@ -145,7 +145,7 @@ orderInsertionMarkers(InsertionMarker ** insMarkers,
 	IDnum sequenceCounter = rdmaps->length;
 
 	velvetLog("Ordering insertion markers\n");
-#ifdef OPENMP
+#ifdef _OPENMP
 	#pragma omp parallel for
 #endif
 	for (sequenceIndex = 1; sequenceIndex <= sequenceCounter;
@@ -605,7 +605,7 @@ static void connectPreNodeToTheNext(IDnum * currentPreNodeID,
 	if (nextPreNodeID == 0)
 		return;
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	lockTwoNodes(*currentPreNodeID, nextPreNodeID);
 #endif
 
@@ -616,7 +616,7 @@ static void connectPreNodeToTheNext(IDnum * currentPreNodeID,
 		createPreArc_pg(*currentPreNodeID, nextPreNodeID,
 				preGraph);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	unLockTwoNodes(*currentPreNodeID, nextPreNodeID);
 #endif
 
@@ -670,7 +670,7 @@ static void reConnectAnnotation(IDnum * currentPreNodeID, Annotation * annot,
 {
 	IDnum nextPreNodeID = getStartID(annot);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	lockNode(nextPreNodeID);
 #endif
 	*previous = addPreMarker_pg(preGraph, 
@@ -678,14 +678,14 @@ static void reConnectAnnotation(IDnum * currentPreNodeID, Annotation * annot,
 			sequenceIndex,
 			currentPosition, 
 			*previous);
-#ifdef OPENMP
+#ifdef _OPENMP
 	unLockNode(nextPreNodeID);
 #endif
 
 	while (*currentPreNodeID != getFinishID(annot)) {
 		nextPreNodeID = (*currentPreNodeID) + 1;
 
-#ifdef OPENMP
+#ifdef _OPENMP
 		lockNode(nextPreNodeID);
 #endif
 		*previous = addPreMarker_pg(preGraph, 
@@ -693,7 +693,7 @@ static void reConnectAnnotation(IDnum * currentPreNodeID, Annotation * annot,
 				sequenceIndex,
 				currentPosition,
 				*previous);
-#ifdef OPENMP
+#ifdef _OPENMP
 		unLockNode(nextPreNodeID);
 #endif
 		*currentPreNodeID = nextPreNodeID;
@@ -705,11 +705,11 @@ static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
 {
 	IDnum sequenceIndex;
 	IDnum referenceCount = rdmaps->referenceCount;
-#ifndef OPENMP
+#ifndef _OPENMP
 	Annotation *annot = rdmaps->annotations;
 #endif
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	int threads = omp_get_max_threads();
 	if (threads > 8)
 		threads = 8;
@@ -719,7 +719,7 @@ static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
 	for (sequenceIndex = 1;
 	     sequenceIndex <= referenceCount;
 	     sequenceIndex++) {
-#ifdef OPENMP
+#ifdef _OPENMP
 		Annotation *annot = getAnnotationInArray(rdmaps->annotations, annotationOffset[sequenceIndex - 1]);
 #endif
 		RoadMap *rdmap;
@@ -750,7 +750,7 @@ static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
 			    || (nextInternalPreNodeID != 0
 				&& currentInternalPosition <
 				getPosition(annot))) {
-#ifdef OPENMP
+#ifdef _OPENMP
 				lockNode(nextInternalPreNodeID);
 #endif
 				previous = addPreMarker_pg(preGraph, 
@@ -758,7 +758,7 @@ static void createPreMarkers(RoadMapArray * rdmaps, PreGraph * preGraph,
 						sequenceIndex,
 						&currentPosition,
 						previous);
-#ifdef OPENMP
+#ifdef _OPENMP
 				unLockNode(nextInternalPreNodeID);
 #endif
 				currentPreNodeID = nextInternalPreNodeID;
@@ -789,7 +789,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 {
 	IDnum sequenceIndex;
 	IDnum referenceCount = rdmaps->referenceCount;
-#ifdef OPENMP
+#ifdef _OPENMP
 	annotationOffset = mallocOrExit(rdmaps->length + 1, Coordinate);
 	annotationOffset[0] = 0;
 	for (sequenceIndex = 1; sequenceIndex <= rdmaps->length; sequenceIndex++)
@@ -802,7 +802,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	if (rdmaps->referenceCount > 0) 
 		allocatePreMarkerCountSpace_pg(preGraph);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	int threads = omp_get_max_threads();
 	if (threads > 8)
 		threads = 8;
@@ -812,7 +812,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	for (sequenceIndex = 1;
 	     sequenceIndex <= sequenceCount_pg(preGraph);
 	     sequenceIndex++) {
-#ifdef OPENMP
+#ifdef _OPENMP
 		Annotation *annot = getAnnotationInArray(rdmaps->annotations, annotationOffset[sequenceIndex - 1]);
 #endif
 		RoadMap *rdmap;
@@ -873,7 +873,7 @@ static void connectPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		createPreMarkers(rdmaps, preGraph, chains);	
 	}
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	free(annotationOffset);
 	annotationOffset = NULL;
 #endif
@@ -920,7 +920,7 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 	velvetLog("Adjusting marker info...\n");
 	convertInsertionMarkers(insertionMarkers, veryLastMarker, chains);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	createNodeLocks(preGraph);
 #endif
 	velvetLog("Connecting preNodes\n");
@@ -928,7 +928,7 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 
 	velvetLog("Cleaning up memory\n");
 	cleanUpMemory(preGraph, rdmapArray, chains);
-#ifdef OPENMP
+#ifdef _OPENMP
 	free(nodeLocks);
 	nodeLocks = NULL;
 #endif 

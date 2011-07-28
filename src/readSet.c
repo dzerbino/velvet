@@ -1699,6 +1699,31 @@ void logInstructions(int argc, char **argv, char *directory)
 
 	velvetFprintf(logFile, "\n");
 
+	velvetFprintf(logFile, "Version %i.%i.%2.2i\n", VERSION_NUMBER,
+	       RELEASE_NUMBER, UPDATE_NUMBER);
+	velvetFprintf(logFile, "Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)\n");
+	velvetFprintf(logFile, "This is free software; see the source for copying conditions.  There is NO\n");
+	velvetFprintf(logFile, "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
+	velvetFprintf(logFile, "Compilation settings:\n");
+	velvetFprintf(logFile, "CATEGORIES = %i\n", CATEGORIES);
+	velvetFprintf(logFile, "MAXKMERLENGTH = %i\n", MAXKMERLENGTH);
+#ifdef _OPENMP
+	velvetFprintf(logFile, "OPENMP\n");
+#endif
+#ifdef LONGSEQUENCES
+	velvetFprintf(logFile, "LONGSEQUENCES\n");
+#endif
+#ifdef BIGASSEMBLY
+	velvetFprintf(logFile, "BIGASSEMBLY\n");
+#endif
+#ifdef COLOR
+	velvetFprintf(logFile, "COLOR\n");
+#endif
+#ifdef DEBUG
+	velvetFprintf(logFile, "DEBUG\n");
+#endif
+	velvetFprintf(logFile, "\n");
+
 	fclose(logFile);
 	free(logFilename);
 }

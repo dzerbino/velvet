@@ -46,7 +46,7 @@ void destroyRecycleBin(RecycleBin * recycle_bin);
 void *allocatePointer(RecycleBin * recycle_bin);
 void deallocatePointer(RecycleBin * recycle_bin, void *data);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 // For multithreading: thread-specific recycle bins
 RecycleBin *newRecycleBinArray(unsigned int n,
 			       size_t node_size, int nodes_per_chunk);

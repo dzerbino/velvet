@@ -20,7 +20,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 */
 #include <stdlib.h>
 #include <stdio.h>
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -591,13 +591,13 @@ PassageMarkerI newPassageMarker(IDnum seqID, Coordinate start,
 	PassageMarker *markerVal;
 	PassageMarker *twinMarkerVal;
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	#pragma omp critical
 	{
 #endif
 		marker = allocatePassageMarker();
 		twinMarker = allocatePassageMarker();
-#ifdef OPENMP
+#ifdef _OPENMP
 	}
 #endif
 	markerVal = PM_FI2P (marker);

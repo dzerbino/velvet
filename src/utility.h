@@ -88,4 +88,11 @@ void destroyStringBuffer(StringBuffer *buffer, boolean freeString);
 void appendStringBuffer(StringBuffer *buffer, char *str);
 void resetStringBuffer(StringBuffer *buffer);
 
+// Solaris 10 and earlier versions lack titmersub()
+#if defined (__SVR4) && defined (__sun) && !defined(timersub)
+#define timersub(a, b, res) \
+       *res.tv_sec = *a.tv_sec - *b.tv_sec; \
+       *res.tv_usec = 0;
+#endif
+
 #endif

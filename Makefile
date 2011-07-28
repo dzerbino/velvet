@@ -29,7 +29,6 @@ endif
 # OpenMP 
 ifdef OPENMP
 override CFLAGS := $(CFLAGS) -fopenmp
-override DEF := $(DEF) -D OPENMP
 endif
 
 # Per library coverage
@@ -55,7 +54,7 @@ Z_LIB_DIR=third-party/zlib-1.2.3
 Z_LIB_FILES=$(Z_LIB_DIR)/*.o
 override DEF := $(DEF) -D BUNDLEDZLIB
 
-zlib : 
+zlib: 
 	cd $(Z_LIB_DIR); ./configure; make; rm minigzip.o; rm example.o
 
 clean-zlib :

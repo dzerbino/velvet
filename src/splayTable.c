@@ -24,7 +24,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <time.h>
 #include <sys/time.h>
 
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -40,7 +40,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #define HASH_BUCKETS_NB 16777216
 
-#ifdef OPENMP
+#ifdef _OPENMP
 
 #define NB_PUSH 32
 #define BUFFER_SIZE 4096
@@ -168,7 +168,7 @@ static void appendLine(char *line, int thread)
 
 struct splayTable_st {
 	SplayTree **table;
-#ifdef OPENMP
+#ifdef _OPENMP
 	omp_lock_t *tableLocks;
 #endif
 	KmerOccurenceTable *kmerOccurenceTable;
@@ -183,7 +183,7 @@ SplayTable *newSplayTable(int WORDLENGTH, boolean double_strand)
 	splayTable->table = callocOrExit(HASH_BUCKETS_NB, SplayTree *);
 	splayTable->kmerOccurenceTable = NULL;
 	splayTable->double_strand = double_strand;
-#ifdef OPENMP
+#ifdef _OPENMP
 	splayTable->tableLocks = mallocOrExit(HASH_BUCKETS_NB, omp_lock_t);
 	int i;
 	#pragma omp parallel for
@@ -320,7 +320,7 @@ static inline boolean
 doFindOrInsertOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
 				   Coordinate * position, SplayTable *table)
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 	const KmerKey kmerHash = hash_kmer(kmer);
 	boolean ret;
 
@@ -408,7 +408,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 	clearKmer(&word);
 	clearKmer(&antiWord);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	thread = omp_get_thread_num();
 #endif
 
@@ -417,7 +417,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 
 	// Neglect any string shorter than WORDLENGTH :
 	if (getLength(tString) < table->WORDLENGTH) {
-#ifdef OPENMP
+#ifdef _OPENMP
 		pushBuffer(thread);
 #else
 		velvetFprintf(file, "%s", annotationBuffer->str);
@@ -570,7 +570,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 			(long long) start, (long long) finish);
 		appendLine(lineBuffer, thread);
 	}
-#ifdef OPENMP
+#ifdef _OPENMP
 	pushBuffer(thread);
 #else
 	velvetFprintf(file, "%s", annotationBuffer->str);
@@ -580,7 +580,7 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 	return;
 }
 
-static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second_in_pair, SplayTable * table, IDnum ** sequenceIDs, Coordinate ** coords, IDnum * seqID) {
+static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second_in_pair, SplayTable * table, IDnum ** sequenceIDs, Coordinate ** coords, IDnum seqID) {
 	Coordinate readNucleotideIndex = 0;
 	Kmer word;
 	Kmer antiWord;
@@ -603,7 +603,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 
 	clearKmer(&polyA);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	#pragma omp critical
 	{
 #endif
@@ -616,11 +616,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 			exit(1);
 		}
         start = strchr(line, '\t');
-		sscanf(start, "\t%li\t", &long_var);
-		*seqID = (IDnum) long_var;
-		if (*seqID == 0)
-			abort();
-		tString = getTightStringInArray(array, *seqID - 1);
+		tString = getTightStringInArray(array, seqID - 1);
 		length = getLength(tString);
 		*sequenceIDs = callocOrExit(length, IDnum);
 		*coords = callocOrExit(length, Coordinate);
@@ -644,7 +640,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 				}
 			}
 		}
-#ifdef OPENMP
+#ifdef _OPENMP
 	}
 #endif
 
@@ -761,7 +757,7 @@ void inputSequenceIntoSplayTable(TightString * array,
 
 	// If appropriate, get the HSPs on reference sequences
 	if (table->kmerOccurenceTable) 
-		computeClearHSPs(array, seqFile, second_in_pair, table, &sequenceIDs, &coords, &seqID);
+		computeClearHSPs(array, seqFile, second_in_pair, table, &sequenceIDs, &coords, seqID);
 
 	// Go through read, eventually with annotations
 	printAnnotations(sequenceIDs, coords, array, table, file, second_in_pair, seqID);
@@ -782,7 +778,7 @@ void inputReferenceIntoSplayTable(TightString * tString,
 	Kmer word;
 	Kmer antiWord;
 	Nucleotide nucleotide;
-#ifdef OPENMP
+#ifdef _OPENMP
 	char lineBuffer[MAXLINE];
 #endif
 
@@ -790,7 +786,7 @@ void inputReferenceIntoSplayTable(TightString * tString,
 	clearKmer(&antiWord);
 
 	currentIndex = seqID;
-#ifdef OPENMP
+#ifdef _OPENMP
 	sprintf(lineBuffer, "ROADMAP %li\n", (long)currentIndex);
 	appendLine(lineBuffer, omp_get_thread_num());
 #else
@@ -897,7 +893,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	gettimeofday(&start, NULL);
 	array = reads->tSequences;
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	if (omp_get_max_threads() == 1)
 	{
 		omp_set_num_threads(2);
@@ -933,7 +929,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 			fgets(line, MAXLINE, seqFile);
 		}
 
-#ifdef OPENMP
+#ifdef _OPENMP
 		producing = 1;
 		#pragma omp parallel sections
 		{
@@ -949,7 +945,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 					inputReferenceIntoSplayTable(getTightStringInArray(array, index),
 								     table, outfile, index + 1);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 				for (index = omp_get_max_threads() - 1; index >= 0; index--)
 					pushBufferCommit(index);
 				producing = 0;
@@ -963,7 +959,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 
 	velvetLog("Inputting sequences...\n");
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	producing = 1;
 	#pragma omp parallel sections
 	{
@@ -1003,7 +999,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 							    outfile, seqFile,
 							    second_in_pair, index + 1);
 			}
-#ifdef OPENMP
+#ifdef _OPENMP
 			for (index = omp_get_max_threads() - 1; index >= 0; index--)
 				pushBufferCommit(index);
 			producing = 0;

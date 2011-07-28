@@ -166,7 +166,7 @@ void deallocatePointer(RecycleBin * recycle_bin, void *data)
 	return;
 }
 
-#ifdef OPENMP
+#ifdef _OPENMP
 RecycleBin *newRecycleBinArray(unsigned int n,
 			       size_t node_size, int nodes_per_chunk)
 {

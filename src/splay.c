@@ -21,7 +21,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -46,7 +46,7 @@ typedef struct splayNode_st SplayNode;
 typedef struct splayNode_st SplayTree;
 
 
-#ifdef OPENMP
+#ifdef _OPENMP
 void initSplayTreeMemory(void)
 {
 	int n;
@@ -60,7 +60,7 @@ void initSplayTreeMemory(void)
 
 static SplayNode *allocateSplayNode()
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 #ifdef DEBUG
 	if (treeMemory == NULL)
 	{
@@ -81,7 +81,7 @@ static SplayNode *allocateSplayNode()
 
 void destroyAllSplayTrees()
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 	destroyRecycleBinArray(treeMemory);
 #else
 	destroyRecycleBin(treeMemory);

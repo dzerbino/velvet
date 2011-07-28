@@ -386,3 +386,10 @@ V 1.1.04
 - Manual typo
 - Pairing bug
 - Node sequence export bug
+
+V 1.1.05
+- Log file now contains compilation and version info
+- timersub macro
+- POSIX compliance in Makefile
+- OPENMP compilation tags standardized
+- Offset bug in Columbus

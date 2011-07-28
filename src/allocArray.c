@@ -22,7 +22,7 @@ Copyright 2009 Sylvain Foret (sylvain.foret@anu.edu.au)
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -65,7 +65,7 @@ static void initAllocArray(AllocArray * array, size_t elementSize, char * name)
 	array->elementsAllocated = 0;
 	array->name = name;
 #endif
-#ifdef OPENMP
+#ifdef _OPENMP
 	array->nbThreads = 0;
 #endif
 }
@@ -181,7 +181,7 @@ allocArrayFree (AllocArray *array, ArrayIdx idx)
 	}
 }
 
-#ifdef OPENMP
+#ifdef _OPENMP
 
 #define BLOCKS_ALLOC_SHIFT 16
 

@@ -22,7 +22,7 @@ Copyright 2009 Sylvain Foret (sylvain.foret@anu.edu.au)
 #ifndef _ALLOC_ARRAY_H_
 #define _ALLOC_ARRAY_H_
 
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -46,7 +46,7 @@ struct AllocArray_st
 	size_t elementsRecycled;
 	size_t elementsAllocated;
 #endif
-#ifdef OPENMP
+#ifdef _OPENMP
 	int nbThreads;
 #endif
 };
@@ -73,7 +73,7 @@ static inline type* name##_I2P(ArrayIdx idx) \
 	return NULL; \
 } 
 
-#ifdef OPENMP
+#ifdef _OPENMP
 // For multithreading: thread-specific alloc arrays 
 AllocArray *newAllocArrayArray(unsigned int n,
 			       size_t elementSize,

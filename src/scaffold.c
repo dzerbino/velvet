@@ -24,7 +24,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <math.h>
 #include <sys/time.h>
  
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -73,7 +73,7 @@ static Connection **scaffold = NULL;
 static RecycleBin *connectionMemory = NULL;
 static boolean estimated[CATEGORIES + 1];
 
-#ifdef OPENMP
+#ifdef _OPENMP
 
 #define READS_PER_LOCK 32
 
@@ -161,7 +161,7 @@ static inline void unLockTwoNodes(IDnum nodeID, IDnum node2ID)
 static Connection *allocateConnection()
 {
 	Connection *connect;
-#ifdef OPENMP
+#ifdef _OPENMP
 #pragma omp critical
 	{
 #endif
@@ -170,7 +170,7 @@ static Connection *allocateConnection()
 		    newRecycleBin(sizeof(Connection), BLOCK_SIZE);
 
 	connect = allocatePointer(connectionMemory);
-#ifdef OPENMP
+#ifdef _OPENMP
 	}
 #endif
 	connect->destination = NULL;
@@ -339,7 +339,7 @@ static IDnum *computeReadToNodeCounts(Coordinate *totalCount)
 
 	velvetLog("Computing read to node mapping array sizes\n");
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	#pragma omp parallel for reduction(+:total)
 #endif
 	for (nodeIndex = 0; nodeIndex < maxNodeIndex; nodeIndex++) {
@@ -362,7 +362,7 @@ static IDnum *computeReadToNodeCounts(Coordinate *totalCount)
 			shortMarker = getShortReadMarkerAtIndex(nodeArray,
 								readIndex);
 			readID = getShortReadMarkerID(shortMarker);
-#ifdef OPENMP
+#ifdef _OPENMP
 			#pragma omp atomic
 #endif
 			readNodeCounts[readID]++;
@@ -446,7 +446,7 @@ static void computePartialReadToNodeMappingShort(IDnum nodeID,
 		shortMarker = getShortReadMarkerAtIndex(nodeArray, index);
 		readIndex = getShortReadMarkerID(shortMarker);
 		readArray = readNodes[readIndex];
-#ifdef OPENMP
+#ifdef _OPENMP
 		lockRead(readIndex);
 #endif
 		readOccurence = &readArray[readNodeCounts[readIndex]];
@@ -456,7 +456,7 @@ static void computePartialReadToNodeMappingShort(IDnum nodeID,
 		readOccurence->offset =
 		    getShortReadMarkerOffset(shortMarker);
 		readNodeCounts[readIndex]++;
-#ifdef OPENMP
+#ifdef _OPENMP
 		unLockRead(readIndex);
 #endif
 	}
@@ -523,7 +523,7 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts,
 
 	velvetLog("Computing read to node mappings\n");
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	createReadsLocks();
 	#pragma omp parallel for
 #endif
@@ -532,7 +532,7 @@ static ReadOccurence **computeReadToNodeMappings(IDnum * readNodeCounts,
 			computePartialReadToNodeMappingShort(nodeID, readNodes,
 							     readNodeCounts);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	free(readsLocks);
 	readsLocks = NULL;
 #endif
@@ -1002,7 +1002,7 @@ struct ConnectionStack_st
 	ConnectionStack *next;
 };
 
-#ifdef OPENMP
+#ifdef _OPENMP
 static void initConnectionStackMemory(void)
 {
 	int n = omp_get_max_threads();
@@ -1017,7 +1017,7 @@ static void initConnectionStackMemory(void)
 
 static ConnectionStack *allocateConnectionStack(void)
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 #ifdef DEBUG
 	if (connectionStackMemory == NULL)
 	{
@@ -1039,7 +1039,7 @@ static ConnectionStack *allocateConnectionStack(void)
 
 static void deallocateConnectionStack(ConnectionStack *stack)
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 	deallocatePointer(getRecycleBinInArray(connectionStackMemory,
 					       omp_get_thread_num()),
 			  stack);
@@ -1050,7 +1050,7 @@ static void deallocateConnectionStack(ConnectionStack *stack)
 
 static void destroyConnectionStackMemory(void)
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 	destroyRecycleBinArray(connectionStackMemory);
 #else
 	destroyRecycleBin(connectionStackMemory);
@@ -1118,7 +1118,7 @@ static void setAllConnectionsClean(void)
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	#pragma omp parallel for
 #endif
 	for (nodeID = 2 * nodes; nodeID >= 0; nodeID--)
@@ -1218,7 +1218,7 @@ static void createConnection(IDnum nodeID,
 {
 	Connection *connect;
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	lockTwoNodes(nodeID, node2ID);
 #endif
 	connect = findOrCreateConnection(nodeID, node2ID);
@@ -1244,7 +1244,7 @@ static void createConnection(IDnum nodeID,
 					 distance,
 					 variance);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	unLockTwoNodes(nodeID, node2ID);
 #endif
 }
@@ -1371,11 +1371,11 @@ static void projectFromReadPair(Node * node, ReadOccurence * readOccurence,
 	if (doMatePairs) {
 		Connection *reverseConnect;
 
-#ifdef OPENMP
+#ifdef _OPENMP
 		lockTwoNodes(nodeID, node2ID);
 #endif
 		reverseConnect = findConnection(-nodeID, -node2ID);
-#ifdef OPENMP
+#ifdef _OPENMP
 		unLockTwoNodes(nodeID, node2ID);
 #endif
 
@@ -1580,7 +1580,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 	velvetLog("Computing direct node to node mappings\n");
 
 	gettimeofday(&start, NULL);
-#ifdef OPENMP
+#ifdef _OPENMP
 	createNodeLocks(graph);
 
 	int threads = omp_get_max_threads();
@@ -1598,7 +1598,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 				readPairs, cats, dubious, lengths, shadows, false, 0);
 	}
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	initConnectionStackMemory();
 #endif
 
@@ -1618,7 +1618,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 			if (!shadows[cat])
 				continue;
 			velvetLog("Scaffolding MP library %i\n", cat);
-#ifdef OPENMP
+#ifdef _OPENMP
 			#pragma omp parallel for
 #endif 
 			for (nodeID = -nodes; nodeID <= nodes; nodeID++)
@@ -1627,7 +1627,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 						shadows, true, cat);
 		}
 	}
-#ifdef OPENMP
+#ifdef _OPENMP
 	#pragma omp parallel for
 #endif
 	for (nodeID = 2 * nodes; nodeID >= 0; nodeID--)
@@ -1635,7 +1635,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 
 	destroyConnectionStackMemory();
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	free(nodeLocks);
 	nodeLocks = NULL;
 #endif

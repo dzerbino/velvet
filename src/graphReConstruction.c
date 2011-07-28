@@ -25,7 +25,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <limits.h>
 #include <sys/time.h>
 
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -50,7 +50,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 // Node Locking
 //////////////////////////////////////////////////////////
 
-#ifdef OPENMP
+#ifdef _OPENMP
 
 /* Array of per-node locks */
 
@@ -148,7 +148,7 @@ static RecycleBin *smallNodeListMemory = NULL;
 
 #define BLOCKSIZE 1000
 
-#ifdef OPENMP
+#ifdef _OPENMP
 static void initSmallNodeListMemory(void)
 {
 	int n = omp_get_max_threads();
@@ -163,7 +163,7 @@ static void initSmallNodeListMemory(void)
 
 static SmallNodeList *allocateSmallNodeList()
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 #ifdef DEBUG
 	if (smallNodeListMemory == NULL)
 	{
@@ -184,7 +184,7 @@ static SmallNodeList *allocateSmallNodeList()
 
 static void deallocateSmallNodeList(SmallNodeList * smallNodeList)
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 	deallocatePointer(getRecycleBinInArray(smallNodeListMemory,
 					       omp_get_thread_num()),
 			  smallNodeList);
@@ -197,7 +197,7 @@ static void destroySmallNodeListMemmory(void)
 {
 	if (smallNodeListMemory != NULL)
 	{
-#ifdef OPENMP
+#ifdef _OPENMP
 		destroyRecycleBinArray(smallNodeListMemory);
 #else
 		destroyRecycleBin(smallNodeListMemory);
@@ -212,14 +212,14 @@ static inline void memorizeNode(Node * node, SmallNodeList ** nodePile)
 	list->node = node;
 	list->next = *nodePile;
 	*nodePile = list;
-#ifndef OPENMP
+#ifndef _OPENMP
    	setSingleNodeStatus(node, true);
 #endif
 }
 
 static inline boolean isNodeMemorized(Node * node, SmallNodeList * nodePile)
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 	/* SF TODO There must be a faster way to do this: bit mask, hash table, tree, ... ? */
 	SmallNodeList * list;
 
@@ -240,7 +240,7 @@ static void unMemorizeNodes(SmallNodeList ** nodePile)
 	while (*nodePile) {
 		list = *nodePile;
 		*nodePile = list->next;
-#ifndef OPENMP
+#ifndef _OPENMP
    		setSingleNodeStatus(list->node, false);
 #endif
 		deallocateSmallNodeList(list);
@@ -784,11 +784,11 @@ static void ghostThreadSequenceThroughGraph(TightString * tString,
 		// Fill in graph
 		if (node && !isNodeMemorized(node, nodePile))
 		{
-#ifdef OPENMP
+#ifdef _OPENMP
 			lockNode(node);
 #endif
 			incrementReadStartCount(node, graph);
-#ifdef OPENMP
+#ifdef _OPENMP
 			unLockNode(node);
 #endif
 			memorizeNode(node, &nodePile);
@@ -980,7 +980,7 @@ static void threadSequenceThroughGraph(TightString * tString,
 		// Fill in graph
 		if (node)
 		{
-#ifdef OPENMP
+#ifdef _OPENMP
 			lockNode(node);
 #endif
 			kmerIndex = readNucleotideIndex - wordLength;
@@ -1002,7 +1002,7 @@ static void threadSequenceThroughGraph(TightString * tString,
 					incrementVirtualCoverage(node, 1);
 #endif
 				}
-#ifdef OPENMP
+#ifdef _OPENMP
 				unLockNode(node);
 #endif
 			} else {
@@ -1043,11 +1043,11 @@ static void threadSequenceThroughGraph(TightString * tString,
 					incrementVirtualCoverage(node, 1);
 #endif
 				}
-#ifdef OPENMP
+#ifdef _OPENMP
 				lockTwoNodes(node, previousNode);
 #endif
 				createArc(previousNode, node, graph);
-#ifdef OPENMP
+#ifdef _OPENMP
 				unLockTwoNodes(node, previousNode);
 #endif
 			}
@@ -1092,7 +1092,7 @@ static void fillUpGraph(ReadSet * reads,
 		activateReadStarts(graph);
 
 	gettimeofday(&start, NULL);
-#ifdef OPENMP
+#ifdef _OPENMP
 	initSmallNodeListMemory();
 	createNodeLocks(graph);
 	#pragma omp parallel for
@@ -1132,7 +1132,7 @@ static void fillUpGraph(ReadSet * reads,
 	velvetLog(" === Ghost-Threaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
 
 	gettimeofday(&start, NULL);
-#ifdef OPENMP
+#ifdef _OPENMP
 	int threads = omp_get_max_threads();
 	if (threads > 32)
 		threads = 32;
@@ -1170,7 +1170,7 @@ static void fillUpGraph(ReadSet * reads,
 	timersub(&end, &start, &diff);
 	velvetLog(" === Threaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	free(nodeLocks);
 	nodeLocks = NULL;
 #endif

@@ -35,7 +35,7 @@ boolean findOrInsertOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
 					 Coordinate * position,
 					 SplayTree ** T);
 
-#ifdef OPENMP
+#ifdef _OPENMP
 /* Initialises the per-thread RecycleBin array */
 void initSplayTreeMemory(void);
 #endif

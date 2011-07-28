@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 		puts("Compilation settings:");
 		printf("CATEGORIES = %i\n", CATEGORIES);
 		printf("MAXKMERLENGTH = %i\n", MAXKMERLENGTH);
-#ifdef OPENMP
+#ifdef _OPENMP
 		puts("OPENMP");
 #endif
 #ifdef LONGSEQUENCES

@@ -23,7 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <string.h>
 #include <ctype.h>
 
-#ifdef OPENMP
+#ifdef _OPENMP
 #include <omp.h>
 #endif
 
@@ -85,7 +85,7 @@ DECLARE_FAST_ACCESSORS(PREARC, PreArc, preArcMemory)
 
 PreArcI allocatePreArc_pg()
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 	return allocArrayArrayAllocate (preArcMemory); 
 #else
 	if (preArcMemory == NULL)
@@ -97,7 +97,7 @@ PreArcI allocatePreArc_pg()
 
 void deallocatePreArc_pg(PreArcI preArc)
 {
-#ifdef OPENMP
+#ifdef _OPENMP
 	allocArrayArrayFree (preArcMemory, preArc);
 #else
 	allocArrayFree (preArcMemory, preArc);
@@ -380,7 +380,7 @@ void destroyPreGraph_pg(PreGraph * preGraph)
 	}
 
 	// Arcs
-#ifdef OPENMP
+#ifdef _OPENMP
 	destroyAllocArrayArray(preArcMemory);
 #else
 	destroyAllocArray(preArcMemory);
@@ -993,7 +993,7 @@ PreGraph *emptyPreGraph_pg(IDnum sequenceCount, IDnum referenceCount, int wordLe
 	newPreGraph->nodeReferenceMarkers = NULL;
 	newPreGraph->referenceStarts = NULL;
 
-#ifdef OPENMP
+#ifdef _OPENMP
 	preArcMemory = newAllocArrayArray(omp_get_max_threads(), sizeof(PreArc), "PreArc");
 #endif
 
