@@ -17,7 +17,7 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-#	Version 2.1.2
+#	Version 2.1.4
 #
 #	Changes for 2.0.1
 #	*Bug fix in CalcAssemblyScore.  Now returns 0 if there is no calculable score instead of crashing.
@@ -33,6 +33,9 @@
 #
 #	Changes for 2.1.3
 #	*Now prints the velvet calculated insert sizes and standard deviations in the Assembly summaries (both log files and screen).
+#
+#	Changes for 2.1.4
+#	*Fixed a bug where newer versions of velvet would cause the paired end library stats not to be displayed.
 
 package VelvetOpt::Assembly;
 
@@ -79,7 +82,7 @@ Copyright 2008, 2009 Simon Gladman <simon.gladman@csiro.au>
 A container class to hold the results of a Velvet assembly.  Includes timestamps,
 version information, parameter strings and assembly output metrics.
 
-Version 1.1
+Version 2.1.4
 
 =head2 Uses
 
@@ -260,6 +263,8 @@ my %f_opts;
 	$f_opts{'tbp'}->{'desc'} = "The total number of basepairs in contigs";
 	$f_opts{'Lbp'}->{'intname'} = 'totalbp1k';
 	$f_opts{'Lbp'}->{'desc'} = "The total number of base pairs in large contigs";
+	$f_opts{'LNbp'}->{'intname'} = 'numNs1k';
+	$f_opts{'LNbp'}->{'desc'} = "The total number of Ns in large contigs";
 
 #accessor methods
 sub assmscore{ $_[0]->{assmscore}=$_[1] if defined $_[1]; $_[0]->{assmscore}}
@@ -280,6 +285,7 @@ sub maxlength{ $_[0]->{maxlength}=$_[1] if defined $_[1]; $_[0]->{maxlength}}
 sub nconts1k{ $_[0]->{nconts1k}=$_[1] if defined $_[1]; $_[0]->{nconts1k}}
 sub totalbp{ $_[0]->{totalbp}=$_[1] if defined $_[1]; $_[0]->{totalbp}}
 sub totalbp1k{ $_[0]->{totalbp1k}=$_[1] if defined $_[1]; $_[0]->{totalbp1k}}
+sub numNs1k{ $_[0]->{numNs1k}=$_[1] if defined $_[1]; $_[0]->{numNs1k}}
 sub velvethout{ $_[0]->{velvethout}=$_[1] if defined $_[1]; $_[0]->{velvethout}}
 sub velvetgout{ $_[0]->{velvetgout}=$_[1] if defined $_[1]; $_[0]->{velvetgout}}
 sub sequences{ $_[0]->{sequences}=$_[1] if defined $_[1]; $_[0]->{sequences}}
@@ -371,6 +377,7 @@ sub getAssemblyDetails {
 		$self->{nconts1k} = defined $large->{numSeqs} ? $large->{numSeqs} : 0;
 		$self->{totalbp} = defined $all->{numBases} ? $all->{numBases} : 0;
 		$self->{totalbp1k} = defined $large->{numBases} ? $large->{numBases} : 0;
+		$self->{numNs1k} = defined $large->{numNs} ? $large->{numNs} : 0;
 		
 		if($self->pstringg =~ m/cov_cutoff/){
 			$self->calcAssemblyScore($self->{assmfunc2});
@@ -536,7 +543,8 @@ sub toStringNoV {
 		my @x = split /\n/, $self->velvetgout;
 		foreach(@x){
 			chomp;
-			if(/^Paired-end library \d+ has/){
+			if(/Paired-end library \d+ has/){
+				s/^\[\d+\.\d+\]\s+//;
 				$tmp .= "$_\n";
 			}
 		}

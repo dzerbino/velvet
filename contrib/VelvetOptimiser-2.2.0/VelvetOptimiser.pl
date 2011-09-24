@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 #       VelvetOptimiser.pl
 #
@@ -19,13 +19,13 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-#		Version 2.1.7
+#		Version 2.2.0
 
 #
 #   pragmas
 #
 use strict;
-
+use warnings;
 #
 #   includes
 #
@@ -59,6 +59,7 @@ my $interested = 0;
 my $verbose : shared;
 my $hashs;
 my $hashe;
+my $hashstep;
 my $amos;
 my $vgoptions;
 my $genomesize;
@@ -73,8 +74,9 @@ our $num_threads;
 my $current_threads : shared = 0;
 my $opt_func;
 my $opt_func2;
-my $OptVersion = "2.1.7";
+my $OptVersion = "2.2.0";
 my $threadfailed : shared = 0;
+my $finaldir;
 
 #
 #
@@ -108,6 +110,12 @@ $response =~ /MAXKMERLENGTH = (\d+)/;
 $maxhash = $1;
 unless($maxhash){ $maxhash = 31; }
 
+#check the number of threads that velvet was compiled with (OMP_NUM_THREADS) if it is the OMP version
+#then warn the user that -t will multiply that value and VO will use more CPUs than they think..
+my $thread_per_job = $ENV{OMP_NUM_THREADS} || 1;
+
+print STDERR "Velvet OMP compiler setting: $thread_per_job\n";
+
 #get the options!
 &setOptions();
 
@@ -134,13 +142,14 @@ print STDERR "Velvet details:\n";
 print STDERR "\tVelvet version: $vhversion\n";
 print STDERR "\tCompiled categories: $categories\n" if $categories;
 print STDERR "\tCompiled max kmer length: $maxhash\n" if $maxhash;
-print STDERR "\tMaximum number of threads to run: $num_threads\n";
+print STDERR "\tMaximum number of velvetinstances to run: $num_threads\n";
 
 #let user know about parameters to run with.
 print STDERR "Will run velvet optimiser with the following paramters:\n";
 print STDERR "\tVelveth parameter string:\n\t\t$readfile\n";
 print STDERR "\tVelveth start hash values:\t$hashs\n";
 print STDERR "\tVelveth end hash value:\t\t$hashe\n";
+print STDERR "\tVelveth hash step value:\t$hashstep\n\n";
 if($vgoptions){
 	print $OUT "\tUser specified velvetg options: $vgoptions\n";
 }
@@ -150,9 +159,14 @@ if($amos){
     print STDERR "\tRead tracking for final assembly off.\n";
 }
 
-#build the hashval array
-for(my $i = $hashs; $i <= $hashe; $i += 2){
+#build the hashval array - steps too...
+for(my $i = $hashs; $i <= $hashe; $i += $hashstep){
     push @hashvals, $i;
+}
+#check for $hashe in array..
+my $max = $hashvals[$#hashvals];
+if($max < $hashe){
+	push @hashvals, $hashe;
 }
 
 if($genomesize){
@@ -175,7 +189,8 @@ print $OUT strftime("%b %e %H:%M:%S", localtime), "\n";
 print $OUT "Will run velvet optimiser with the following paramters:\n";
 print $OUT "\tVelveth parameter string:\n\t\t$readfile\n";
 print $OUT "\tVelveth start hash values:\t$hashs\n";
-print $OUT "\tVelveth end hash value:\t\t$hashe\n\n";
+print $OUT "\tVelveth end hash value:\t\t$hashe\n";
+print $OUT "\tVelveth hash step value:\t\t$hashstep\n\n";
 if($vgoptions){
 	print $OUT "\tUser specified velvetg options: $vgoptions\n";
 }
@@ -349,15 +364,25 @@ print STDERR $assembliesObjs{$bestId}->toStringNoV() if !$verbose;
 print $OUT $assembliesObjs{$bestId}->toStringNoV() if !$verbose;
 print STDERR $assembliesObjs{$bestId}->toString() if $verbose;
 print $OUT $assembliesObjs{$bestId}->toString() if $verbose;
-print STDERR "\n\nAssembly output files are in the following directory:\n" . $assembliesObjs{$bestId}->{ass_dir} . "\n\n";
-print $OUT "\n\nAssembly output files are in the following directory:\n" . $assembliesObjs{$bestId}->{ass_dir} . "\n";
+if($finaldir eq "."){
+	print STDERR "\n\nAssembly output files are in the following directory:\n" . $assembliesObjs{$bestId}->{ass_dir} . "\n\n";
+	print $OUT "\n\nAssembly output files are in the following directory:\n" . $assembliesObjs{$bestId}->{ass_dir} . "\n";
+}
+else {
+	print STDERR "\n\nAssembly output files are in the following directory:\n" . $finaldir . "\n\n";
+	print $OUT "\n\nAssembly output files are in the following directory:\n" . $finaldir . "\n";
+}
 
 #delete superfluous directories..
 foreach my $key(keys %assemblies){
 	unless($key == $bestId){ 
 		my $dir = $assembliesObjs{$key}->{ass_dir};
-		`rm -r $dir`;
+		system('rm', '-r', '--preserve-root', $dir);
 	} 
+}
+unless ($finaldir eq "."){
+	rename $assembliesObjs{$bestId}->{ass_dir}, $finaldir;
+	rename $logfile, "$finaldir/$logfile";
 }
 
 #
@@ -371,14 +396,16 @@ foreach my $key(keys %assemblies){
 
 sub setOptions {
 	use Getopt::Long;
+	my $num_cpus = VelvetOpt::Utils::num_cpu;
+	my $thmax = int($num_cpus/$thread_per_job);
 	
-	my $thmax = VelvetOpt::Utils::num_cpu;
 
 	@Options = (
 		{OPT=>"help",    VAR=>\&usage,             DESC=>"This help"},
 		{OPT=>"v|verbose+", VAR=>\$verbose, DEFAULT=>0, DESC=>"Verbose logging, includes all velvet output in the logfile."},
 		{OPT=>"s|hashs=i", VAR=>\$hashs, DEFAULT=>19, DESC=>"The starting (lower) hash value"}, 
-		{OPT=>"e|hashe=i", VAR=>\$hashe, DEFAULT=>31, DESC=>"The end (higher) hash value"},
+		{OPT=>"e|hashe=i", VAR=>\$hashe, DEFAULT=>$maxhash, DESC=>"The end (higher) hash value"},
+		{OPT=>"x|step=i", VAR=>\$hashstep, DEFAULT=>2, DESC=>"The step in hash search..  min 2, no odd numbers"},
 		{OPT=>"f|velvethfiles=s", VAR=>\$readfile, DEFAULT=>0, DESC=>"The file section of the velveth command line."},
 		{OPT=>"a|amosfile!", VAR=>\$amos, DEFAULT=>0, DESC=>"Turn on velvet's read tracking and amos file output."},
 		{OPT=>"o|velvetgoptions=s", VAR=>\$vgoptions, DEFAULT=>'', DESC=>"Extra velvetg options to pass through.  eg. -long_mult_cutoff -max_coverage etc"},
@@ -386,7 +413,8 @@ sub setOptions {
 		{OPT=>"g|genomesize=f", VAR=>\$genomesize, DEFAULT=>0, DESC=>"The approximate size of the genome to be assembled in megabases.\n\t\t\tOnly used in memory use estimation. If not specified, memory use estimation\n\t\t\twill not occur. If memory use is estimated, the results are shown and then program exits."},
 		{OPT=>"k|optFuncKmer=s", VAR=>\$opt_func, DEFAULT=>'n50', DESC=>"The optimisation function used for k-mer choice."},
 		{OPT=>"c|optFuncCov=s", VAR=>\$opt_func2, DEFAULT=>'Lbp', DESC=>"The optimisation function used for cov_cutoff optimisation."},
-		{OPT=>"p|prefix=s", VAR=>\$prefix, DEFAULT=>'auto', DESC=>"The prefix for the output filenames, the default is the date and time in the format DD-MM-YYYY-HH-MM_."}
+		{OPT=>"p|prefix=s", VAR=>\$prefix, DEFAULT=>'auto', DESC=>"The prefix for the output filenames, the default is the date and time in the format DD-MM-YYYY-HH-MM_."},
+		{OPT=>"d|dir_final=s", VAR=>\$finaldir, DEFAULT=>'.', DESC=>"The name of the directory to put the final output into."},
 	);
 
 	(@ARGV < 1) && (usage());
@@ -415,7 +443,21 @@ sub setOptions {
         $hashs = $hashs - 1;
         print STDERR "\tStart hash value not odd.  Subtracting one. New start hash value = $hashs\n";
     }
-	
+    
+    if(&isOdd($hashstep)){
+		print STDERR "\tOld hash step value $hashstep\n";
+		$hashstep --;
+		print STDERR "\tHash search step value was odd, substracting one.  New hash step value = $hashstep\n";
+	}
+	if($hashstep < 2){
+		$hashstep = 2;
+		print STDERR "\tHash step set below minimum of 2.  New hash step value = 2\n";
+	}
+	if($hashstep > ($hashe - $hashs)){
+		$hashstep = $hashe - $hashs;
+		print STDERR "\tHash search step value was higher than start to end range.  Setting hash step to range. New hash step value = $hashstep\n";
+	}
+		
 	if($hashe > $maxhash || $hashe < 1){
         print STDERR "\tEnd hash value not in workable range.  New end hash value is $maxhash.\n";
         $hashe = $maxhash;
@@ -428,6 +470,11 @@ sub setOptions {
         $hashe = $hashe - 1;
         print STDERR "\tEnd hash value not odd.  Subtracting one. New end hash value = $hashe\n";
     }
+    
+    if($num_threads > $thmax){
+		print STDERR "\tWARNING: You have set the number of threads to use to a value greater than the number of available CPUs.\n";
+		print STDERR "\tWARNING: This may be because of the velvet compile option for OMP.\n";
+	}
 	
 	#check the velveth parameter string..
 	my $vh_ok = VelvetOpt::hwrap::_checkVHString("check 21 $readfile", $categories);
@@ -435,6 +482,11 @@ sub setOptions {
 	unless($vh_ok){ die "Please re-start with a corrected velveth parameter string." }
 	
 	print STDERR "\tVelveth parameter string OK.\n";
+	
+	#test if outdir exists...
+	if(-d $finaldir && $finaldir ne "."){
+		die "Output directory $finaldir already exists, please choose a different name and restart.\n";
+	}
 
 	print STDERR strftime("%b %e %H:%M:%S", localtime), " Finished checking input parameters.\n";
 	
@@ -540,6 +592,7 @@ sub runVelvetg{
     my $vgline = $prefix . "_data_" . $assembly->{hashval};
 	
 	$vgline .= " $vgoptions";
+	$vgline .= " -clean yes";
 
     #save the velvetg commandline in the assembly.
     $assembly->{pstringg} = $vgline;

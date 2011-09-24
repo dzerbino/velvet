@@ -6,7 +6,7 @@ VelvetOptimiser
 VERSION
 =======
 
-Version 2.1.7
+Version 2.1.9
 
 LICENCE
 =======
@@ -67,6 +67,7 @@ COMMAND LINE
   --v|verbose+    	Verbose logging, includes all velvet output in the logfile. (default '0').
   --s|hashs=i     	The starting (lower) hash value (default '19').
   --e|hashe=i     	The end (higher) hash value (default '31').
+  --x|step=i      	The step in hash search..  min 2, no odd numbers (default '2').
   --f|velvethfiles=s The file section of the velveth command line. (default '0').
   --a|amosfile!   	Turn on velvet's read tracking and amos file output. (default '0').
   --o|velvetgoptions=s Extra velvetg options to pass through.  eg. -long_mult_cutoff -max_coverage etc (default '').
@@ -77,10 +78,13 @@ COMMAND LINE
   --k|optFuncKmer=s The optimisation function used for k-mer choice. (default 'n50').
   --c|optFuncCov=s 	The optimisation function used for cov_cutoff optimisation. (default 'Lbp').
   --p|prefix=s    	The prefix for the output filenames, the default is the date and time in the format DD-MM-YYYY-HH-MM_. (default 'auto').
+  --d|dir_final=s The name of the directory to put the final output into. (default '.')
+  
 
 Advanced!: Changing the optimisation function(s)
 
 Velvet optimiser assembly optimisation function can be built from the following variables.
+	LNbp = The total number of Ns in large contigs
 	Lbp = The total number of base pairs in large contigs
 	Lcon = The number of large contigs
 	max = The length of the longest contig
@@ -106,7 +110,7 @@ Find the best assembly for a lane of Illumina single-end reads, trying k-values 
 Print an estimate of how much RAM is needed by the above command, if we use eight threads at once,
 and we estimate our assembled genome to be 4.5 megabases long:
 
-% VelvetOptimiser.pl -s 27 -e 31 -f '-short -fastq s_1_sequence.txt' -g 4.5
+% VelvetOptimiser.pl -s 27 -e 31 -f '-short -fastq s_1_sequence.txt' -g 4.5 -t 8
 
 Find the best assembly for Illumina paired end reads just for k=31, using four threads (eg. quad core CPU), 
 but optimizing for N50 for k-mer length rather than sum of large contig sizes:
@@ -145,6 +149,16 @@ DETAILED OPTIONS
 	If the supplied value is higher than MAXKMERLENGTH, it will be dropped to MAXKMERLENGTH.
 	If the supplied value is lower than 'hashs' then it will be set to equal 'hashs'.
 	
+-x or --step
+
+	Parameter type required: even integer < difference between 'hashs' and 'hashe'.
+	Default: 2
+	
+	This parameter details the number of hash values to skip each increment from 'hashs' to 'hashe' when searching for the optimum. 
+	If the supplied value is odd, it will be lowered by 1.
+	If the supplied value is less than 2, it will be set to 2.
+	If the supplied value is greater than the 'hashs' to 'hashe' range, it will be set to the range.
+	
 -f or --velvethfiles
 
 	Parameter type required: string with '' or ""
@@ -176,8 +190,6 @@ DETAILED OPTIONS
 		-long
 		-longPaired
 
-	At this stage the optimiser does not support more than the 2 standard CATEGORIES but this will be added in the near future.
-	
 	Examples:
 	
 	-f 'reads.fna'
@@ -233,6 +245,7 @@ DETAILED OPTIONS
 		
 	Velvet optimiser assembly optimisation functions can be built from the following variables:
 		
+		LNbp = The total number of Ns in large contigs
 		Lbp = The total number of base pairs in large contigs
 		Lcon = The number of large contigs
 		max = The length of the longest contig
@@ -256,7 +269,13 @@ DETAILED OPTIONS
 	Default: The current date and time in the format "DD-MM-YYYY-HH-MM-SS_"
 	
 	Names the logfile and the output directory with whatever prefix is supplied followed by "_logfile.txt" for the logfile and "_data_k" where k is the optimum hash value for the ouput data directory.
+	
+-d or --dir_final
 
+	Parameter type required: string
+	Default: . (the current directory)
+	
+	At the completion of the optimiser, any non default string will cause the final velvet output and the Velvet Optimiser logfile to be moved to the directory specified.  If the directory already exists, an error is generated and the optimiser stops.
 
 BUGS
 ====
@@ -309,10 +328,24 @@ Changes since Version 2.0:
 
 *	Takes new velveth help format into account.  Thanks to Alexie Papanicolaou - CSIRO for the patch.
 
+2.1.8
+
+*	Fixed a bug in the Assembly.pm file so it displays the paired end statistics for newer versions of velvet.
+
+2.1.9
+
+*	Added a hash value search step option.
+*	Calculates the maximum number of velvet instances to run allowing for the velvet OMP compile num threads.
+*	Warns if compiled with velvet is OMP and optimiser threads set to more than number of cpus times OMP threads.
+
+2.2.0
+
+*	You can choose an output folder to put final optimal results into with the -d option.
+*	Fixed a potential bug when running as root.
+*	Set default 'hashe' parameter to MAXKMERLENGTH that velvet was compiled with.
+
 TO DO
-=====
-	
-	* Add the number of N's in the assembly output to the list of variables available to the optimisation function.  
+=====  
 
 
 CONTACT
