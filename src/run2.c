@@ -54,6 +54,7 @@ static void printUsage()
 	puts("\t-max_gap_count <integer>\t: maximum number of gaps allowed in the alignment of the two branches of a bubble (default: 3)");
 	puts("\t-min_pair_count <integer>\t: minimum number of paired end connections to justify the scaffolding of two long contigs (default: 5)");
 	puts("\t-max_coverage <floating point>\t: removal of high coverage nodes AFTER tour bus (default: no removal)");
+	puts("\t-coverage_mask <int>\t: minimum coverage required for confident regions of contigs (default: 1)");
 	puts("\t-long_mult_cutoff <int>\t\t: minimum number of long reads required to merge contigs (default: 2)");
 	puts("\t-unused_reads <yes|no>\t\t: export unused reads in UnusedReads.fa file (default: no)");
 	puts("\t-alignments <yes|no>\t\t: export a summary of contig alignment to the reference sequences (default: no)");
@@ -100,7 +101,7 @@ int main(int argc, char **argv)
 	int arg_index, arg_int;
 	double arg_double;
 	char *arg;
-	IDnum *sequenceLengths = NULL;
+	ShortLength *sequenceLengths = NULL;
 	Category cat;
 	boolean scaffolding = true;
 	int pebbleRounds = 1;
@@ -109,6 +110,7 @@ int main(int argc, char **argv)
 	boolean exportFilteredNodes = false;
 	int clean = 0;
 	boolean shadows[CATEGORIES];
+	int coverageMask = 1;
 
 	setProgramName("velvetg");
 
@@ -279,6 +281,9 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-min_contig_lgth") == 0) {
 			sscanf(argv[arg_index], "%lli", &longlong_var);
 			minContigLength = (Coordinate) longlong_var;
+		} else if (strcmp(arg, "-coverage_mask") == 0) {
+			sscanf(argv[arg_index], "%lli", &longlong_var);
+			coverageMask = (IDnum) longlong_var;
 		} else if (strcmp(arg, "-accel_bits") == 0) {
 			sscanf(argv[arg_index], "%hi", &accelerationBits);
 			if (accelerationBits < 0) {
@@ -476,6 +481,9 @@ int main(int argc, char **argv)
 	removeHighCoverageNodes(graph, maxCoverageCutoff, exportFilteredNodes, minContigKmerLength, highCovContigsFilename);
 	clipTipsHard(graph);
 
+	if (sequences->readCount > 0 && sequences->categories[0] == REFERENCE)
+		removeLowArcs(graph, coverageCutoff);
+
 	if (expectedCoverage > 0) {
 
 		// Mixed length sequencing
@@ -504,7 +512,8 @@ int main(int argc, char **argv)
 
 	strcpy(graphFilename, directory);
 	strcat(graphFilename, "/contigs.fa");
-	exportLongNodeSequences(graphFilename, graph, minContigKmerLength); 
+	sequenceLengths = getSequenceLengths(sequences, getWordLength(graph));
+	exportLongNodeSequences(graphFilename, graph, minContigKmerLength, sequences, sequenceLengths, coverageMask); 
 
 	if (exportAlignments) {
 		strcpy(graphFilename, directory);
@@ -563,6 +572,7 @@ int main(int argc, char **argv)
 		remove(graphFilename);	
 	}
 
+	free(sequenceLengths);
 	destroyGraph(graph);
 	free(graphFilename);
 	free(preGraphFilename);

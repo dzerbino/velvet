@@ -87,7 +87,7 @@ static Ticket **todo;
 static Ticket *done;
 static boolean *progressStatus;
 
-static IDnum *sequenceLengths;
+static ShortLength *sequenceLengths;
 static Category *sequenceCategories;
 
 //End of global variables;
@@ -2188,8 +2188,8 @@ static boolean pathContainsReference(PassageMarkerI path) {
 
 	for (marker = getNextInSequence(path); !isTerminal(marker);
 	     marker = getNextInSequence(marker))
-		for (marker2 = getMarker(getNode(marker)); marker2; marker2 = getNextInNode(marker2))
-			if (marker2 != marker && sequenceCategories[getAbsolutePassMarkerSeqID(marker)] == REFERENCE)
+		for (marker2 = getMarker(getNode(marker)); marker2 != NULL_IDX; marker2 = getNextInNode(marker2))
+			if (marker2 != marker && sequenceCategories[getAbsolutePassMarkerSeqID(marker2) - 1] == REFERENCE)
 				return true;
 
 	return false;
@@ -2467,7 +2467,7 @@ void clipTipsHard(Graph * graph)
 				while ((marker = getMarker(current))) {
 					if (!isInitial(marker)
 					    && !isTerminal(marker))
-						disconnectNextPassageMarker
+						deleteNextPassageMarker
 						    (getPreviousInSequence
 						     (marker), graph);
 					destroyPassageMarker(marker);
@@ -2480,7 +2480,7 @@ void clipTipsHard(Graph * graph)
 				while ((marker = getMarker(current))) {
 					if (!isInitial(marker)
 					    && !isTerminal(marker))
-						disconnectNextPassageMarker
+						deleteNextPassageMarker
 						    (getPreviousInSequence
 						     (marker), graph);
 					destroyPassageMarker(marker);
@@ -2513,7 +2513,7 @@ static void tourBus(Node * startingPoint)
 	}
 }
 
-void correctGraph(Graph * argGraph, IDnum * argSequenceLengths, Category * argSequenceCategories)
+void correctGraph(Graph * argGraph, ShortLength * argSequenceLengths, Category * argSequenceCategories)
 {
 	IDnum nodes;
 	IDnum index;

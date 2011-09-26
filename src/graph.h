@@ -74,12 +74,12 @@ ShortReadMarker *commonNodeReads(Node * nodeA, Node * nodeB, Graph * graph,
 ShortReadMarker *extractBackOfNodeReads(Node * node, Coordinate breakpoint,
 					Graph * graph, IDnum * length,
 					PassageMarkerI sourceMarker,
-					IDnum * sequenceLengths);
+					ShortLength * sequenceLengths);
 ShortReadMarker *extractFrontOfNodeReads(Node * node,
 					 Coordinate breakpoint,
 					 Graph * graph, IDnum * length,
 					 PassageMarkerI sourceMarker,
-					 IDnum * sequenceLengths);
+					 ShortLength * sequenceLengths);
 
 // Short read marker moving around
 void foldSymmetricalNodeReads(Node * node, Graph * graph);

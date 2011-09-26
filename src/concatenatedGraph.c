@@ -26,6 +26,13 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "passageMarker.h"
 #include "utility.h"
 
+// DEBUG
+static boolean isLocallyInitial(PassageMarkerI marker) {
+	PassageMarkerI previous = getPreviousInSequence(marker);
+	return (previous == NULL_IDX
+	    || getPassageMarkerFinish(previous) != getPassageMarkerStart(marker));
+}
+
 void concatenateReadStarts(Node * target, Node * source, Graph * graph)
 {
 	IDnum sourceLength, targetLength;
@@ -104,21 +111,28 @@ void concatenateStringOfNodes(Node * nodeA, Graph * graph)
 
 		// Passage marker management in node A:
 		for (marker = getMarker(nodeA); marker != NULL_IDX;
-		     marker = getNextInNode(marker))
-			if (getNode(getNextInSequence(marker)) != currentNode)
+		     marker = getNextInNode(marker)) {
+ 			if (getNode(getNextInSequence(marker)) != currentNode 
+ 			    || getFinishOffset(marker) != 0
+ 			    || getStartOffset(getNextInSequence(marker)) != 0
+ 			    || getPassageMarkerFinish(marker) != getPassageMarkerStart(getNextInSequence(marker)))
 				incrementFinishOffset(marker,
 						      getNodeLength(currentNode));
+		}
 
 		// Swapping new born passageMarkers from B to A
 		for (marker = getMarker(currentNode); marker != NULL_IDX; marker = tmpMarker) {
 			tmpMarker = getNextInNode(marker);
 
-			if (isInitial(marker)
-			    || getNode(getPreviousInSequence(marker)) != nodeA) {
+ 			if (isLocallyInitial(marker)
+ 			    || getNode(getPreviousInSequence(marker)) != nodeA
+ 			    || getStartOffset(marker) != 0
+ 			    || getFinishOffset(getPreviousInSequence(marker)) != 0
+ 			    || getPassageMarkerStart(marker) != getPassageMarkerFinish(getPreviousInSequence(marker))) {
 				extractPassageMarker(marker);
-				transposePassageMarker(marker, nodeA);
 				incrementFinishOffset(getTwinMarker(marker),
 						      getNodeLength(nodeA));
+				transposePassageMarker(marker, nodeA);
 			} else
 				disconnectNextPassageMarker(getPreviousInSequence
 							    (marker), graph);

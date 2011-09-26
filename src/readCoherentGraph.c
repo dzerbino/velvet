@@ -279,13 +279,15 @@ static boolean goesToNode(PassageMarkerI marker, Node * node)
 	Node * twinStart = getTwinNode(start);
 	Node * currentNode;
 
-	for (current = marker; current != NULL_IDX;
+	for (current = getNextInSequence(marker); current != NULL_IDX;
 	     current = getNextInSequence(current)) {
 		currentNode = getNode(current);
 		if (currentNode == start || currentNode == twinStart)
 			return false;
-		else if (getNode(current) == node)
+		else if (currentNode == node)
 			return true;
+		else if (getUniqueness(currentNode))
+			return false;
 	}
 
 	return false;
@@ -532,6 +534,7 @@ void readCoherentGraph(Graph * inGraph, boolean(*isUnique) (Node * node),
 	}
 
 	destroyRecycleBin(listMemory);
+	destroyRecycleBin(nodeListMemory);
 
 	velvetLog("Confronted to %li multiple hits and %li null over %li\n",
 	       (long) multCounter, (long) nullCounter, (long) dbgCounter);

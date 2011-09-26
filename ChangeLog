@@ -393,3 +393,12 @@ V 1.1.05
 - POSIX compliance in Makefile
 - OPENMP compilation tags standardized
 - Offset bug in Columbus
+
+V 1.1.06
+- Corrected manual regarding multiple k-mer use
+- Corrected bugs in multiple k-mer user
+- Corrected bugs in Columbus (off-by-1, long read tracking)
+- Added coverage masks
+- Added gap mask in Columbus
+- Offsets used in kmerOccurenceTable to accelerate searches
+- Some memory leaks

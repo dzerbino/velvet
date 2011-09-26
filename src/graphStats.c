@@ -22,6 +22,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "globals.h"
 #include "graph.h"
@@ -33,6 +34,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "readCoherentGraph.h"
 #include "fibHeap.h"
 #include "utility.h"
+#include "recycleBin.h"
+#include "passageMarker.h"
 
 
 static PassageMarkerList *copyMarkers(Node * node)
@@ -724,13 +727,195 @@ void projectGraphToFile(Graph * graph, char *filename, int WORDLENGTH,
 	fclose(outfile);
 }
 
-static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
+typedef struct mask_st Mask;
+
+struct mask_st {
+	Coordinate start;
+	Coordinate finish;
+	Mask* next;
+}; 
+
+static RecycleBin * maskMemory = NULL;
+
+static Mask *allocateMask()
+{
+	if (maskMemory == NULL)
+		maskMemory = newRecycleBin(sizeof(Mask), 10000);
+
+	return (Mask *) allocatePointer(maskMemory);
+}
+
+static void deallocateMask(Mask * mask)
+{
+	deallocatePointer(maskMemory, mask);
+}
+
+
+static Mask * newMask(Coordinate position)
+{
+	Mask * mask = allocateMask();
+	mask->start = position;
+	mask->finish = position;
+	mask->next = NULL;
+	return mask;
+}
+
+static Mask * lowCoverageRegions(Coordinate * starts, Coordinate * stops, size_t length, IDnum cutoff, Coordinate nodeLength) {
+	size_t indexStart = 0;
+	size_t indexStop = 0;
+	int currentValue = 0;
+	Mask * regions = NULL;
+	Mask * lastRegion = NULL;
+	boolean openMask = false;
+
+	while (indexStart < length && indexStop < length) {
+		if (starts[indexStart] == stops[indexStop]) {
+			indexStart++;
+			indexStop++;
+		} else if (starts[indexStart] < stops[indexStop]) {
+			if (currentValue == cutoff - 1 && lastRegion) {
+				lastRegion->finish = starts[indexStart] - 1;
+				openMask = false;
+			}
+			currentValue++;
+			indexStart++;
+		} else {
+			if (currentValue == cutoff && stops[indexStop] != nodeLength) {
+				if (regions) {
+					lastRegion->next = newMask(stops[indexStop]);
+					lastRegion = lastRegion->next;
+				} else { 
+					regions = newMask(stops[indexStop]);
+					lastRegion = regions;
+				}
+				openMask = true;
+			}
+			currentValue--;
+			indexStop++;
+		}
+	}
+
+	while (indexStart < length) {
+		if (currentValue == cutoff - 1 && lastRegion) {
+			lastRegion->finish = starts[indexStart] - 1;
+			openMask = false;
+		} else if (currentValue >= cutoff) {
+			break;
+		}
+		currentValue++;
+		indexStart++;
+	}
+
+	while (indexStop < length) {
+		if (currentValue == cutoff + 1) {
+			if (regions) {
+				lastRegion->next = newMask(stops[indexStop]);
+				lastRegion = lastRegion->next;
+			} else { 
+				regions = newMask(stops[indexStop]);
+				lastRegion = regions;
+			}
+			openMask = true;
+		} else if (currentValue < cutoff)
+			break;
+		currentValue--;
+		indexStop++;
+	}
+
+	if (openMask)
+		lastRegion->finish = nodeLength;
+
+	free(starts);
+	free(stops);
+	return regions;
+}
+
+static int compareCoords(const void * A, const void * B) {
+	Coordinate * a_p = (Coordinate *) A;
+	Coordinate * b_p = (Coordinate *) B;
+	Coordinate a = * a_p;
+	Coordinate b = * b_p;
+	if (a < b)
+		return -1;
+	else if (a > b)
+		return 1;
+	else
+		return 0;
+}
+
+static void sortCoords(Coordinate * array, IDnum length) {
+	qsort(array, (size_t) length, sizeof(Coordinate), compareCoords);
+} 
+
+static void getShortReadCoords(Coordinate * starts, Coordinate * stops, Node * node, Graph * graph, ShortLength * readLengths) {
+	ShortReadMarker * markers = getNodeReads(node, graph);
+	ShortReadMarker* marker;
+	IDnum index;
+	for (index = 0; index < getNodeReadCount(node, graph); index++) {
+		marker = getShortReadMarkerAtIndex(markers, index);
+		starts[index] = getShortReadMarkerPosition(marker);
+		stops[index] = starts[index] - getShortReadMarkerOffset(marker) + readLengths[getShortReadMarkerID(marker) - 1] - 1;
+	}
+}
+
+static void getShortReadTwinCoords(Coordinate * starts, Coordinate * stops, Node * node, Graph * graph, ShortLength * readLengths, IDnum offset) {
+	ShortReadMarker * markers = getNodeReads(getTwinNode(node), graph);
+	ShortReadMarker* marker;
+	IDnum index;
+	for (index = 0; index < getNodeReadCount(getTwinNode(node), graph); index++) {
+		marker = getShortReadMarkerAtIndex(markers, index);
+		stops[index + offset] = getNodeLength(node) - 1 - getShortReadMarkerPosition(marker);
+		starts[index + offset] = stops[index + offset] + getShortReadMarkerOffset(marker) - readLengths[getShortReadMarkerID(marker) - 1] + 1;
+	}
+}
+
+static void getLongReadCoords(Coordinate * starts, Coordinate * stops, Node * node, Graph * graph, ReadSet * reads, IDnum offset) {
+	PassageMarkerI marker;
+	IDnum index = offset;
+
+	for (marker = getMarker(node); marker; marker = getNextInNode(marker)) {
+		if (reads->categories[getAbsolutePassMarkerSeqID(marker) - 1] != REFERENCE) {
+			starts[index] = getStartOffset(marker);
+			stops[index++] = getNodeLength(node) - 1 - getFinishOffset(marker);
+		} else {
+			starts[index] = -5;
+			stops[index++] = -10;
+		}
+	}
+}
+
+static Mask * findLowCoverageRegions(Node * node, Graph * graph, IDnum cutoff, ReadSet * reads, ShortLength * readLengths) {
+	// Fill arrays
+	IDnum nodeReads = getNodeReadCount(node, graph);
+	IDnum twinReads =  getNodeReadCount(getTwinNode(node), graph);
+	IDnum longReads = markerCount(node);
+	IDnum length = nodeReads + twinReads + longReads;
+	Coordinate * starts = callocOrExit(length, Coordinate);
+	Coordinate * stops = callocOrExit(length, Coordinate);
+	getShortReadCoords(starts, stops, node, graph, readLengths);
+	getShortReadTwinCoords(starts, stops, node, graph, readLengths, nodeReads);
+	getLongReadCoords(starts, stops, node, graph, reads, nodeReads + twinReads);
+
+	// Sort arrays
+	sortCoords(starts, length);
+	sortCoords(stops, length);
+
+	// Go through array
+	return lowCoverageRegions(starts, stops, length, cutoff, getNodeLength(node));
+}
+
+static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph, ReadSet * reads, ShortLength * readLengths, IDnum cutoff) {
 	TightString *tString;
 	Coordinate position;
 	char nucleotide;
 	int WORDLENGTH = getWordLength(graph);
 	GapMarker *gap;
 	IDnum nodeIndex = getNodeID(node);
+	Mask * mask = NULL;
+	Mask * next;
+
+	if (readStartsAreActivated(graph) && cutoff > 0)
+		mask = findLowCoverageRegions(node, graph, cutoff, reads, readLengths);
 
 	tString = expandNode(node, WORDLENGTH);
 	velvetFprintf(outfile, ">NODE_%ld_length_%lld_cov_%f\n",
@@ -751,26 +936,42 @@ static void exportLongNodeSequence(FILE * outfile, Node * node, Graph * graph) {
 		if (position % 60 == 0)
 			velvetFprintf(outfile, "\n");
 
-		if (gap
+		while (gap
 		    && position - WORDLENGTH + 1 >=
 		    getGapFinish(gap))
 			gap = getNextGap(gap);
 
-		if (gap == NULL
-		    || position - WORDLENGTH + 1 <
+		while (mask
+		    && position - WORDLENGTH + 1 >=
+		    mask->finish) {
+			next = mask->next;
+			deallocateMask(mask);
+			mask = next;	
+		}
+
+		if (gap
+		    && position - WORDLENGTH + 1 >=
 		    getGapStart(gap)) {
+			velvetFprintf(outfile, "N");
+		} else if (mask &&
+			position - WORDLENGTH + 1 >=
+			mask->start) {
+			nucleotide =
+			    getNucleotideChar(position, tString);
+			velvetFprintf(outfile, "%c", tolower(nucleotide));
+
+		} else {
 			nucleotide =
 			    getNucleotideChar(position, tString);
 			velvetFprintf(outfile, "%c", nucleotide);
-		} else
-			velvetFprintf(outfile, "N");
+		}
 	}
 	velvetFprintf(outfile, "\n");
 	destroyTightString (tString);
 }
 
 void exportLongNodeSequences(char *filename, Graph * graph,
-			     Coordinate minLength)
+			     Coordinate minLength, ReadSet * reads, ShortLength * readLengths, IDnum minCov)
 {
 	FILE *outfile = fopen(filename, "w");
 	IDnum nodeIndex;
@@ -790,8 +991,12 @@ void exportLongNodeSequences(char *filename, Graph * graph,
 		if (node == NULL || getNodeLength(node) < minLength)
 			continue;
 
-		exportLongNodeSequence(outfile, node, graph);
+		exportLongNodeSequence(outfile, node, graph, reads, readLengths, minCov);
 	}
+
+	if (maskMemory)
+		destroyRecycleBin(maskMemory);
+	maskMemory = NULL;
 
 	fclose(outfile);
 }
@@ -971,7 +1176,7 @@ destroyNodePassageMarkers(Graph *graph,
 
 	while ((marker = getMarker(node)) != NULL_IDX) {
 		if (!isInitial(marker) && !isTerminal(marker))
-			disconnectNextPassageMarker(getPreviousInSequence(marker), graph);
+			deleteNextPassageMarker(getPreviousInSequence(marker), graph);
 		destroyPassageMarker(marker);
 	}
 }
@@ -1017,7 +1222,7 @@ removeNodeAndDenounceDubiousReads(Graph *graph,
 	destroyNodePassageMarkers(graph, node);
 
 	if (outfile != NULL && getNodeLength(node) > minLength)
-		exportLongNodeSequence(outfile, node, graph);
+		exportLongNodeSequence(outfile, node, graph, NULL, NULL, -1);
 
 	destroyNode(node, graph);
 }
@@ -1227,7 +1432,7 @@ void removeHighCoverageNodes(Graph * graph, double maxCov, boolean export, Coord
 			destroyNodePassageMarkers(graph, node);
 
 			if (export && getNodeLength(node) > minLength) 
-				exportLongNodeSequence(outfile, node, graph);
+				exportLongNodeSequence(outfile, node, graph, NULL, NULL, -1);
 
 			destroyNode(node, graph);
 		}
@@ -1934,4 +2139,25 @@ void exportLongNodeMappings(char *filename, Graph * graph, ReadSet * reads,
 		free(refCoords[refIndex].name);
 	free(refCoords);
 	fclose(outfile);
+}
+
+static void removeLowArcsFromNode(Node* node, Graph * graph, double cutoff) {
+	Arc * arc, * next;
+	if (node == NULL)
+		return;
+
+	for (arc = getArc(node); arc; arc = next) {
+		next = getNextArc(arc);
+		if (getMultiplicity(arc) <= cutoff)
+			destroyArc(arc, graph);
+	}
+}
+
+void removeLowArcs(Graph * graph, double cutoff) {
+	velvetLog("Removing single arcs\n");
+	IDnum index;
+	for (index = -nodeCount(graph); index <= nodeCount(graph); index++)
+		removeLowArcsFromNode(getNodeInGraph(graph, index), graph, cutoff);
+
+	concatenateGraph(graph);
 }

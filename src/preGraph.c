@@ -1028,6 +1028,7 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 
 		//velvetLog("%c", letter);
 		switch (letter) {
+		case 'N':
 		case 'A':
 			nucleotide = ADENINE;
 			break;

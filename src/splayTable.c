@@ -37,6 +37,32 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "kmerOccurenceTable.h"
 #include "recycleBin.h"
 
+typedef struct mask_st Mask;
+
+struct mask_st {
+	Coordinate start;
+	Coordinate finish;
+	Mask* next;
+}; 
+
+static RecycleBin * maskMemory = NULL;
+
+static Mask *allocateMask()
+{
+	if (maskMemory == NULL)
+		maskMemory = newRecycleBin(sizeof(Mask), 10000);
+
+	return (Mask *) allocatePointer(maskMemory);
+}
+
+static Mask * newMask(Coordinate position)
+{
+	Mask * mask = allocateMask();
+	mask->start = position;
+	mask->finish = position;
+	mask->next = NULL;
+	return mask;
+}
 
 #define HASH_BUCKETS_NB 16777216
 
@@ -588,7 +614,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 	Nucleotide nucleotide;
 	KmerOccurence * hit;
 	char line[MAXLINE];
-    char* start;
+        char* start;
 	char c;
 	
 	Coordinate mapCount = 0;
@@ -615,7 +641,7 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 #endif 
 			exit(1);
 		}
-        start = strchr(line, '\t');
+                start = strchr(line, '\t');
 		tString = getTightStringInArray(array, seqID - 1);
 		length = getLength(tString);
 		*sequenceIDs = callocOrExit(length, IDnum);
@@ -770,7 +796,7 @@ void inputSequenceIntoSplayTable(TightString * array,
 }
 
 void inputReferenceIntoSplayTable(TightString * tString,
-				 SplayTable * table, FILE * file, IDnum seqID)
+				 SplayTable * table, FILE * file, IDnum seqID, Mask * mask)
 {
 	IDnum currentIndex;
 	Coordinate readNucleotideIndex = 0;
@@ -778,6 +804,7 @@ void inputReferenceIntoSplayTable(TightString * tString,
 	Kmer word;
 	Kmer antiWord;
 	Nucleotide nucleotide;
+	Mask * currentMask = mask;
 #ifdef _OPENMP
 	char lineBuffer[MAXLINE];
 #endif
@@ -815,7 +842,7 @@ void inputReferenceIntoSplayTable(TightString * tString,
 
 	while (readNucleotideIndex < getLength(tString)) {
 		// Shift word:
-		nucleotide = getNucleotide(readNucleotideIndex++, tString);
+		nucleotide = getNucleotide(readNucleotideIndex, tString);
 		pushNucleotide(&word, nucleotide);
 
 		if (table->double_strand) {
@@ -826,6 +853,19 @@ void inputReferenceIntoSplayTable(TightString * tString,
 #endif
 		}
 
+		// Check for gap masks:
+		if (currentMask && currentMask->start - table->WORDLENGTH + 1 <= readNucleotideIndex) {
+			while(currentMask && currentMask->finish + table->WORDLENGTH - 1 < readNucleotideIndex)
+				currentMask = currentMask->next;
+
+			if (currentMask && currentMask->finish + table->WORDLENGTH - 1 >= readNucleotideIndex) {
+				readNucleotideIndex++;
+				kmerIndex++;
+				continue;
+			}
+		}
+
+		// Record k-mer
 		if (table->double_strand) {
 			if (compareKmers(&word, &antiWord) <= 0)
 				recordKmerOccurence(&word, currentIndex, 
@@ -840,6 +880,7 @@ void inputReferenceIntoSplayTable(TightString * tString,
 					    kmerIndex,
 					    table->kmerOccurenceTable);
 		}
+		readNucleotideIndex++;
 		kmerIndex++;
 	}
 
@@ -861,6 +902,49 @@ static Coordinate countReferenceKmers(ReadSet * reads, int wordLength) {
 	return length;
 }
 
+Mask ** scanReferenceSequences(FILE * file, IDnum referenceSequenceCount) {
+	Mask ** referenceMasks = callocOrExit(referenceSequenceCount, Mask*);
+	IDnum index;
+	char line[MAXLINE];
+	char c;
+
+	// Search sequences for masks
+	for (index = 0; index < referenceSequenceCount; index++) {
+		Mask * current = NULL;
+		Coordinate position = 0;
+		boolean openMask = false;
+
+		// Read through header
+		fgets(line, MAXLINE, file);
+
+		// Read through sequence
+		while ((c = getc(file))) {
+			if (c == EOF || c == '>')
+				break;
+			else if (c == '\r' || c == '\n')
+				continue;
+			else if (c == 'n' || c == 'N') {
+				if (openMask)
+					current->finish++;
+				else if (referenceMasks[index] == NULL) {
+					referenceMasks[index] = newMask(position);
+					current = referenceMasks[index];
+				} else {
+					current->next = newMask(position);
+					current = current->next;		
+				}
+				openMask = true;
+				position++;
+			} else {
+				openMask = false;
+				position++;
+			}
+		}
+	}
+
+	return referenceMasks;
+}
+
 void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 						SplayTable * table,
 						char *filename, char* seqFilename)
@@ -872,9 +956,10 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	FILE *seqFile = NULL;
 	IDnum kmerCount;
 	IDnum referenceSequenceCount = 0;
-	char line[MAXLINE];
 	struct timeval start, end, diff;
-	char c;
+
+	// DEBUG 
+	Mask ** referenceMasks;
 
 	if (outfile == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", filename);
@@ -917,17 +1002,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 			velvetLog("Reading mapping info from file %s\n", seqFilename);
 
 		// Skip through reference headers quickly
-		for (index = 0; index < referenceSequenceCount; index++)
-			while (fgets(line, MAXLINE, seqFile)) 
-				if (line[0] == '>')
-					break;
-
-		// Edge to the first sequence header
-		while ((c = getc(seqFile))) {
-			if (c == '>')
-				break;
-			fgets(line, MAXLINE, seqFile);
-		}
+		referenceMasks = scanReferenceSequences(seqFile, referenceSequenceCount);
 
 #ifdef _OPENMP
 		producing = 1;
@@ -943,7 +1018,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 #endif
 				for (index = 0; index < referenceSequenceCount; index++)
 					inputReferenceIntoSplayTable(getTightStringInArray(array, index),
-								     table, outfile, index + 1);
+								     table, outfile, index + 1, referenceMasks[index]);
 
 #ifdef _OPENMP
 				for (index = omp_get_max_threads() - 1; index >= 0; index--)
@@ -954,6 +1029,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		}
 #endif
 
+		if (maskMemory)
+			destroyRecycleBin(maskMemory);
 		sortKmerOccurenceTable(table->kmerOccurenceTable);
 	}
 

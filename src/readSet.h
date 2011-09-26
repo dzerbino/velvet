@@ -36,7 +36,7 @@ struct readSet_st {
 
 ReadSet *newReadSet();
 
-IDnum *getSequenceLengths(ReadSet * reads, int wordLength);
+ShortLength *getSequenceLengths(ReadSet * reads, int wordLength);
 
 void convertSequences(ReadSet * rs);
 

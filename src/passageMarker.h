@@ -128,6 +128,7 @@ boolean isDestinationToMarker(PassageMarkerI marker, Node * node);
 
 // Bypasses the middle marker
 void disconnectNextPassageMarker(PassageMarkerI marker, Graph * graph);
+void deleteNextPassageMarker(PassageMarkerI marker, Graph * graph);
 
 // Merge two markers (cf concatenateGraph())
 void concatenatePassageMarkers(PassageMarkerI marker,

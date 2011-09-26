@@ -56,6 +56,7 @@ static void printUsage()
 	printf("\t-short%i\t-shortPaired%i\n", CATEGORIES, CATEGORIES);
 #endif
 	puts("\t-long\t-longPaired");
+	puts("\t-reference");
 	puts("");
 	puts("Options:");
 	puts("\t-strand_specific\t: for strand specific transcriptome sequencing data (default: off)");
@@ -162,8 +163,8 @@ int main(int argc, char **argv)
 	if (hashLengthStep % 2 == 1) {
 		velvetLog
 		    ("Velvet can't work with an odd length k-mer step, such as %i. We'll use %i instead, if you don't mind.\n",
-		     hashLengthStep, hashLengthStep - 1);
-		hashLengthStep--;
+		     hashLengthStep, hashLengthStep + 1);
+		hashLengthStep++;
 	}
 
 	for (h = hashLength; h < hashLengthMax; h += hashLengthStep) {
@@ -206,7 +207,10 @@ int main(int argc, char **argv)
 		if ( h == hashLength ) {
 			parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand, &noHash);
 		} else {
-			sprintf(buf,"ln -s ../%s_%d/Sequences %s",argv[1],hashLength,seqFilename);
+			if (argv[1][0] == '/')
+				sprintf(buf,"ln -s %s_%d/Sequences %s",argv[1],hashLength,seqFilename);
+			else
+				sprintf(buf,"ln -s `pwd`/%s_%d/Sequences %s",argv[1],hashLength,seqFilename);
 			system(buf);
 		}
 
@@ -215,8 +219,7 @@ int main(int argc, char **argv)
 
 		splayTable = newSplayTable(h, double_strand);
 
-		if (!allSequences)
-			allSequences = importReadSet(seqFilename);
+		allSequences = importReadSet(seqFilename);
 		velvetLog("%li sequences in total.\n", (long) allSequences->readCount);
 
 		strcpy(filename, directory);

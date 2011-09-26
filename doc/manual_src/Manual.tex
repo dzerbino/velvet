@@ -258,7 +258,7 @@ If you are using a strand specific transcriptome sequencing protocol, you may wi
 
 \subsubsection{Multiple k-mers}
 
-If you wish for Velvet to efficiently test various k-mer lengths without doing redundant computations, you can request all k-mer lengths such that $m \le k \le M$ with a step of s:
+If you wish for Velvet to efficiently test various k-mer lengths without doing redundant computations, you can request all k-mer lengths such that $m \le k < M$ with a step of s:
 
 \begin{verbatim}
 > ./velveth output_directory/ m,M,s (..data files..)
@@ -650,6 +650,10 @@ $READ_ID2	etc.
 
 \section{Practical considerations / Frequently asked questions} 
 
+\subsection{K-mer coverage}
+
+All coverage values in Velvet are provided in \emph{k-mer coverage}, i.e. how many times has a k-mer been seen among the reads. The relation between k-mer coverage $C_k$ and standard (nucleotide-wise) coverage $C$ is $C_k = C * (L - k + 1) / L$ where k is your hash length, and L you read length. 
+
 \subsection{Choice of hash length k}
 
 \label{sec:kmercov}
@@ -665,9 +669,7 @@ Firstly, you must observe three technical constraints:
 
 Now you still have quite a lot of possibilities. As is often the case, it's a trade-off between specificity and sensitivity. Longer kmers bring you more specificity (i.e. less spurious overlaps) but lowers coverage (cf. below)\ldots so there's a sweet spot to be found with time and experience.
 
-We like to think in terms of ``k-mer coverage'', i.e. how many times has a k-mer been seen among the reads. The relation between k-mer coverage $C_k$ and standard (nucleotide-wise) coverage $C$ is $C_k = C * (L - k + 1) / L$ where k is your hash length, and L you read length. 
-
-Experience shows that this kmer coverage should be above 10 to start getting decent results. If $C_k$ is above 20, you might be ``wasting'' coverage. Experience also shows that empirical tests with different values for $k$ are not that costly to run!
+Experience shows that kmer coverage should be above 10 to start getting decent results. If $C_k$ is above 20, you might be ``wasting'' coverage. Experience also shows that empirical tests with different values for $k$ are not that costly to run!
 
 \subsection{Choice of a coverage cutoff}
 

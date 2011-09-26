@@ -2824,7 +2824,7 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 					 Coordinate breakpoint,
 					 Graph * graph, IDnum * length,
 					 PassageMarkerI sourceMarker,
-					 IDnum * lengths)
+					 ShortLength * lengths)
 {
 	IDnum sourceID;
 	IDnum mergeLength, newLength, sourceLength;
@@ -2959,7 +2959,7 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 ShortReadMarker *extractBackOfNodeReads(Node * node, Coordinate breakpoint,
 					Graph * graph, IDnum * length,
 					PassageMarkerI sourceMarker,
-					IDnum * lengths)
+					ShortLength  * lengths)
 {
 	IDnum sourceID;
 	IDnum mergeLength, newLength, sourceLength;

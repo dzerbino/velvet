@@ -24,6 +24,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <math.h>
 #include <time.h>
 #include <limits.h>
+#include <ctype.h>
 
 #include "globals.h"
 #include "tightString.h"
@@ -189,6 +190,10 @@ static void velvetifySequence(char * str) {
 		case EOF:
 			str[i] = '\0';
 			break;
+		case 'A':
+		case 'a':
+			str[i] = 'A';
+			break;
 		case 'C':
 		case 'c':
 			str[i] = 'C';
@@ -202,7 +207,7 @@ static void velvetifySequence(char * str) {
 			str[i] = 'T';
 			break;
 		default:
-			str[i] = 'A';
+			str[i] = 'N';
 		}
 	} 
 }
@@ -595,6 +600,7 @@ static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTabl
 	char * name;
 	long long start, finish;
 	Coordinate i;
+	IDnum index = 0;
 
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
@@ -606,7 +612,7 @@ static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTabl
 
 	resizeReferenceCoordinateTable(refCoords,counter);
 
-	while (fgets(line, maxline, file)) {
+	while (fgets(line, maxline, file) && index < counter) {
 		if (line[0] == '>') {
 			name = callocOrExit(strlen(line), char);
 
@@ -627,6 +633,8 @@ static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTabl
 				strcpy(name, line + 1);
 				addReferenceCoordinate(refCoords, name, 1, -1, true);
 			}
+
+			index++;
 		}
 	}
 
@@ -699,7 +707,7 @@ static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * s
 		velvetFprintf(outfile, "\n");
 	fclose(file);
 
-	if (cat == REFERENCE) 
+	if (cat == REFERENCE)
 		fillReferenceCoordinateTable(filename, refCoords, counter);
 
 	velvetLog("%li sequences found\n", (long) counter);
@@ -832,10 +840,14 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	char previous_qname[5000];
 	char previous_seq[5000];
 	char previous_rname[5000];
+	char previous_cigar[5000];
 	long long previous_pos = -1;
 	int previous_orientation = 0;
 	boolean previous_paired = false;
 	ReferenceCoordinate * refCoord;
+	char c;
+	int cigar_index;
+	long long cigar_num;
 
 	if (cat == REFERENCE) {
 		velvetLog("SAM file %s cannot contain reference sequences.\n", filename);
@@ -855,7 +867,7 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	readCount = 0;
 	for (lineno = 1; fgets(line, sizeof(line), file); lineno++)
 		if (line[0] != '@') {
-			char *qname, *flag, *seq, *rname;
+			char *qname, *flag, *seq, *rname, *cigar;
 			long long pos;
 			int orientation;
 			int i;
@@ -866,7 +878,12 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 			sscanf(strtok(NULL, "\t"), "%lli", &pos);
 			orientation = 1;
 
-			for (i = 5; i < 10; i++)
+			// Mapping scor
+			(void) strtok(NULL, "\t");
+			cigar = strtok(NULL, "\t");
+
+			// Columns 7,8,9 are paired name, position and score
+			for (i = 7; i < 10; i++)
 				(void) strtok(NULL, "\t");
 			seq = strtok(NULL, "\t");
 
@@ -931,10 +948,35 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 					}
 
 					if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
-						if (refCoord->positive_strand)
-							velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-						else 
-							velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+						if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
+							;
+						else {
+							cigar_num = 0;
+							for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
+								c = previous_cigar[cigar_index];
+								if (c == 'M' || c == '=' || c == 'X') {
+									if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
+										if (refCoord->positive_strand) {
+											velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+										} else 
+											velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+									}
+									cigar_num = 0;
+								} else if (c == 'S' || c == 'I') {
+									previous_pos -= cigar_num;
+									cigar_num = 0;
+								} else if (c == 'D' || c == 'N') {
+									previous_pos += cigar_num;
+									cigar_num = 0;
+								} else if (c == 'H' || c == 'P') {
+									cigar_num = 0;
+								} else if (isdigit(c)) {
+									cigar_num = 10 * cigar_num + (c - 48);
+								} else {
+									abort();
+								}
+							}
+						}
 					} 
 				}
 
@@ -942,6 +984,7 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 				strcpy(previous_qname_pairing, qname_pairing);
 				strcpy(previous_seq, seq);
 				strcpy(previous_rname, rname);
+				strcpy(previous_cigar, cigar);
 				previous_pos = pos;
 				previous_orientation = orientation;
 				velvetifySequence(previous_seq);
@@ -971,15 +1014,41 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 		}
 
 		if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
-			if (refCoord->positive_strand)
-				velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-			else 
-				velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+			if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
+				;
+			else {
+				cigar_num = 0;
+				for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
+					c = previous_cigar[cigar_index];
+					if (c == 'M' || c == '=' || c == 'X') {
+						if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
+							if (refCoord->positive_strand) {
+								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+							} else 
+								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+						}
+						cigar_num = 0;
+					} else if (c == 'S' || c == 'I') {
+						previous_pos -= cigar_num;
+						cigar_num = 0;
+					} else if (c == 'D' || c == 'N') {
+						previous_pos += cigar_num;
+						cigar_num = 0;
+					} else if (c == 'H' || c == 'P') {
+						cigar_num = 0;
+					} else if (isdigit(c)) {
+						cigar_num = 10 * cigar_num + (c - 48);
+					} else {
+						abort();
+					}
+				}
+			}
 		}
 	}
 
 	fclose(file);
-	velvetLog("%lu reads found.\nDone\n", readCount);
+	velvetLog("%lu reads found.\n", readCount);
+	velvetLog("Done\n");
 }
 
 static int readBAMint32(gzFile file)
@@ -995,6 +1064,8 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 {
 	size_t seqCapacity = 0;
 	char *seq = NULL;
+	char cigar[5000];
+	char cigar_buffer[5000];
 	size_t bufferCapacity = 4;
 	unsigned char *buffer = mallocOrExit(bufferCapacity, unsigned char);
 	unsigned long recno, readCount;
@@ -1003,6 +1074,7 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	char previous_qname_pairing[10];
 	char previous_qname[5000];
 	char previous_seq[5000];
+	char previous_cigar[5000];
 	int previous_rID = 0;
 	long long previous_pos = -1;
 	int previous_orientation = 0;
@@ -1010,6 +1082,9 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	int previous_flagbits = 0;
 	char ** refNames;
 	ReferenceCoordinate * refCoord;
+	char c;
+	int cigar_index;
+	long long cigar_num;
 
 	if (cat == REFERENCE) {
 		velvetLog("BAM file %s cannot contain reference sequences.\n", filename);
@@ -1087,10 +1162,13 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 			int flagbits = flag_nc >> 16;
 			int cigarLength = flag_nc & 0xffff;
 			char *qname = (char *)&buffer[36];
+			uint32_t *rawcigar = (uint32_t *) &buffer[36 + readNameLength];
 			unsigned char *rawseq =
 					&buffer[36 + readNameLength + 4 * cigarLength];
 			int rID = int32(&buffer[4]);
-			long long pos = int32(&buffer[8]);
+			// NOTE: BAM file coords are 0-based, not 1-based like SAM files
+			// No comment
+			long long pos = int32(&buffer[8]) + 1;
 			int orientation = 1;
 
 			const char *qname_pairing = "";
@@ -1098,6 +1176,14 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 				qname_pairing = "/1";
 			else if (flagbits & 0x80)
 				qname_pairing = "/2";
+
+			strcpy(cigar, "");
+			for (i = 0; i < cigarLength; i++) {
+				static const char decode_ops[] = "MIDNSHP=X";
+				uint32_t packed = *(rawcigar++);
+				sprintf(cigar_buffer, "%i%c", packed >> 4, decode_ops[packed & 0xf]);
+				strcat(cigar, cigar_buffer);
+			}
 
 			if (seqCapacity < readLength + 1) {
 				seqCapacity = readLength * 2 + 1;
@@ -1150,16 +1236,42 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 				}
 
 				if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
-					if (refCoord->positive_strand)
-						velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-					else 
-						velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+					if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
+						;
+					else {
+						cigar_num = 0;
+						for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
+							c = previous_cigar[cigar_index];
+							if (c == 'M' || c == '=' || c == 'X') {
+								if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
+									if (refCoord->positive_strand) {
+										velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+									} else 
+										velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+								}
+								cigar_num = 0;
+							} else if (c == 'S' || c == 'I') {
+								previous_pos -= cigar_num;
+								cigar_num = 0;
+							} else if (c == 'D' || c == 'N') {
+								previous_pos += cigar_num;
+								cigar_num = 0;
+							} else if (c == 'H' || c == 'P') {
+								cigar_num = 0;
+							} else if (isdigit(c)) {
+								cigar_num = 10 * cigar_num + (c - 48);
+							} else {
+								abort();
+							}
+						}
+					}
 				}
 			}
 
 			strcpy(previous_qname, qname);
 			strcpy(previous_qname_pairing, qname_pairing);
 			strcpy(previous_seq, seq);
+			strcpy(previous_cigar, cigar);
 			previous_rID = rID;
 			previous_pos = pos;
 			previous_orientation = orientation;
@@ -1191,10 +1303,35 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 		}
 
 		if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
-			if (refCoord->positive_strand)
-				velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-			else 
-				velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+			if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
+				;
+			else {
+				cigar_num = 0;
+				for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
+					c = previous_cigar[cigar_index];
+					if (c == 'M' || c == '=' || c == 'X') {
+						if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
+							if (refCoord->positive_strand) {
+								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+							} else 
+								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+						}
+						cigar_num = 0;
+					} else if (c == 'S' || c == 'I') {
+						previous_pos -= cigar_num;
+						cigar_num = 0;
+					} else if (c == 'D' || c == 'N') {
+						previous_pos += cigar_num;
+						cigar_num = 0;
+					} else if (c == 'H' || c == 'P') {
+						cigar_num = 0;
+					} else if (isdigit(c)) {
+						cigar_num = 10 * cigar_num + (c - 48);
+					} else {
+						abort();
+					}
+				}
+			}
 		}
 	}
 
@@ -1202,7 +1339,8 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	free(buffer);
 
 	gzclose(file);
-	velvetLog("%lu reads found.\nDone\n", readCount);
+	velvetLog("%lu reads found.\n", readCount);
+	velvetLog("Done\n");
 }
 
 static void printUsage()
@@ -1233,6 +1371,7 @@ static void printUsage()
 	puts("\t-shortPaired2");
 	puts("\t-long");
 	puts("\t-longPaired");
+	puts("\t-reference");
 	puts("");
 	puts("Options:");
 	puts("\t-strand_specific\t: for strand specific transcriptome sequencing data (default: off)");
@@ -1363,7 +1502,9 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			else if (strcmp(argv[argIndex], "-strand_specific") == 0) {
 				*double_strand = false;
 				reference_coordinate_double_strand = false;
-			} 
+			} else if (strcmp(argv[argIndex], "-noHash") == 0) {
+				;
+			}
 			else {
 				velvetLog("Unknown option: %s\n",
 				       argv[argIndex]);
@@ -1769,10 +1910,10 @@ void destroyReadSet(ReadSet * reads)
 	free(reads);
 }
 
-IDnum *getSequenceLengths(ReadSet * reads, int wordLength)
+ShortLength *getSequenceLengths(ReadSet * reads, int wordLength)
 {
-	IDnum *lengths = callocOrExit(reads->readCount, IDnum);
-	IDnum index;
+	ShortLength *lengths = callocOrExit(reads->readCount, ShortLength);
+	ShortLength index;
 	int lengthOffset = wordLength - 1;
 
 	for (index = 0; index < reads->readCount; index++)

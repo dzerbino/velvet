@@ -445,6 +445,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			}
 			switch (c) {
 			case 'A':
+			case 'N':
 				pushNucleotide(&initialKmer, ADENINE);
 				break;
 			case 'C':
@@ -525,6 +526,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 					//	velvetLog("(%c)", c);
 					switch (c) {
 					case 'A':
+					case 'N':
 						pushNucleotide(&initialKmer, ADENINE);
 						break;
 					case 'C':

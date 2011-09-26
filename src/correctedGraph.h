@@ -23,7 +23,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 void clipTipsHard(Graph * graph);
 
-void correctGraph(Graph * graph, IDnum * sequenceLengths, Category * sequenceCategories);
+void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories);
 
 // Black arts:
 void setMaxReadLength(int value);

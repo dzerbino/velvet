@@ -97,6 +97,9 @@ void writeNucleotide(Nucleotide nucleotide, Codon * codonPtr, int position)
 	case 'T':
 		nucleotideNum = Thymine;
 		break;
+	case 'N':
+		nucleotideNum = Adenine;
+		break;
 	case 'a':
 		nucleotideNum = Adenine;
 		break;
@@ -109,6 +112,8 @@ void writeNucleotide(Nucleotide nucleotide, Codon * codonPtr, int position)
 	case 't':
 		nucleotideNum = Thymine;
 		break;
+	case 'n':
+		nucleotideNum = Adenine;
 	default:
 		nucleotideNum = Adenine;
 	}

@@ -36,6 +36,7 @@ Copyright 2010 Daniel Zerbino (zerbino@ebi.ac.uk)
 struct kmerOccurence_st {
 	IDnum position;
 	IDnum nodeID;
+	IDnum offset;
 	Kmer kmer;
 } ATTRIBUTE_PACKED;
 
@@ -88,8 +89,7 @@ KmerOccurence *findKmerInKmerOccurenceTable(Kmer * kmer,
 		diff = compareKmers(&(array[middleIndex].kmer), kmer);
 
 		if (diff == 0) {
-			while (middleIndex > 0 && compareKmers(&(array[middleIndex - 1].kmer), kmer) == 0)
-				middleIndex--;
+			middleIndex -= array[middleIndex].offset;
 			return &(array[middleIndex]);
 		} else if (leftIndex == middleIndex)
 			return NULL;
@@ -159,6 +159,7 @@ void sortKmerOccurenceTable(KmerOccurenceTable * table) {
 	KmerKey header;
 	IDnum *accelPtr = NULL;
 	IDnum kmerOccurenceIndex;
+	KmerOccurence * kmerOccurence, * previous;
 
 	velvetLog("Sorting kmer occurence table ... \n");
 
@@ -166,6 +167,8 @@ void sortKmerOccurenceTable(KmerOccurenceTable * table) {
 	      compareKmerOccurences);
 
 	velvetLog("Sorting done.\n");
+
+	velvetLog("Computing acceleration table... \n");
 
 	// Fill up acceleration table
 	if (table->accelerationTable != NULL) {
@@ -192,15 +195,27 @@ void sortKmerOccurenceTable(KmerOccurenceTable * table) {
 		}
 	}
 
+	velvetLog("Computing offsets... \n");
+
+	// Compute offsets
+	kmerOccurence = table->kmerTable;
+	previous = NULL;
+	for (kmerOccurenceIndex = 1;
+	     kmerOccurenceIndex < table->kmerTableSize;
+	     kmerOccurenceIndex++) {
+		if (previous && compareKmerOccurences(kmerOccurence, previous) == 0)
+			kmerOccurence->offset = previous->offset + 1;
+		previous = kmerOccurence;
+		kmerOccurence++;
+	}
 }
 
 KmerOccurence * getNextKmerOccurence(KmerOccurence * current) {
 	register KmerOccurence * next = current + 1;
-	if (next->nodeID == 0)
+	if (next->nodeID == 0 || next->offset == 0)
 		return NULL;
-	if (compareKmers(&current->kmer, &next->kmer))
-		return NULL;
-	return next;
+	else
+		return next;
 }
 
 void destroyKmerOccurenceTable(KmerOccurenceTable * kmerTable) {

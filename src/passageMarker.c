@@ -174,6 +174,17 @@ void disconnectNextPassageMarker(PassageMarkerI marker, Graph * graph)
 	setPreviousInSequence(NULL_IDX, middle);
 }
 
+void deleteNextPassageMarker(PassageMarkerI marker, Graph * graph)
+{
+	PassageMarkerI middle = getNextInSequence(marker);
+	PassageMarkerI next = getNextInSequence(middle);
+
+	setPreviousInSequence(marker, next);
+	setNextInSequence(marker, next);
+	setNextInSequence(middle, NULL_IDX);
+	setPreviousInSequence(NULL_IDX, middle);
+}
+
 PassageMarkerI getNextInNode(PassageMarkerI marker)
 {
 	if (marker == NULL_IDX)
@@ -379,10 +390,10 @@ void transposePassageMarker(PassageMarkerI marker, Node * node)
 
 	markerVal = PM_FI2P (marker);
 	twinMarkerVal = PM_FI2P (markerVal->twinMarker);
-	markerVal->node = node;
-	twinMarkerVal->node = getTwinNode(node);
 	insertPassageMarker(marker, node);
+	markerVal->node = node;
 	insertPassageMarker(markerVal->twinMarker, getTwinNode(node));
+	twinMarkerVal->node = getTwinNode(node);
 }
 
 PassageMarkerI getTwinMarker(PassageMarkerI marker)

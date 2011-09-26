@@ -55,5 +55,10 @@ IDnum getConnectionDirectCount(Connection * connect);
 IDnum getConnectionPairedCount(Connection * connect);
 
 void incrementConnectionDistance(Connection * connect, Coordinate increment);
+void printConnections(ReadSet * reads, boolean * shadows);
+void printScaffold(Graph * graph,
+		   ReadSet * reads,
+		   boolean * dubious,
+		   boolean * shadows);
 
 #endif

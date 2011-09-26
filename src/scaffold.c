@@ -320,7 +320,7 @@ static boolean testConnection(IDnum IDA,
 	    UNRELIABLE_CONNECTION_CUTOFF)
 		return false;
 
-	for (cat = 0; cat <= CATEGORIES; cat++)
+	for (cat = 0; cat < CATEGORIES; cat++)
 		if (!shadows[cat] || cat <= PEBBLE_ROUND_NUM)
 			total += expectedNumberOfConnections(IDA, connect, counts, cat);
 
@@ -1218,6 +1218,10 @@ static void createConnection(IDnum nodeID,
 {
 	Connection *connect;
 
+	if (getUniqueness(getNodeInGraph(graph, node2ID)) && node2ID < nodeID) {
+		return;
+	}	
+
 #ifdef _OPENMP
 	lockTwoNodes(nodeID, node2ID);
 #endif
@@ -1259,9 +1263,6 @@ static void projectFromSingleRead(Node * node,
 	double variance = 1;
 
 	if (target == getTwinNode(node) || target == node)
-		return;
-
-	if (getUniqueness(target) && getNodeID(target) < getNodeID(node))
 		return;
 
 	if (position < 0) {
@@ -1419,7 +1420,7 @@ static void projectFromShortRead(Node * node,
 				 IDnum * readPairs, Category * cats,
 				 ReadOccurence ** readNodes,
 				 IDnum * readNodeCounts,
-				 IDnum * lengths,
+				 ShortLength * lengths,
 				 boolean * shadows,
 				 boolean doMatePairs,
 				 Category thisCat)
@@ -1477,7 +1478,7 @@ static void projectFromLongRead(Node * node, PassageMarkerI marker,
 				IDnum * readPairs, Category * cats,
 				ReadOccurence ** readNodes,
 				IDnum * readNodeCounts,
-				IDnum * lengths)
+				ShortLength * lengths)
 {
 	IDnum index;
 	IDnum readIndex = getPassageMarkerSequenceID(marker);
@@ -1522,7 +1523,7 @@ static void projectFromNode(IDnum nodeID,
 			    ReadOccurence ** readNodes,
 			    IDnum * readNodeCounts,
 			    IDnum * readPairs, Category * cats,
-			    boolean * dubious, IDnum * lengths,
+			    boolean * dubious, ShortLength * lengths,
 			    boolean * shadows,
 			    boolean doMatePairs,
 			    Category thisCat)
@@ -1567,7 +1568,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 					      Category * cats,
 					      boolean * dubious,
 					      boolean * shadows,
-					      IDnum * lengths)
+					      ShortLength * lengths)
 {
 	IDnum nodeID;
 	IDnum nodes = nodeCount(graph);
@@ -1712,6 +1713,79 @@ static void removeUnreliableConnections(ReadSet * reads, boolean *shadows)
 	free(counts);
 }
 
+void printConnections(ReadSet * reads, boolean * shadows)
+{
+	IDnum maxNodeIndex = nodeCount(graph) * 2 + 1;
+	IDnum index;
+	Connection *connect, *next;
+	Node *node;
+	IDnum **counts = countShortReads(graph, reads);
+	IDnum nodes = nodeCount(graph);
+	Category cat;
+
+	puts("CONNECT IDA IDB dcount pcount dist lengthA lengthB var countA countB coordA coordB real exp distance test");
+
+	for (index = 0; index < maxNodeIndex; index++) {
+		node = getNodeInGraph(graph, index - nodeCount(graph));
+		for (connect = scaffold[index]; connect != NULL;
+		     connect = next) {
+			next = getNextConnection(connect);
+			printf
+			    ("CONNECT %ld %ld %ld %ld %lld %lld %lld %f %ld %ld",
+			     (long) index - nodeCount(graph),
+			     (long) getNodeID(connect->destination),
+			     (long) connect->direct_count,
+			     (long) connect->paired_count,
+			     (long long) getConnectionDistance(connect),
+			     (long long) getNodeLength(node), (long long)
+			     getNodeLength(connect->destination),
+			     connect->variance,
+			     (long) getNodeReadCount(node, graph),
+			     (long) getNodeReadCount(connect->destination,
+						     graph));
+			if (markerCount(node) == 1
+			    && markerCount(connect->destination) == 1)
+				printf(" %lld %lld %lld", (long long)
+				       getPassageMarkerFinish(getMarker
+							      (node)),
+				       (long long)
+				       getPassageMarkerFinish(getMarker
+							      (connect->
+							       destination)),
+				       (long
+					long) (getPassageMarkerFinish
+					       (getMarker(node)) -
+					       getPassageMarkerFinish
+					       (getMarker
+						(connect->destination))));
+			else
+				printf(" ? ? ?");
+			printf(" %ld",
+			       (long) expectedNumberOfConnections(index -
+								  nodeCount
+								  (graph),
+								  connect,
+								  counts,
+								  0));
+			printf(" %lld",
+			       (long long) (getConnectionDistance(connect)
+					    - (getNodeLength(node) +
+					       getNodeLength
+					       (connect->destination)) /
+					    2));
+			if (testConnection(index - nodes, connect, counts, shadows))
+				puts(" OK");
+			else
+				puts(" NG");
+		}
+	}
+
+	for (cat = 0; cat <= CATEGORIES; cat++)
+		if (counts[cat])
+			free(counts[cat]);
+	free(counts);
+}
+
 void buildScaffold(Graph * argGraph,
 		   ReadSet * reads,
 		   boolean * dubious,
@@ -1722,7 +1796,7 @@ void buildScaffold(Graph * argGraph,
 	IDnum *readNodeCounts;
 	ReadOccurence **readNodes;
 	ReadOccurence *readNodesArray = NULL;
-	IDnum *lengths = getSequenceLengths(reads, getWordLength(argGraph));
+	ShortLength *lengths = getSequenceLengths(reads, getWordLength(argGraph));
 	Coordinate totalCount = 0;
 
 	graph = argGraph;
@@ -1743,6 +1817,41 @@ void buildScaffold(Graph * argGraph,
 	free(readNodes);
 	free(readNodeCounts);
 	free(lengths);
+}
+
+//DEBUG
+void printScaffold(Graph * argGraph,
+		   ReadSet * reads,
+		   boolean * dubious,
+		   boolean * shadows)
+{
+	IDnum *readPairs;
+	Category *cats;
+	IDnum *readNodeCounts;
+	ReadOccurence **readNodes;
+	ReadOccurence *readNodesArray = NULL;
+	ShortLength *lengths = getSequenceLengths(reads, getWordLength(argGraph));
+	Coordinate totalCount = 0;
+
+	graph = argGraph;
+	readPairs = reads->mateReads;
+	cats = reads->categories;
+
+	// Prepare primary scaffold
+	readNodeCounts = computeReadToNodeCounts(&totalCount);
+	readNodes = computeReadToNodeMappings(readNodeCounts, reads, totalCount, &readNodesArray);
+
+	estimateMissingInsertLengths(readNodes, readNodeCounts, readPairs, cats);
+
+	scaffold = computeNodeToNodeMappings(readNodes, readNodeCounts,
+				      readPairs, cats, dubious, shadows, lengths);
+	printConnections(reads, shadows);
+
+	free(readNodesArray);
+	free(readNodes);
+	free(readNodeCounts);
+	free(lengths);
+	cleanScaffoldMemory();
 }
 
 void setUnreliableConnectionCutoff(int val)
