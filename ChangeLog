@@ -402,3 +402,6 @@ V 1.1.06
 - Added gap mask in Columbus
 - Offsets used in kmerOccurenceTable to accelerate searches
 - Some memory leaks
+
+V 1.1.07
+- Concurrency issues in Columbus

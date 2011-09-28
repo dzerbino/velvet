@@ -606,69 +606,23 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 	return;
 }
 
-static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second_in_pair, SplayTable * table, IDnum ** sequenceIDs, Coordinate ** coords, IDnum seqID) {
+static void computeClearHSPs(TightString * array, boolean second_in_pair, SplayTable * table, IDnum ** sequenceIDs, Coordinate ** coords, IDnum * mapReferenceIDs, Coordinate * mapCoords, Coordinate mapCount, IDnum seqID) {
 	Coordinate readNucleotideIndex = 0;
 	Kmer word;
 	Kmer antiWord;
 	Kmer polyA;
 	Nucleotide nucleotide;
 	KmerOccurence * hit;
-	char line[MAXLINE];
-        char* start;
-	char c;
 	
-	Coordinate mapCount = 0;
-	Coordinate maxCount = 10;	
-	IDnum * mapReferenceIDs = callocOrExit(maxCount, IDnum);
-	Coordinate * mapCoords = callocOrExit(maxCount, Coordinate);
-	long long_var;
-	long long longlong_var;
 	int penalty;
 	TightString * tString;
 	Coordinate length;
 
 	clearKmer(&polyA);
-
-#ifdef _OPENMP
-	#pragma omp critical
-	{
-#endif
-		// Get read ID:
-		if (!fgets(line, MAXLINE, seqFile)) {
-			puts("Incomplete Sequences file (computeHSPScores)");
-#ifdef DEBUG
-			abort();
-#endif 
-			exit(1);
-		}
-                start = strchr(line, '\t');
-		tString = getTightStringInArray(array, seqID - 1);
-		length = getLength(tString);
-		*sequenceIDs = callocOrExit(length, IDnum);
-		*coords = callocOrExit(length, Coordinate);
-
-		// Parse file for mapping info
-		while (seqFile && (c = getc(seqFile)) != EOF) {
-			if (c == '>')
-				break;
-
-			fgets(line, MAXLINE, seqFile);
-
-			if (c == 'M') {
-				sscanf(line,"\t%li\t%lli\n", &long_var, &longlong_var);
-				mapReferenceIDs[mapCount] = (IDnum) long_var;
-				mapCoords[mapCount] = (Coordinate) longlong_var;
-
-				if (++mapCount == maxCount) {
-					maxCount *= 2;
-					mapReferenceIDs = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
-					mapCoords = reallocOrExit(mapCoords, maxCount, Coordinate);
-				}
-			}
-		}
-#ifdef _OPENMP
-	}
-#endif
+	tString = getTightStringInArray(array, seqID - 1);
+	length = getLength(tString);
+	*sequenceIDs = callocOrExit(length, IDnum);
+	*coords = callocOrExit(length, Coordinate);
 
 	// First pass for unambiguous hits
 	// Fill in the initial word : 
@@ -774,8 +728,9 @@ static void computeClearHSPs(TightString * array, FILE * seqFile, boolean second
 
 void inputSequenceIntoSplayTable(TightString * array,
 				 SplayTable * table,
-				 FILE * file, FILE * seqFile,
+				 FILE * file,
 				 boolean second_in_pair,
+				 IDnum * mapReferenceIDs, Coordinate * mapCoords, Coordinate mapCount,
 				 IDnum seqID)
 {
 	IDnum * sequenceIDs = NULL;
@@ -783,7 +738,7 @@ void inputSequenceIntoSplayTable(TightString * array,
 
 	// If appropriate, get the HSPs on reference sequences
 	if (table->kmerOccurenceTable) 
-		computeClearHSPs(array, seqFile, second_in_pair, table, &sequenceIDs, &coords, seqID);
+		computeClearHSPs(array, second_in_pair, table, &sequenceIDs, &coords, mapReferenceIDs, mapCoords, mapCount, seqID);
 
 	// Go through read, eventually with annotations
 	printAnnotations(sequenceIDs, coords, array, table, file, second_in_pair, seqID);
@@ -906,7 +861,7 @@ Mask ** scanReferenceSequences(FILE * file, IDnum referenceSequenceCount) {
 	Mask ** referenceMasks = callocOrExit(referenceSequenceCount, Mask*);
 	IDnum index;
 	char line[MAXLINE];
-	char c;
+	char c = '\0';
 
 	// Search sequences for masks
 	for (index = 0; index < referenceSequenceCount; index++) {
@@ -942,6 +897,8 @@ Mask ** scanReferenceSequences(FILE * file, IDnum referenceSequenceCount) {
 		}
 	}
 
+	if (c != '\0')
+		ungetc(c, file);
 	return referenceMasks;
 }
 
@@ -957,7 +914,17 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	IDnum kmerCount;
 	IDnum referenceSequenceCount = 0;
 	struct timeval start, end, diff;
+	IDnum ** mapReferenceIDs = NULL;
+	Coordinate ** mapCoords = NULL;
+	Coordinate * mapCount = NULL;
 
+	char line[MAXLINE];
+	char c;
+	IDnum seqID = 0;
+	long long_var;
+	long long longlong_var;
+	Coordinate maxCount = 20;
+	Coordinate counter = 0;
 	// DEBUG 
 	Mask ** referenceMasks;
 
@@ -1036,6 +1003,40 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 
 	velvetLog("Inputting sequences...\n");
 
+	if (table->kmerOccurenceTable) {
+		mapReferenceIDs = callocOrExit(sequenceCount + 1, IDnum*);
+		mapCoords = callocOrExit(sequenceCount + 1, Coordinate *);
+		mapCount = callocOrExit(sequenceCount + 1, Coordinate);
+
+		// Parse file for mapping info
+		while (seqFile && (c = getc(seqFile)) != EOF) {
+
+			if (c == '>') {
+				mapCount[seqID] = counter;
+				counter = 0;
+				maxCount = 20;
+				fgets(line, MAXLINE, seqFile);
+				sscanf(line,"%*s\t%li\t", &long_var);
+				seqID = (IDnum) long_var;
+				mapReferenceIDs[seqID] = callocOrExit(maxCount, IDnum);
+				mapCoords[seqID] = callocOrExit(maxCount, Coordinate);
+			} else if (c == 'M') {
+				fgets(line, MAXLINE, seqFile);
+				sscanf(line,"\t%li\t%lli\n", &long_var, &longlong_var);
+				mapReferenceIDs[seqID][counter] = (IDnum) long_var;
+				mapCoords[seqID][counter] = (Coordinate) longlong_var;
+
+				if (++counter == maxCount) {
+					maxCount *= 2;
+					mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
+					mapCoords[seqID] = reallocOrExit(mapCoords, maxCount, Coordinate);
+				}
+			}
+		}
+	}
+	if (seqFile)
+		fclose(seqFile);
+
 #ifdef _OPENMP
 	producing = 1;
 	#pragma omp parallel sections
@@ -1073,8 +1074,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 
 				// Hashing the reads
 				inputSequenceIntoSplayTable(array, table,
-							    outfile, seqFile,
-							    second_in_pair, index + 1);
+							    outfile,
+							    second_in_pair, mapReferenceIDs[index + 1], mapCoords[index+1], mapCount[index+1], index + 1);
 			}
 #ifdef _OPENMP
 			for (index = omp_get_max_threads() - 1; index >= 0; index--)
@@ -1093,9 +1094,12 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	velvetLog(" === Sequences loaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
 
 	fclose(outfile);
-	if (seqFile)
-		fclose(seqFile);
 
+	if (mapReferenceIDs) {
+		free(mapReferenceIDs);
+		free(mapCoords);
+		free(mapCount);
+	}
 	//free(reads->tSequences);
 	//reads->tSequences = NULL;
 	//destroyReadSet(reads);
