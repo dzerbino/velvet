@@ -1680,10 +1680,18 @@ static void computeSecondInPair(ReadSet * reads)
 					phase = 0;
 				}
 			}
-			else
+			else {
 				phase = 1;
+				if (index > 0 && previousCat & 1 && !isSecondInPair(reads, index - 1))
+				    reads->categories[index - 1] = (reads->categories[index - 1] / 2) * 2;
+			}
 		}
 		previousCat = currentCat;
+	}
+
+	// Safeguard against odd sets of reads
+	if (!isSecondInPair(reads, reads->readCount - 1)) {
+		reads->categories[reads->readCount - 1] = (reads->categories[reads->readCount - 1] / 2) * 2;
 	}
 }
 
