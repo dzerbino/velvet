@@ -63,6 +63,7 @@ static void printUsage()
 	puts("\t-very_clean <yes|no>\t\t: remove all the intermediary files (no recalculation possible) (default: no)");
 	puts("\t-paired_exp_fraction <double>\t: remove all the paired end connections which less than the specified fraction of the expected count (default: 0.1)");
 	puts("\t-shortMatePaired* <yes|no>\t: for mate-pair libraries, indicate that the library might be contaminated with paired-end reads (default no)");
+	puts("\t-conserveLong <yes|no>\t\t: preserve sequences with long reads in them (default no)");
 	puts("");
 	puts("Output:");
 	puts("\tdirectory/contigs.fa\t\t: fasta file of contigs longer than twice hash length");
@@ -109,6 +110,7 @@ int main(int argc, char **argv)
 	short int short_var;
 	boolean exportFilteredNodes = false;
 	int clean = 0;
+	boolean conserveLong = false;
 	boolean shadows[CATEGORIES];
 	int coverageMask = 1;
 
@@ -322,6 +324,9 @@ int main(int argc, char **argv)
 		} else if (strcmp(arg, "-very_clean") == 0) {
 			if (strcmp(argv[arg_index], "yes") == 0)
 				clean = 2;
+		} else if (strcmp(arg, "-conserveLong") == 0) {
+			if (strcmp(argv[arg_index], "yes") == 0)
+				conserveLong = 2;
 		} else if (strcmp(arg, "-unused_reads") == 0) {
 			unusedReads =
 			    (strcmp(argv[arg_index], "yes") == 0);
@@ -397,7 +402,8 @@ int main(int argc, char **argv)
 		rdmaps = importRoadMapArray(roadmapFilename);
 		preGraph = newPreGraph_pg(rdmaps, seqFilename);
 		concatenatePreGraph_pg(preGraph);
-		clipTips_pg(preGraph);
+		if (!conserveLong)
+		    clipTips_pg(preGraph);
 		exportPreGraph_pg(preGraphFilename, preGraph);
 		destroyPreGraph_pg(preGraph);
 
@@ -408,7 +414,7 @@ int main(int argc, char **argv)
 				   roadmapFilename, readTracking, accelerationBits);
 		sequenceLengths =
 		    getSequenceLengths(sequences, getWordLength(graph));
-		correctGraph(graph, sequenceLengths, sequences->categories);
+		correctGraph(graph, sequenceLengths, sequences->categories, conserveLong);
 		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else {
 		velvetLog("No Roadmap file to build upon! Please run velveth (see manual)\n");

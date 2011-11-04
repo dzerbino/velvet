@@ -2442,7 +2442,7 @@ static Coordinate getTipLength(Node * node)
 	return length;
 }
 
-void clipTipsHard(Graph * graph)
+void clipTipsHard(Graph * graph, boolean conserveLong)
 {
 	IDnum index;
 	Node *current, *twin;
@@ -2458,6 +2458,9 @@ void clipTipsHard(Graph * graph)
 			current = getNodeInGraph(graph, index);
 
 			if (current == NULL)
+				continue;
+	
+			if (conserveLong && getMarker(current))
 				continue;
 
 			twin = getTwinNode(current);
@@ -2513,7 +2516,7 @@ static void tourBus(Node * startingPoint)
 	}
 }
 
-void correctGraph(Graph * argGraph, ShortLength * argSequenceLengths, Category * argSequenceCategories)
+void correctGraph(Graph * argGraph, ShortLength * argSequenceLengths, Category * argSequenceCategories, boolean conserveLong)
 {
 	IDnum nodes;
 	IDnum index;
@@ -2572,7 +2575,7 @@ void correctGraph(Graph * argGraph, ShortLength * argSequenceLengths, Category *
 	deactivateArcLookupTable(graph);
 	concatenateGraph(graph);
 
-	clipTipsHard(graph);
+	clipTipsHard(graph, conserveLong);
 
 	//Deallocating globals
 	free(times);
