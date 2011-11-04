@@ -194,7 +194,8 @@ static boolean isEligibleTip(IDnum index, PreGraph * preGraph, Coordinate
 	// Finding first tangle
 	while (currentIndex != 0
 	       && simplePreArcCount_pg(-currentIndex, preGraph) < 2
-	       && simplePreArcCount_pg(currentIndex, preGraph) < 2) {
+	       && simplePreArcCount_pg(currentIndex, preGraph) < 2
+	       && (!referenceMarkersAreActivated_pg(preGraph) || !hasPreMarkers(currentIndex, preGraph))) {
 		totalLength += getPreNodeLength_pg(currentIndex, preGraph);
 		activeArc = getPreArc_pg(currentIndex, preGraph);
 		currentIndex = getDestination_pg(activeArc, currentIndex);

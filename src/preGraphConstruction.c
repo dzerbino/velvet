@@ -614,7 +614,7 @@ static void connectPreNodeToTheNext(IDnum * currentPreNodeID,
 	if (isReference)
 		incrementNodeReferenceMarkerCount_pg(preGraph, nextPreNodeID);
 
-	if (*currentPreNodeID != 0)
+	if (!isReference && *currentPreNodeID != 0)
 		createPreArc_pg(*currentPreNodeID, nextPreNodeID,
 				preGraph);
 

@@ -893,8 +893,6 @@ static void threadSequenceThroughGraph(TightString * tString,
 				}
 			} else  {
 				node = NULL;
-				if (previousNode)
-					break;
 			}
 		}
 		// Search for reference-based mapping
@@ -1046,7 +1044,8 @@ static void threadSequenceThroughGraph(TightString * tString,
 #ifdef _OPENMP
 				lockTwoNodes(node, previousNode);
 #endif
-				createArc(previousNode, node, graph);
+				if (category != REFERENCE)
+					createArc(previousNode, node, graph);
 #ifdef _OPENMP
 				unLockTwoNodes(node, previousNode);
 #endif

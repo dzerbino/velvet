@@ -50,6 +50,7 @@ void incrementNodeReferenceMarkerCount_pg(PreGraph * preGraph, IDnum preNodeID);
 void allocatePreMarkerSpace_pg(PreGraph * preGraph);
 PreMarker * addPreMarker_pg(PreGraph * preGraph, IDnum nodeID, IDnum seqID, Coordinate * start, PreMarker * previous);
 void concatenateReferenceMarkers_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph * preGraph, Coordinate totalOffset);
+boolean hasPreMarkers(IDnum nodeID, PreGraph * preGraph);
 
 ////////////////////////////////////////////////////////////
 // PreArc functions
