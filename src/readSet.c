@@ -1921,7 +1921,7 @@ void destroyReadSet(ReadSet * reads)
 ShortLength *getSequenceLengths(ReadSet * reads, int wordLength)
 {
 	ShortLength *lengths = callocOrExit(reads->readCount, ShortLength);
-	ShortLength index;
+	IDnum index;
 	int lengthOffset = wordLength - 1;
 
 	for (index = 0; index < reads->readCount; index++)

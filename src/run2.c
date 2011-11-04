@@ -564,11 +564,11 @@ int main(int argc, char **argv)
 		remove(graphFilename);	
 
 		strcpy(graphFilename, directory);
-		strcat(graphFilename, "/Graph2.txt");
+		strcat(graphFilename, "/Graph2");
 		remove(graphFilename);	
 
 		strcpy(graphFilename, directory);
-		strcat(graphFilename, "/Graph.txt");
+		strcat(graphFilename, "/Graph");
 		remove(graphFilename);	
 	}
 

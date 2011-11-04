@@ -1073,9 +1073,14 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 				second_in_pair = reads->categories[index] % 2 && isSecondInPair(reads, index);
 
 				// Hashing the reads
-				inputSequenceIntoSplayTable(array, table,
-							    outfile,
-							    second_in_pair, mapReferenceIDs[index + 1], mapCoords[index+1], mapCount[index+1], index + 1);
+				if (table->kmerOccurenceTable)
+				    inputSequenceIntoSplayTable(array, table,
+								outfile,
+								second_in_pair, mapReferenceIDs[index + 1], mapCoords[index+1], mapCount[index+1], index + 1);
+				else
+				    inputSequenceIntoSplayTable(array, table,
+								outfile,
+								second_in_pair, NULL, NULL, NULL, index + 1);
 			}
 #ifdef _OPENMP
 			for (index = omp_get_max_threads() - 1; index >= 0; index--)

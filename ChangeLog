@@ -406,3 +406,5 @@ V 1.1.06
 V 1.1.07
 - Concurrency issues in Columbus
 - Pairing bug for odd number of reads
+- Variable size in reading sequence lengths
+- Ubuntu patch to Makefile
