@@ -394,7 +394,7 @@ int main(int argc, char **argv)
 				   roadmapFilename, readTracking, accelerationBits);
 		sequenceLengths =
 		    getSequenceLengths(sequences, getWordLength(graph));
-		correctGraph(graph, sequenceLengths, sequences->categories);
+		correctGraph(graph, sequenceLengths, sequences->categories, conserveLong);
 		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else if ((file = fopen(roadmapFilename, "r")) != NULL) {
 		fclose(file);
@@ -485,7 +485,7 @@ int main(int argc, char **argv)
 							  lowCovContigsFilename);
 
 	removeHighCoverageNodes(graph, maxCoverageCutoff, exportFilteredNodes, minContigKmerLength, highCovContigsFilename);
-	clipTipsHard(graph);
+	clipTipsHard(graph, conserveLong);
 
 	if (sequences->readCount > 0 && sequences->categories[0] == REFERENCE)
 		removeLowArcs(graph, coverageCutoff);
