@@ -1080,7 +1080,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 				else
 				    inputSequenceIntoSplayTable(array, table,
 								outfile,
-								second_in_pair, NULL, NULL, NULL, index + 1);
+								second_in_pair, NULL, NULL, 0, index + 1);
 			}
 #ifdef _OPENMP
 			for (index = omp_get_max_threads() - 1; index >= 0; index--)

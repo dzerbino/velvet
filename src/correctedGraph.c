@@ -921,16 +921,14 @@ remapBackOfNodeMarkersOntoNeighbour(Node * source,
 			continue;
 
 		// Markers which are downstream of the breakpoint
-		if (isInitial(marker)
-		    && getStartOffset(marker) > halfwayPoint) {
+		if (getStartOffset(marker) > halfwayPoint) {
 			newStartOffset =
 			    getStartOffset(marker) - halfwayPoint;
 			setStartOffset(marker, newStartOffset);
 			continue;
 		}
 		// Markers which are upstream of the breakpoint
-		if (isTerminal(marker)
-		    && getFinishOffset(marker) > halfwayPointOffset) {
+		if (getFinishOffset(marker) > halfwayPointOffset) {
 			if (slowToFast) {
 				if (realSourceLength > 0
 				    && alignedTargetLength > 0) {
@@ -981,6 +979,8 @@ remapBackOfNodeMarkersOntoNeighbour(Node * source,
 			breakpoint /= realSourceLength -
 			    getStartOffset(marker) -
 			    getFinishOffset(marker);
+			if (breakpoint > getPassageMarkerLength(marker))
+				breakpoint = getPassageMarkerLength(marker);
 			breakpoint *= passageMarkerDirection(marker);
 			breakpoint += getPassageMarkerStart(marker);
 		} else {
@@ -1283,6 +1283,7 @@ static void foldSymmetricalNode(Node * node)
 			     getPassageMarkerFinish(currentMarker))
 			    / 2;
 			setPassageMarkerFinish(newMarker, halfwayPoint);
+
 			setPassageMarkerStart(currentMarker, halfwayPoint);
 
 			setStartOffset(newMarker,
@@ -1638,7 +1639,6 @@ static void remapEmptyPathMarkersOntoMiddlePathSimple(PassageMarkerI emptyPath,
 					       (marker));
 			setPassageMarkerStart(newMarker, markerStart);
 			setPassageMarkerFinish(newMarker, markerStart);
-
 			setNextInSequence(previousMarker, newMarker);
 			setPreviousInSequence(previousMarker, newMarker);
 
@@ -1777,7 +1777,6 @@ static void remapEmptyPathMarkersOntoMiddlePathDevious(PassageMarkerI emptyPath,
 					       (marker));
 			setPassageMarkerStart(newMarker, markerStart);
 			setPassageMarkerFinish(newMarker, markerStart);
-
 			setNextInSequence(previousMarker, newMarker);
 			setPreviousInSequence(previousMarker, newMarker);
 
