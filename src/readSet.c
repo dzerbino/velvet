@@ -839,15 +839,15 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	char previous_qname_pairing[10];
 	char previous_qname[5000];
 	char previous_seq[5000];
-	char previous_rname[5000];
-	char previous_cigar[5000];
-	long long previous_pos = -1;
-	int previous_orientation = 0;
 	boolean previous_paired = false;
 	ReferenceCoordinate * refCoord;
 	char c;
 	int cigar_index;
 	long long cigar_num;
+
+	size_t buffer_size = 1000;
+	char * buffer = callocOrExit(buffer_size, char);
+	strcpy(buffer, "");
 
 	if (cat == REFERENCE) {
 		velvetLog("SAM file %s cannot contain reference sequences.\n", filename);
@@ -918,26 +918,27 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 				// Determine if paired to previous read
 				if (readCount > 0) {
 					if (cat % 2) {
-						if (previous_paired) {
-							// Last read paired to penultimate read
-							velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-								(long) ((*sequenceIndex)++), (int) cat);
-							writeFastaSequence(outfile, previous_seq);
-							previous_paired = false;
-						} else if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
+						if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
 							// New multi-mapping issue
-							previous_paired = false;
+							;
 						}  else if (strcmp(qname, previous_qname) == 0) {
 							// Last read paired to current reads
 							velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 								(long) ((*sequenceIndex)++), (int) cat);
 							writeFastaSequence(outfile, previous_seq);
+							velvetFprintf(outfile, "%s", buffer);
+							strcpy(buffer, "");
 							previous_paired = true;
 						} else {
-							// Last read unpaired
-							velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-								(long) ((*sequenceIndex)++), (int) cat - 1);
+							if (previous_paired)
+							    velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+								    (long) ((*sequenceIndex)++), (int) cat);	
+							else
+							    velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+								    (long) ((*sequenceIndex)++), (int) cat - 1);	
 							writeFastaSequence(outfile, previous_seq);
+							velvetFprintf(outfile, "%s", buffer);
+							strcpy(buffer, "");
 							previous_paired = false;
 						}
 					} else {
@@ -945,28 +946,36 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 						velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 							(long) ((*sequenceIndex)++), (int) cat);
 						writeFastaSequence(outfile, previous_seq);
+						velvetFprintf(outfile, "%s", buffer);
+						strcpy(buffer, "");
 					}
 
-					if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
-						if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
+					if ((refCoord = findReferenceCoordinate(refCoords, rname, (Coordinate) pos, (Coordinate) pos + strlen(seq) - 1, orientation))) {
+						if (strlen(cigar) == 1 && cigar[0] == '*')
 							;
 						else {
 							cigar_num = 0;
-							for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
-								c = previous_cigar[cigar_index];
+							for (cigar_index = 0; cigar_index < strlen(cigar); cigar_index++) {
+								c = cigar[cigar_index];
 								if (c == 'M' || c == '=' || c == 'X') {
-									if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
+									if (refCoord->finish < 0 || pos < refCoord->finish) {
 										if (refCoord->positive_strand) {
-											velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+											sprintf(buffer, "%sM\t%li\t%lli\n", buffer, (long) orientation * refCoord->referenceID, (long long) (pos - refCoord->start));
 										} else 
-											velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+											sprintf(buffer, "%sM\t%li\t%lli\n", buffer, (long) - orientation * refCoord->referenceID, (long long) (refCoord->finish - pos - strlen(seq)));
+
+										if (buffer_size - strlen(buffer) < 100) {
+											buffer_size += 1000;
+											buffer = reallocOrExit(buffer, buffer_size, char);
+										}
+
 									}
 									cigar_num = 0;
 								} else if (c == 'S' || c == 'I') {
-									previous_pos -= cigar_num;
+									pos -= cigar_num;
 									cigar_num = 0;
 								} else if (c == 'D' || c == 'N') {
-									previous_pos += cigar_num;
+									pos += cigar_num;
 									cigar_num = 0;
 								} else if (c == 'H' || c == 'P') {
 									cigar_num = 0;
@@ -983,10 +992,6 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 				strcpy(previous_qname, qname);
 				strcpy(previous_qname_pairing, qname_pairing);
 				strcpy(previous_seq, seq);
-				strcpy(previous_rname, rname);
-				strcpy(previous_cigar, cigar);
-				previous_pos = pos;
-				previous_orientation = orientation;
 				velvetifySequence(previous_seq);
 
 				readCount++;
@@ -994,58 +999,17 @@ static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 		}
 
 	if (readCount) {
-		if (cat % 2) {
-			if (previous_paired) {
-				// Last read paired to penultimate read
-				velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-					(long) ((*sequenceIndex)++), (int) cat);
-				writeFastaSequence(outfile, previous_seq);
-			} else {
-				// Last read unpaired
-				velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-					(long) ((*sequenceIndex)++), (int) cat - 1);
-				writeFastaSequence(outfile, previous_seq);
-			}
-		} else {
-			// Unpaired dataset 
-			velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-				(long) ((*sequenceIndex)++), (int) cat);
-			writeFastaSequence(outfile, previous_seq);
-		}
-
-		if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
-			if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
-				;
-			else {
-				cigar_num = 0;
-				for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
-					c = previous_cigar[cigar_index];
-					if (c == 'M' || c == '=' || c == 'X') {
-						if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
-							if (refCoord->positive_strand) {
-								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-							} else 
-								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
-						}
-						cigar_num = 0;
-					} else if (c == 'S' || c == 'I') {
-						previous_pos -= cigar_num;
-						cigar_num = 0;
-					} else if (c == 'D' || c == 'N') {
-						previous_pos += cigar_num;
-						cigar_num = 0;
-					} else if (c == 'H' || c == 'P') {
-						cigar_num = 0;
-					} else if (isdigit(c)) {
-						cigar_num = 10 * cigar_num + (c - 48);
-					} else {
-						abort();
-					}
-				}
-			}
-		}
+		if (previous_paired)
+		    velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+			    (long) ((*sequenceIndex)++), (int) cat);
+		else
+		    velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+			    (long) ((*sequenceIndex)++), (int) cat);
+		writeFastaSequence(outfile, previous_seq);
+		velvetFprintf(outfile, "%s", buffer);
 	}
 
+	free(buffer);
 	fclose(file);
 	velvetLog("%lu reads found.\n", readCount);
 	velvetLog("Done\n");
@@ -1074,17 +1038,15 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	char previous_qname_pairing[10];
 	char previous_qname[5000];
 	char previous_seq[5000];
-	char previous_cigar[5000];
-	int previous_rID = 0;
-	long long previous_pos = -1;
-	int previous_orientation = 0;
 	boolean previous_paired = false;
-	int previous_flagbits = 0;
 	char ** refNames;
 	ReferenceCoordinate * refCoord;
 	char c;
 	int cigar_index;
 	long long cigar_num;
+
+	size_t mapBuffer_size = 1000;
+	char * mapBuffer = callocOrExit(mapBuffer_size, char);
 
 	if (cat == REFERENCE) {
 		velvetLog("BAM file %s cannot contain reference sequences.\n", filename);
@@ -1206,26 +1168,28 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 			// Determine if paired to previous read
 			if (readCount > 0) {
 				if (cat % 2) {
-					 if (previous_paired) {
-						// Last read paired to penultimate read
-						velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-							(long) ((*sequenceIndex)++), (int) cat);
-						writeFastaSequence(outfile, previous_seq);
-						previous_paired = false;
-					} else if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
+					if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
 						// New multi-mapping issue
-						previous_paired = false;
+						;
 					} else if (strcmp(qname, previous_qname) == 0) {
 						// Last read paired to current reads
 						velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 							(long) ((*sequenceIndex)++), (int) cat);
 						writeFastaSequence(outfile, previous_seq);
+						velvetFprintf(outfile, "%s", mapBuffer);
+						strcpy(mapBuffer, "");
 						previous_paired = true;
 					} else {
 						// Last read unpaired
-						velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-							(long) ((*sequenceIndex)++), (int) cat - 1);
+						if (previous_paired)
+						    velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							    (long) ((*sequenceIndex)++), (int) cat);
+						else
+						    velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							    (long) ((*sequenceIndex)++), (int) cat - 1);
 						writeFastaSequence(outfile, previous_seq);
+						velvetFprintf(outfile, "%s", mapBuffer);
+						strcpy(mapBuffer, "");
 						previous_paired = false;
 					}
 				} else {
@@ -1233,28 +1197,36 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 					velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 						(long) ((*sequenceIndex)++), (int) cat);
 					writeFastaSequence(outfile, previous_seq);
+					velvetFprintf(outfile, "%s", mapBuffer);
+					strcpy(mapBuffer, "");
 				}
 
-				if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
-					if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
+				if (!(flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[rID], (Coordinate) pos, (Coordinate) pos + strlen(seq) - 1, orientation))) {
+					if (strlen(cigar) == 1 && cigar[0] == '*')
 						;
 					else {
 						cigar_num = 0;
-						for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
-							c = previous_cigar[cigar_index];
+						for (cigar_index = 0; cigar_index < strlen(cigar); cigar_index++) {
+							c = cigar[cigar_index];
 							if (c == 'M' || c == '=' || c == 'X') {
-								if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
-									if (refCoord->positive_strand) {
-										velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-									} else 
-										velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
+								if (refCoord->finish < 0 || pos < refCoord->finish) {
+									if (refCoord->positive_strand)
+										sprintf(mapBuffer, "%sM\t%li\t%lli\n", mapBuffer, (long) orientation * refCoord->referenceID, (long long) (pos - refCoord->start));
+									else 
+										sprintf(mapBuffer, "%sM\t%li\t%lli\n", mapBuffer, (long) - orientation * refCoord->referenceID, (long long) (refCoord->finish - pos - strlen(seq)));
+
+									if (mapBuffer_size - strlen(mapBuffer) < 100) {
+										mapBuffer_size += 1000;
+										mapBuffer = reallocOrExit(mapBuffer, mapBuffer_size, char);
+									}
+
 								}
 								cigar_num = 0;
 							} else if (c == 'S' || c == 'I') {
-								previous_pos -= cigar_num;
+								pos -= cigar_num;
 								cigar_num = 0;
 							} else if (c == 'D' || c == 'N') {
-								previous_pos += cigar_num;
+								pos += cigar_num;
 								cigar_num = 0;
 							} else if (c == 'H' || c == 'P') {
 								cigar_num = 0;
@@ -1271,11 +1243,6 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 			strcpy(previous_qname, qname);
 			strcpy(previous_qname_pairing, qname_pairing);
 			strcpy(previous_seq, seq);
-			strcpy(previous_cigar, cigar);
-			previous_rID = rID;
-			previous_pos = pos;
-			previous_orientation = orientation;
-			previous_flagbits = flagbits;
 			velvetifySequence(previous_seq);
 
 			readCount++;
@@ -1283,60 +1250,20 @@ static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequ
 	}
 
 	if (readCount) {
-		if (cat % 2) {
-			if (previous_paired) {
-				// Last read paired to penultimate read
-				velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-					(long) ((*sequenceIndex)++), (int) cat);
-				writeFastaSequence(outfile, previous_seq);
-			} else {
-				// Last read unpaired
-				velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
-					(long) ((*sequenceIndex)++), (int) cat - 1);
-				writeFastaSequence(outfile, previous_seq);
-			}
-		} else {
-			// Unpaired dataset 
+		if (previous_paired)
 			velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 				(long) ((*sequenceIndex)++), (int) cat);
-			writeFastaSequence(outfile, previous_seq);
-		}
-
-		if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
-			if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
-				;
-			else {
-				cigar_num = 0;
-				for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
-					c = previous_cigar[cigar_index];
-					if (c == 'M' || c == '=' || c == 'X') {
-						if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
-							if (refCoord->positive_strand) {
-								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-							} else 
-								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
-						}
-						cigar_num = 0;
-					} else if (c == 'S' || c == 'I') {
-						previous_pos -= cigar_num;
-						cigar_num = 0;
-					} else if (c == 'D' || c == 'N') {
-						previous_pos += cigar_num;
-						cigar_num = 0;
-					} else if (c == 'H' || c == 'P') {
-						cigar_num = 0;
-					} else if (isdigit(c)) {
-						cigar_num = 10 * cigar_num + (c - 48);
-					} else {
-						abort();
-					}
-				}
-			}
-		}
+		else
+			// Last read unpaired
+			velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+				(long) ((*sequenceIndex)++), (int) cat - 1);
+		writeFastaSequence(outfile, previous_seq);
+		velvetFprintf(outfile, "%s", mapBuffer);
 	}
 
 	free(seq);
 	free(buffer);
+	free(mapBuffer);
 
 	gzclose(file);
 	velvetLog("%lu reads found.\n", readCount);

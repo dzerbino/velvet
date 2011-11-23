@@ -64,6 +64,9 @@ static Mask * newMask(Coordinate position)
 	return mask;
 }
 
+// DEBUG
+boolean debug = false;
+
 #define HASH_BUCKETS_NB 16777216
 
 #ifdef _OPENMP
@@ -388,6 +391,9 @@ static boolean findOrInsertOccurenceInSplayTable(Kmer * kmer, IDnum * seqID,
 		// If in buffer zone:
 		return doFindOrInsertOccurenceInSplayTree(kmer, seqID, position, table);
 
+
+	if (debug)
+		abort();
 	// Look up first in reference sequence k-mers
 	if (table->kmerOccurenceTable 
 	    && (hit = findKmerInKmerOccurenceTable(kmer, table->kmerOccurenceTable))) {
@@ -437,6 +443,9 @@ static void printAnnotations(IDnum *sequenceIDs, Coordinate * coords,
 #ifdef _OPENMP
 	thread = omp_get_thread_num();
 #endif
+
+	if (debug) 
+		abort();
 
 	sprintf(lineBuffer, "ROADMAP %li\n", (long)seqID);
 	appendLine(lineBuffer, thread);
@@ -735,6 +744,8 @@ void inputSequenceIntoSplayTable(TightString * array,
 {
 	IDnum * sequenceIDs = NULL;
 	Coordinate * coords = NULL;
+
+	debug = (seqID == 29405);
 
 	// If appropriate, get the HSPs on reference sequences
 	if (table->kmerOccurenceTable) 

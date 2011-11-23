@@ -408,3 +408,7 @@ V 1.1.07
 - Pairing bug for odd number of reads
 - Variable size in reading sequence lengths
 - Ubuntu patch to Makefile
+
+V 1.1.08
+- Negative marker bug in TourBus
+- Better reading of SAM/BAM files
