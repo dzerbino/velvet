@@ -389,7 +389,7 @@ int main(int argc, char **argv)
 				   roadmapFilename, readTracking, accelerationBits);
 		sequenceLengths =
 		    getSequenceLengths(sequences, getWordLength(graph));
-		//correctGraph(graph, sequenceLengths, sequences->categories);
+		correctGraph(graph, sequenceLengths, sequences->categories);
 		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else if ((file = fopen(roadmapFilename, "r")) != NULL) {
 		fclose(file);

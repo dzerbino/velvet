@@ -745,7 +745,7 @@ void inputSequenceIntoSplayTable(TightString * array,
 	IDnum * sequenceIDs = NULL;
 	Coordinate * coords = NULL;
 
-	debug = (seqID == 29405);
+	//debug = (seqID == 29405);
 
 	// If appropriate, get the HSPs on reference sequences
 	if (table->kmerOccurenceTable) 
