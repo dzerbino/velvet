@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall
 DEBUG = -g
-LDFLAGS = -lm
+LIBS = -lm
 OPT = -O3
 MAXKMERLENGTH=31
 CATEGORIES=2

@@ -18,15 +18,14 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#ifndef _CORRECTEDGRAPH_H_
-#define _CORRECTEDGRAPH_H_
+#ifndef _SPLAYTABLE_H_
+#define _SPLAYTABLE_H_
 
-void clipTipsHard(Graph * graph, boolean conserveLong);
+SplayTable *newSplayTable(int WORDLENGTH, boolean double_strand);
 
-void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories, boolean conserveLong);
+void destroySplayTable(SplayTable * table);
 
-// Black arts:
-void setMaxReadLength(int value);
-void setMaxGaps(int value);
-void setMaxDivergence(double value);
+void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
+						SplayTable * table,
+						char *filename, char* seqFilename);
 #endif

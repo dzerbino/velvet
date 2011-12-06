@@ -21,9 +21,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _CORRECTEDGRAPH_H_
 #define _CORRECTEDGRAPH_H_
 
-void clipTipsHard(Graph * graph, boolean conserveLong);
+void clipTipsHard(Graph * graph);
 
-void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories, boolean conserveLong);
+void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories);
 
 // Black arts:
 void setMaxReadLength(int value);

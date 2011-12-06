@@ -18,15 +18,22 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#ifndef _CORRECTEDGRAPH_H_
-#define _CORRECTEDGRAPH_H_
+#ifndef _DFIBHEAP_H_
+#define _DFIBHEAP_H_
 
-void clipTipsHard(Graph * graph, boolean conserveLong);
+DFibHeap *newDFibHeap();
 
-void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories, boolean conserveLong);
+DFibHeapNode *insertNodeIntoDHeap(DFibHeap * heap, Time key, Node * node);
 
-// Black arts:
-void setMaxReadLength(int value);
-void setMaxGaps(int value);
-void setMaxDivergence(double value);
+Time replaceKeyInDHeap(DFibHeap * heap, DFibHeapNode * node, Time newKey);
+
+Node *removeNextNodeFromDHeap(DFibHeap * heap);
+
+void destroyDHeap(DFibHeap * heap);
+
+void replaceValueInDHeap(DFibHeapNode * node, Node * newValue);
+
+void *destroyNodeInDHeap(DFibHeapNode * node, DFibHeap * heap);
+
+Time getKey(DFibHeapNode * node);
 #endif

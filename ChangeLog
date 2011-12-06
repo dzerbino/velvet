@@ -402,3 +402,12 @@ V 1.1.06
 - Added gap mask in Columbus
 - Offsets used in kmerOccurenceTable to accelerate searches
 - Some memory leaks
+
+V 1.1.07
+- Concurrency issues in Columbus
+- Pairing bug for odd number of reads
+- Variable size in reading sequence lengths
+- Ubuntu patch to Makefile
+
+V 1.1.08
+- Added conserveLong option

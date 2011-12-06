@@ -18,15 +18,17 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#ifndef _CORRECTEDGRAPH_H_
-#define _CORRECTEDGRAPH_H_
+#ifndef _READCOHERENTGRAPH_H_
+#define _READCOHERENTGRAPH_H_
 
-void clipTipsHard(Graph * graph, boolean conserveLong);
+void readCoherentGraph(Graph * graph, boolean(*isUnique) (Node * node),
+		       double coverage, ReadSet * reads);
 
-void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories, boolean conserveLong);
+boolean isUniqueSolexa(Node * node);
 
-// Black arts:
-void setMaxReadLength(int value);
-void setMaxGaps(int value);
-void setMaxDivergence(double value);
+void setMultiplicityCutoff(int value);
+
+boolean uniqueNodesConnect(Node * startingNode);
+Node* bypass();
+
 #endif

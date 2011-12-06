@@ -18,15 +18,20 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#ifndef _CORRECTEDGRAPH_H_
-#define _CORRECTEDGRAPH_H_
+#ifndef _SHORTREADPAIRS_H_
+#define _SHORTREADPAIRS_H_
 
-void clipTipsHard(Graph * graph, boolean conserveLong);
+void exploitShortReadPairs(Graph * graph,
+			   ReadSet * reads,
+			   boolean * dubious,
+			   boolean * shadows,
+			   boolean force_jumps);
+void handicapNode(Node * node);
+NodeList *getMarkedNodeList();
+NodeList *allocateNodeList();
+void deallocateNodeList(NodeList * nodeList);
+void concatenateLongReads(Node * node, Node * candidate, Graph * graph);
+void absorbExtension(Node * node, Node * extension);
+void adjustLongReads(Node * target, Coordinate nodeLength);
 
-void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories, boolean conserveLong);
-
-// Black arts:
-void setMaxReadLength(int value);
-void setMaxGaps(int value);
-void setMaxDivergence(double value);
 #endif

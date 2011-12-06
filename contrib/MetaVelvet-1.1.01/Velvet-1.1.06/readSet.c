@@ -31,8 +31,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "readSet.h"
 #include "utility.h"
 
-#include "binarySequences.h"
-
 #if !defined(BUNDLEDZLIB)
 #include <zlib.h>
 #elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
@@ -48,21 +46,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #else
 #  define SET_BINARY_MODE(file)
 #endif
-
-//
-// cmd line args can override the createBinary flag
-// note that createBinary is only used by velveth
-//
-boolean createBinary = false;
-inline boolean isCreateBinary()
-{
-	return createBinary;
-}
-
-void setCreateBinary(boolean val)
-{
-	createBinary = val;
-}
 
 ReadSet *newReadSet()
 {
@@ -290,6 +273,96 @@ static int int32(const unsigned char * ptr)
 	return x;
 }
 
+// Imports sequences from a fastq file 
+// Memory space allocated within this function.
+static void readSolexaFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
+{
+	FILE *file = fopen(filename, "r");
+	IDnum counter = 0;
+	const int maxline = 500;
+	char line[500];
+	char readName[500];
+	char readSeq[500];
+	char str[100];
+	Coordinate start;
+
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "r");
+	else
+		file = stdin;
+
+	if (file != NULL)
+		velvetLog("Reading Solexa file %s\n", filename);
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	while (fgets(line, maxline, file) != NULL)
+		if (strchr(line, '.') == NULL) {
+			sscanf(line, "%s\t%*i\t%*i\t%*i\t%*c%[^\n]",
+			       readName, readSeq);
+			velvetFprintf(outfile, ">%s\t%ld\t%d\n", readName, (long) ((*sequenceIndex)++), (int) cat);
+			velvetifySequence(readSeq);
+			start = 0;
+			while (start <= (Coordinate)strlen(readSeq)) {
+				strncpy(str, readSeq + start, 60);
+				str[60] = '\0';
+				velvetFprintf(outfile, "%s\n", str);
+				start += 60;
+			}
+
+			counter++;
+		}
+
+	fclose(file);
+
+	velvetLog("%li sequences found\n", (long) counter);
+	velvetLog("Done\n");
+}
+
+static void readElandFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
+{
+	FILE *file = fopen(filename, "r");
+	IDnum counter = 0;
+	const int maxline = 5000;
+	char line[5000];
+	char readName[5000];
+	char readSeq[5000];
+	char str[100];
+	Coordinate start;
+
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "r");
+	else
+		file = stdin;
+
+	if (file != NULL)
+		velvetLog("Reading Solexa file %s\n", filename);
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	// Reopen file and memorize line:
+	while (fgets(line, maxline, file) != NULL) {
+		sscanf(line, "%[^\t]\t%[^\t\n]",
+		       readName, readSeq);
+		velvetFprintf(outfile, ">%s\t%ld\t%d\n", readName, (long) ((*sequenceIndex)++), (int) cat);
+		velvetifySequence(readSeq);
+		start = 0;
+		while (start <= (Coordinate)strlen(readSeq)) {
+			strncpy(str, readSeq + start, 60);
+			str[60] = '\0';
+			velvetFprintf(outfile, "%s\n", str);
+			start += 60;
+		}
+
+		counter++;
+	}
+
+	fclose(file);
+
+	velvetLog("%li sequences found\n", (long) counter);
+	velvetLog("Done\n");
+}
+
 void goToEndOfLine(char *line, FILE * file)
 {
 	size_t length = strlen(line);
@@ -301,16 +374,15 @@ void goToEndOfLine(char *line, FILE * file)
 
 // Imports sequences from a fastq file 
 // Memory space allocated within this function.
-static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex)
+static void readFastQFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
 	FILE *file;
 	const int maxline = 5000;
 	char line[5000];
-	IDnum counter = 0;
-	Coordinate i;
-	char c;
 	char str[100];
-	Coordinate start;
+	IDnum counter = 0;
+	Coordinate start, i;
+	char c;
 
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
@@ -328,40 +400,27 @@ static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastQ format", filename);
 	ungetc(c, file);	
 
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
 	while(fgets(line, maxline, file)) { 
 
 		for (i = strlen(line) - 1;
 		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
 			line[i] = '\0';
 		}
-		if (isCreateBinary()) {
-			if (counter > 0) {
-				// end previous seq
-				cnySeqInsertEnd(seqWriteInfo);
-			}
-			cnySeqInsertStart(seqWriteInfo);
-		} else {
-			velvetFprintf(seqWriteInfo->m_pFile,">%s\t%ld\t%d\n", line + 1, (long) ((*sequenceIndex)++), (int) cat);
-		}
+
+		velvetFprintf(outfile,">%s\t%ld\t%d\n", line + 1, (long) ((*sequenceIndex)++), (int) cat);
 		counter++;
 
 		if(!fgets(line, maxline, file))
 			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
 
 		velvetifySequence(line);
-		if (isCreateBinary()) {
-			cnySeqInsertNucleotideString(line, seqWriteInfo);
-		} else {
+
 		start = 0;
-		while (start <= strlen(line)) {
+		while (start <= (Coordinate)strlen(line)) {
 			strncpy(str, line + start, 60);
 			str[60] = '\0';
-				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
+			velvetFprintf(outfile, "%s\n", str);
 			start += 60;
-		}
 		}
 
 		if(!fgets(line, maxline, file))
@@ -369,9 +428,7 @@ static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 		if(!fgets(line, maxline, file))
 			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
 	}
-	if (isCreateBinary()) {
-		cnySeqInsertEnd(seqWriteInfo);
-	}
+
 	fclose(file);
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
@@ -379,14 +436,15 @@ static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 
 // Imports sequences from a raw sequence file 
 // Memory space allocated within this function.
-static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex)
+static void readRawFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
 	FILE *file;
 	const int maxline = 5000;
 	char line[5000];
-	IDnum counter = 0;
 	char str[100];
+	IDnum counter = 0;
 	Coordinate start;
+
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
 	else 
@@ -397,19 +455,8 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
 	while(fgets(line, maxline, file)) { 
-		if (isCreateBinary()) {
-			if (counter > 0) {
-				// end previous seq
-				cnySeqInsertEnd(seqWriteInfo);
-			}
-			cnySeqInsertStart(seqWriteInfo);
-		} else {
-			velvetFprintf(seqWriteInfo->m_pFile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
-		}
+		velvetFprintf(outfile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
 		counter++;
 
 		if (strlen(line) >= maxline - 1) {
@@ -420,21 +467,15 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			exit(1);
 		}
 		velvetifySequence(line);
-		if (isCreateBinary()) {
-			cnySeqInsertNucleotideString(line, seqWriteInfo);
-		} else {
 		start = 0;
-		while (start <= strlen(line)) {
+		while (start <= (Coordinate)strlen(line)) {
 			strncpy(str, line + start, 60);
 			str[60] = '\0';
-				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
+			velvetFprintf(outfile, "%s\n", str);
 			start += 60;
 		}
 	}
-	}
-	if (isCreateBinary()) {
-		cnySeqInsertEnd(seqWriteInfo);
-	}
+
 	fclose(file);
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
@@ -442,16 +483,15 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 
 // Imports sequences from a zipped rfastq file 
 // Memory space allocated within this function.
-static void readFastQGZFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex)
+static void readFastQGZFile(FILE * outfile, char *filename, Category cat, IDnum *sequenceIndex)
 {
 	gzFile file;
 	const int maxline = 5000;
 	char line[5000];
-	IDnum counter = 0;
-	Coordinate i;
-	char c;
 	char str[100];
-	Coordinate start;
+	IDnum counter = 0;
+	Coordinate start, i;
+	char c;
 
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "rb");
@@ -471,46 +511,29 @@ static void readFastQGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastQ format", filename);
 	gzungetc(c, file);	
 
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
 	while (gzgets(file, line, maxline)) {
 		for (i = strlen(line) - 1;
 		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
 			line[i] = '\0';
 		}
 
-		if (isCreateBinary()) {
-			if (counter > 0) {
-				// end previous seq
-				cnySeqInsertEnd(seqWriteInfo);
-			}
-			cnySeqInsertStart(seqWriteInfo);
-		} else {
-			velvetFprintf(seqWriteInfo->m_pFile,">%s\t%ld\t%d\n", line + 1, (long) ((*sequenceIndex)++), (int) cat);
-		}
+		velvetFprintf(outfile,">%s\t%ld\t%d\n", line + 1, (long) ((*sequenceIndex)++), (int) cat);
 		counter++;
 
 		gzgets(file, line, maxline);
 
 		velvetifySequence(line);
-		if (isCreateBinary()) {
-			cnySeqInsertNucleotideString(line, seqWriteInfo);
-		} else {
+
 		start = 0;
-		while (start <= strlen(line)) {
+		while (start <= (Coordinate)strlen(line)) {
 			strncpy(str, line + start, 60);
 			str[60] = '\0';
-				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
+			velvetFprintf(outfile, "%s\n", str);
 			start += 60;
-		}
 		}
 
 		gzgets(file, line, maxline);
 		gzgets(file, line, maxline);
-	}
-	if (isCreateBinary()) {
-		cnySeqInsertEnd(seqWriteInfo);
 	}
 
 	gzclose(file);
@@ -520,14 +543,15 @@ static void readFastQGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 
 // Imports sequences from a zipped raw file 
 // Memory space allocated within this function.
-static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex)
+static void readRawGZFile(FILE * outfile, char *filename, Category cat, IDnum *sequenceIndex)
 {
 	gzFile file;
 	const int maxline = 5000;
 	char line[5000];
-	IDnum counter = 0;
 	char str[100];
+	IDnum counter = 0;
 	Coordinate start;
+
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "rb");
 	else { 
@@ -540,19 +564,8 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
 	while (gzgets(file, line, maxline)) {
-		if (isCreateBinary()) {
-			if (counter > 0) {
-				// end previous seq
-				cnySeqInsertEnd(seqWriteInfo);
-			}
-			cnySeqInsertStart(seqWriteInfo);
-		} else {
-			velvetFprintf(seqWriteInfo->m_pFile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
-		}
+		velvetFprintf(outfile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
 		counter++;
 
 		if (strlen(line) >= maxline - 1) {
@@ -564,21 +577,16 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 		}
 
 		velvetifySequence(line);
-		if (isCreateBinary()) {
-			cnySeqInsertNucleotideString(line, seqWriteInfo);
-		} else {
+
 		start = 0;
-		while (start <= strlen(line)) {
+		while (start <= (Coordinate)strlen(line)) {
 			strncpy(str, line + start, 60);
 			str[60] = '\0';
-				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
+			velvetFprintf(outfile, "%s\n", str);
 			start += 60;
 		}
 	}
-	}
-	if (isCreateBinary()) {
-		cnySeqInsertEnd(seqWriteInfo);
-	}
+
 	gzclose(file);
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
@@ -636,17 +644,18 @@ static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTabl
 
 // Imports sequences from a fasta file 
 // Memory is allocated within the function 
-static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
+static void readFastAFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	FILE *file;
 	const int maxline = 5000;
 	char line[5000];
-	IDnum counter = 0;
-	char c;
 	char str[100];
+	IDnum counter = 0;
 	Coordinate i;
+	char c;
 	Coordinate start;
 	int offset = 0;
+
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
 	else
@@ -657,9 +666,6 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
 	// Checking if FastA
 	c = getc(file);
 	if (c != EOF && c != '>') 
@@ -668,15 +674,8 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 
 	while (fgets(line, maxline, file)) {
 		if (line[0] == '>') {
-			if (isCreateBinary()) {
-				if (counter > 0) {
-					// end previous seq
-					cnySeqInsertEnd(seqWriteInfo);
-				}
-				cnySeqInsertStart(seqWriteInfo);
-			} else {
 			if (offset != 0) { 
-					velvetFprintf(seqWriteInfo->m_pFile, "\n");
+				velvetFprintf(outfile, "\n");
 				offset = 0;
 			}
 
@@ -685,35 +684,27 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 				line[i] = '\0';
 			}
 
-				velvetFprintf(seqWriteInfo->m_pFile,"%s\t%ld\t%d\n", line, (long) ((*sequenceIndex)++), (int) cat);
-			}
+			velvetFprintf(outfile,"%s\t%ld\t%d\n", line, (long) ((*sequenceIndex)++), (int) cat);
 			counter++;
 		} else {
 			velvetifySequence(line);
-			if (isCreateBinary()) {
-				cnySeqInsertNucleotideString(line, seqWriteInfo);
-			} else {
 			start = 0;
-			while (start < strlen(line)) {
+			while (start < (Coordinate)strlen(line)) {
 				strncpy(str, line + start, 60 - offset);
 				str[60 - offset] = '\0';
-					velvetFprintf(seqWriteInfo->m_pFile, "%s", str);
+				velvetFprintf(outfile, "%s", str);
 				offset += strlen(str);
 				if (offset >= 60) {
-						velvetFprintf(seqWriteInfo->m_pFile, "\n");
+					velvetFprintf(outfile, "\n");
 					offset = 0;
 				}
 				start += strlen(str);
 			}
 		}
 	}
-	}
-	if (isCreateBinary()) {
-		cnySeqInsertEnd(seqWriteInfo);
-	} else {
+
 	if (offset != 0) 
-			velvetFprintf(seqWriteInfo->m_pFile, "\n");
-	}
+		velvetFprintf(outfile, "\n");
 	fclose(file);
 
 	if (cat == REFERENCE)
@@ -725,16 +716,17 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 
 // Imports sequences from a zipped fasta file 
 // Memory is allocated within the function 
-static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex)
+static void readFastAGZFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
 {
 	gzFile file;
 	const int maxline = 5000;
 	char line[5000];
-	IDnum counter = 0;
-	char c;
 	char str[100];
+	IDnum counter = 0;
 	Coordinate i, start;
+	char c;
 	int offset = 0;
+
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "rb");
 	else { 
@@ -747,9 +739,6 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
 	// Checking if FastA
 	c = gzgetc(file);
 	if (c != EOF && c != '>') 
@@ -758,15 +747,8 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 
 	while (gzgets(file, line, maxline)) {
 		if (line[0] == '>') {
-			if (isCreateBinary()) {
-				if (counter > 0) {
-					// end previous seq
-					cnySeqInsertEnd(seqWriteInfo);
-				}
-				cnySeqInsertStart(seqWriteInfo);
-			} else {
 			if (offset != 0) { 
-					velvetFprintf(seqWriteInfo->m_pFile, "\n");
+				velvetFprintf(outfile, "\n");
 				offset = 0;
 			}
 
@@ -775,48 +757,87 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 				line[i] = '\0';
 			}
 
-				velvetFprintf(seqWriteInfo->m_pFile, "%s\t%ld\t%d\n", line, (long) ((*sequenceIndex)++), (int) cat);	
-			}
+			velvetFprintf(outfile, "%s\t%ld\t%d\n", line, (long) ((*sequenceIndex)++), (int) cat);	
 			counter++;
 		} else {
 			velvetifySequence(line);
-			if (isCreateBinary()) {
-				cnySeqInsertNucleotideString(line, seqWriteInfo);
-			} else {
+
 			start = 0;
-			while (start < strlen(line)) {
+			while (start < (Coordinate)strlen(line)) {
 				strncpy(str, line + start, 60 - offset);
 				str[60 - offset] = '\0';
-					velvetFprintf(seqWriteInfo->m_pFile, "%s", str);
+				velvetFprintf(outfile, "%s", str);
 				offset += strlen(str);
 				if (offset >= 60) {
-						velvetFprintf(seqWriteInfo->m_pFile, "\n");
+					velvetFprintf(outfile, "\n");
 					offset = 0;
 				}
 				start += strlen(str);
 			}
 		}
 	}
-	}
-	if (isCreateBinary()) {
-		cnySeqInsertEnd(seqWriteInfo);
-	} else {
+
 	if (offset != 0) 
-			velvetFprintf(seqWriteInfo->m_pFile, "\n");
-}
+		velvetFprintf(outfile, "\n");
 	gzclose(file);
 
 	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
 }
 
-static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
+// Parser for new output
+static void readMAQGZFile(FILE* outfile, char *filename, Category cat, IDnum * sequenceIndex)
+{
+	gzFile file;
+	const int maxline = 1000;
+	char line[1000];
+	IDnum counter = 0;
+	char readName[500];
+	char readSeq[500];
+	char str[100];
+	Coordinate start;
+
+	if (strcmp(filename, "-"))
+		file = gzopen(filename, "rb");
+	else { 
+		file = gzdopen(fileno(stdin), "rb");
+		SET_BINARY_MODE(stdin);
+	}
+
+	if (file != NULL)
+		velvetLog("Reading zipped MAQ file %s\n", filename);
+	else
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	// Reopen file and memorize line:
+	while (gzgets(file, line, maxline)) {
+		sscanf(line, "%s\t%*i\t%*i\t%*c\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%*i\t%[^\t]",
+		       readName, readSeq);
+		velvetFprintf(outfile, ">%s\t%ld\t%d\n", readName, (long) ((*sequenceIndex)++), (int) cat);
+		velvetifySequence(readSeq);
+		start = 0;
+		while (start <= (Coordinate)strlen(readSeq)) {
+			strncpy(str, readSeq + start, 60);
+			str[60] = '\0';
+			velvetFprintf(outfile, "%s\n", str);
+			start += 60;
+		}
+
+		counter++;
+	}
+
+	gzclose(file);
+
+	velvetLog("%li sequences found\n", (long) counter);
+	velvetLog("Done\n");
+}
+
+static void readSAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	char line[5000];
 	unsigned long lineno, readCount;
 	char previous_qname_pairing[10];
 	char previous_qname[5000];
-	char print_qname[5000];
 	char previous_seq[5000];
 	char previous_rname[5000];
 	char previous_cigar[5000];
@@ -842,9 +863,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		velvetLog("Reading SAM file %s\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
+
 	readCount = 0;
 	for (lineno = 1; fgets(line, sizeof(line), file); lineno++)
 		if (line[0] != '@') {
@@ -898,65 +917,34 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 
 				// Determine if paired to previous read
 				if (readCount > 0) {
-					if (isCreateBinary()) {
-						cnySeqInsertStart(seqWriteInfo);
-					}
 					if (cat % 2) {
 						if (previous_paired) {
 							// Last read paired to penultimate read
-							if (isCreateBinary()) {
-								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-								strcpy(print_qname, previous_qname);
-								strcat(print_qname, previous_qname_pairing);
-								cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-							} else {
-								velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 								(long) ((*sequenceIndex)++), (int) cat);
-								writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-							}
+							writeFastaSequence(outfile, previous_seq);
 							previous_paired = false;
 						} else if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
 							// New multi-mapping issue
 							previous_paired = false;
 						}  else if (strcmp(qname, previous_qname) == 0) {
 							// Last read paired to current reads
-							if (isCreateBinary()) {
-								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-								strcpy(print_qname, previous_qname);
-								strcat(print_qname, previous_qname_pairing);
-								cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-							} else {
-								velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 								(long) ((*sequenceIndex)++), (int) cat);
-								writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-							}
+							writeFastaSequence(outfile, previous_seq);
 							previous_paired = true;
 						} else {
 							// Last read unpaired
-							if (isCreateBinary()) {
-								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-								strcpy(print_qname, previous_qname);
-								strcat(print_qname, previous_qname_pairing);
-								cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-							} else {
-								velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+							velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 								(long) ((*sequenceIndex)++), (int) cat - 1);
-								writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-							}
+							writeFastaSequence(outfile, previous_seq);
 							previous_paired = false;
 						}
 					} else {
 						// Unpaired dataset 
-						if (isCreateBinary()) {
-							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-							strcpy(print_qname, previous_qname);
-							strcat(print_qname, previous_qname_pairing);
-							cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-						} else {
-							velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+						velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 							(long) ((*sequenceIndex)++), (int) cat);
-							writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-					}
+						writeFastaSequence(outfile, previous_seq);
 					}
 
 					if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
@@ -964,27 +952,14 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							;
 						else {
 							cigar_num = 0;
-							for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
+							for (cigar_index = 0; cigar_index < (int)strlen(previous_cigar); cigar_index++) {
 								c = previous_cigar[cigar_index];
 								if (c == 'M' || c == '=' || c == 'X') {
 									if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
 										if (refCoord->positive_strand) {
-											if (isCreateBinary()) {
-												seqWriteInfo->m_bIsRef = true;
-												seqWriteInfo->m_referenceID = (long) previous_orientation * refCoord->referenceID;
-												seqWriteInfo->m_pos = (long long) (previous_pos - refCoord->start);
-											} else {
-												velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-									}
-										} else {
-											if (isCreateBinary()) {
-												seqWriteInfo->m_bIsRef = true;
-												seqWriteInfo->m_referenceID = (long) - previous_orientation * refCoord->referenceID;
-												seqWriteInfo->m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
-											} else {										
-												velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
-											}
-										}
+											velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+										} else 
+											velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 									}
 									cigar_num = 0;
 								} else if (c == 'S' || c == 'I') {
@@ -1003,10 +978,6 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							}
 						}
 					} 
-					if (isCreateBinary()) {
-						// end previous seq
-						cnySeqInsertEnd(seqWriteInfo);
-				}
 				}
 
 				strcpy(previous_qname, qname);
@@ -1023,47 +994,23 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		}
 
 	if (readCount) {
-		if (isCreateBinary()) {
-			cnySeqInsertStart(seqWriteInfo);
-		}
 		if (cat % 2) {
 			if (previous_paired) {
 				// Last read paired to penultimate read
-				if (isCreateBinary()) {
-					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-					strcpy(print_qname, previous_qname);
-					strcat(print_qname, previous_qname_pairing);
-					cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-				} else {
-					velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+				velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 					(long) ((*sequenceIndex)++), (int) cat);
-					writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-				}
+				writeFastaSequence(outfile, previous_seq);
 			} else {
 				// Last read unpaired
-				if (isCreateBinary()) {
-					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-					strcpy(print_qname, previous_qname);
-					strcat(print_qname, previous_qname_pairing);
-					cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-				} else {
-					velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+				velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 					(long) ((*sequenceIndex)++), (int) cat - 1);
-					writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-			}
+				writeFastaSequence(outfile, previous_seq);
 			}
 		} else {
 			// Unpaired dataset 
-			if (isCreateBinary()) {
-				cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-				strcpy(print_qname, previous_qname);
-				strcat(print_qname, previous_qname_pairing);
-				cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-			} else {
-				velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+			velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 				(long) ((*sequenceIndex)++), (int) cat);
-				writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-		}
+			writeFastaSequence(outfile, previous_seq);
 		}
 
 		if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
@@ -1071,27 +1018,14 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				;
 			else {
 				cigar_num = 0;
-				for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
+				for (cigar_index = 0; cigar_index < (int)strlen(previous_cigar); cigar_index++) {
 					c = previous_cigar[cigar_index];
 					if (c == 'M' || c == '=' || c == 'X') {
 						if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
 							if (refCoord->positive_strand) {
-								if (isCreateBinary()) {
-									seqWriteInfo->m_bIsRef = true;
-									seqWriteInfo->m_referenceID = (long) previous_orientation * refCoord->referenceID;
-									seqWriteInfo->m_pos = (long long) (previous_pos - refCoord->start);
-								} else {
-									velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-						}
-							} else {
-								if (isCreateBinary()) {
-									seqWriteInfo->m_bIsRef = true;
-									seqWriteInfo->m_referenceID = (long) - previous_orientation * refCoord->referenceID;
-									seqWriteInfo->m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
-								} else {
-									velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
-								}
-							}
+								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+							} else 
+								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 						}
 						cigar_num = 0;
 					} else if (c == 'S' || c == 'I') {
@@ -1110,9 +1044,6 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				}
 			}
 		}
-		if (isCreateBinary()) {
-			cnySeqInsertEnd(seqWriteInfo);
-	}
 	}
 
 	fclose(file);
@@ -1129,7 +1060,7 @@ static int readBAMint32(gzFile file)
 	return int32(buffer);
 }
 
-static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
+static void readBAMFile(FILE *outfile, char *filename, Category cat, IDnum *sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	size_t seqCapacity = 0;
 	char *seq = NULL;
@@ -1142,7 +1073,6 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	gzFile file;
 	char previous_qname_pairing[10];
 	char previous_qname[5000];
-	char print_qname[5000];
 	char previous_seq[5000];
 	char previous_cigar[5000];
 	int previous_rID = 0;
@@ -1196,7 +1126,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		strLength = int32(buffer);
 		refNames[i] = callocOrExit(strLength, char);
 		
-		if (bufferCapacity < 4 + strLength) {
+		if (bufferCapacity < (size_t)(4 + strLength)) {
 			bufferCapacity = 4 + strLength + 4096;
 			buffer = reallocOrExit(buffer, bufferCapacity, unsigned char);
 		}
@@ -1206,15 +1136,13 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 
 		strcpy(refNames[i], (char *) buffer); 
 	}
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
+
 	readCount = 0;
 	for (recno = 1; gzread(file, buffer, 4) == 4; recno++) {
 		int blockSize = int32(buffer);
 		int readLength;
 
-		if (bufferCapacity < 4 + blockSize) {
+		if (bufferCapacity < (size_t)(4 + blockSize)) {
 			bufferCapacity = 4 + blockSize + 4096;
 			buffer = reallocOrExit(buffer, bufferCapacity, unsigned char);
 		}
@@ -1257,7 +1185,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				strcat(cigar, cigar_buffer);
 			}
 
-			if (seqCapacity < readLength + 1) {
+			if (seqCapacity < (size_t)(readLength + 1)) {
 				seqCapacity = readLength * 2 + 1;
 				seq = reallocOrExit(seq, seqCapacity, char);
 			}
@@ -1277,65 +1205,34 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 
 			// Determine if paired to previous read
 			if (readCount > 0) {
-				if (isCreateBinary()) {
-					cnySeqInsertStart(seqWriteInfo);
-				}
 				if (cat % 2) {
 					 if (previous_paired) {
 						// Last read paired to penultimate read
-						 if (isCreateBinary()) {
-							 cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-							 strcpy(print_qname, previous_qname);
-							 strcat(print_qname, previous_qname_pairing);
-							 cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-						 } else {
-							 velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+						velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 							(long) ((*sequenceIndex)++), (int) cat);
-							 writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-						 }
+						writeFastaSequence(outfile, previous_seq);
 						previous_paired = false;
 					} else if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
 						// New multi-mapping issue
 						previous_paired = false;
 					} else if (strcmp(qname, previous_qname) == 0) {
 						// Last read paired to current reads
-						if (isCreateBinary()) {
-							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-							strcpy(print_qname, previous_qname);
-							strcat(print_qname, previous_qname_pairing);
-							cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-						} else {
-							velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+						velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 							(long) ((*sequenceIndex)++), (int) cat);
-							writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-						}
+						writeFastaSequence(outfile, previous_seq);
 						previous_paired = true;
 					} else {
 						// Last read unpaired
-						if (isCreateBinary()) {
-							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-							strcpy(print_qname, previous_qname);
-							strcat(print_qname, previous_qname_pairing);
-							cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-						} else {
-							velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+						velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 							(long) ((*sequenceIndex)++), (int) cat - 1);
-							writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-						}
+						writeFastaSequence(outfile, previous_seq);
 						previous_paired = false;
 					}
 				} else {
 					// Unpaired dataset 
-					if (isCreateBinary()) {
-						cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-						strcpy(print_qname, previous_qname);
-						strcat(print_qname, previous_qname_pairing);
-						cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-					} else {
-						velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+					velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 						(long) ((*sequenceIndex)++), (int) cat);
-						writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-				}
+					writeFastaSequence(outfile, previous_seq);
 				}
 
 				if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
@@ -1343,27 +1240,14 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						;
 					else {
 						cigar_num = 0;
-						for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
+						for (cigar_index = 0; cigar_index < (int)strlen(previous_cigar); cigar_index++) {
 							c = previous_cigar[cigar_index];
 							if (c == 'M' || c == '=' || c == 'X') {
 								if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
 									if (refCoord->positive_strand) {
-										if (isCreateBinary()) {
-											seqWriteInfo->m_bIsRef = true;
-											seqWriteInfo->m_referenceID = (long) previous_orientation * refCoord->referenceID;
-											seqWriteInfo->m_pos = (long long) (previous_pos - refCoord->start);
-										} else {
-											velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-								}
-									} else {
-										if (isCreateBinary()) {
-											seqWriteInfo->m_bIsRef = true;
-											seqWriteInfo->m_referenceID = (long) - previous_orientation * refCoord->referenceID;
-											seqWriteInfo->m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
-										} else {
-											velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
-										}
-									}
+										velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+									} else 
+										velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 								}
 								cigar_num = 0;
 							} else if (c == 'S' || c == 'I') {
@@ -1382,10 +1266,6 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						}
 					}
 				}
-				if (isCreateBinary()) {
-					// end previous seq
-					cnySeqInsertEnd(seqWriteInfo);
-			}
 			}
 
 			strcpy(previous_qname, qname);
@@ -1403,47 +1283,23 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	}
 
 	if (readCount) {
-		if (isCreateBinary()) {
-			cnySeqInsertStart(seqWriteInfo);
-		}
 		if (cat % 2) {
 			if (previous_paired) {
 				// Last read paired to penultimate read
-				if (isCreateBinary()) {
-					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-					strcpy(print_qname, previous_qname);
-					strcat(print_qname, previous_qname_pairing);
-					cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-				} else {
-					velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+				velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 					(long) ((*sequenceIndex)++), (int) cat);
-					writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-				}
+				writeFastaSequence(outfile, previous_seq);
 			} else {
 				// Last read unpaired
-				if (isCreateBinary()) {
-					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-					strcpy(print_qname, previous_qname);
-					strcat(print_qname, previous_qname_pairing);
-					cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-				} else {
-					velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+				velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 					(long) ((*sequenceIndex)++), (int) cat - 1);
-					writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-			}
+				writeFastaSequence(outfile, previous_seq);
 			}
 		} else {
 			// Unpaired dataset 
-			if (isCreateBinary()) {
-				cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
-				strcpy(print_qname, previous_qname);
-				strcat(print_qname, previous_qname_pairing);
-				cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
-			} else {
-				velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
+			velvetFprintf(outfile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 				(long) ((*sequenceIndex)++), (int) cat);
-				writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-		}
+			writeFastaSequence(outfile, previous_seq);
 		}
 
 		if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
@@ -1451,27 +1307,14 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				;
 			else {
 				cigar_num = 0;
-				for (cigar_index = 0; cigar_index < strlen(previous_cigar); cigar_index++) {
+				for (cigar_index = 0; cigar_index < (int)strlen(previous_cigar); cigar_index++) {
 					c = previous_cigar[cigar_index];
 					if (c == 'M' || c == '=' || c == 'X') {
 						if (refCoord->finish < 0 || previous_pos < refCoord->finish) {
 							if (refCoord->positive_strand) {
-								if (isCreateBinary()) {
-									seqWriteInfo->m_bIsRef = true;
-									seqWriteInfo->m_referenceID = (long) previous_orientation * refCoord->referenceID;
-									seqWriteInfo->m_pos = (long long) (previous_pos - refCoord->start);
-								} else {
-									velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-						}
-							} else {
-								if (isCreateBinary()) {
-									seqWriteInfo->m_bIsRef = true;
-									seqWriteInfo->m_referenceID = (long) - previous_orientation * refCoord->referenceID;
-									seqWriteInfo->m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
-								} else {
-									velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
-								}
-							}
+								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
+							} else 
+								velvetFprintf(outfile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 						}
 						cigar_num = 0;
 					} else if (c == 'S' || c == 'I') {
@@ -1490,9 +1333,6 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				}
 			}
 		}
-		if (isCreateBinary()) {
-			cnySeqInsertEnd(seqWriteInfo);
-	}
 	}
 
 	free(seq);
@@ -1521,6 +1361,8 @@ static void printUsage()
 	puts("\t-raw.gz");
 	puts("\t-sam");
 	puts("\t-bam");
+	puts("\t-eland");
+	puts("\t-gerald");
 	puts("");
 	puts("Read type options:");
 	puts("\t-short");
@@ -1542,8 +1384,11 @@ static void printUsage()
 
 #define FASTQ 1
 #define FASTA 2
+#define GERALD 3
+#define ELAND 4
 #define FASTA_GZ 5
 #define FASTQ_GZ 6
+#define MAQ_GZ 7
 #define SAM 8
 #define BAM 9
 #define RAW 10
@@ -1554,6 +1399,7 @@ static void printUsage()
 void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * double_strand, boolean * noHash)
 {
 	int argIndex = 1;
+	FILE *outfile;
 	int filetype = FASTA;
 	Category cat = 0;
 	IDnum sequenceIndex = 1;
@@ -1583,15 +1429,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 	if (reuseSequences) 
 		return;
 
-	SequencesWriter * seqWriteInfo = NULL;
-	if (isCreateBinary()) {
-		seqWriteInfo = openCnySeqForWrite(filename);
-		seqWriteInfo->m_unifiedSeqFileHeader.m_bDoubleStrand = *double_strand;
-		// file is already open
-	} else {
-		seqWriteInfo = callocOrExit(1, SequencesWriter);
-		seqWriteInfo->m_pFile = fopen(filename, "w");
-	}
+	outfile = fopen(filename, "w");
 
 	for (argIndex = 1; argIndex < argc; argIndex++) {
 		if (argv[argIndex][0] == '-' && strlen(argv[argIndex]) > 1) {
@@ -1600,6 +1438,10 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				filetype = FASTQ;
 			else if (strcmp(argv[argIndex], "-fasta") == 0)
 				filetype = FASTA;
+			else if (strcmp(argv[argIndex], "-gerald") == 0)
+				filetype = GERALD;
+			else if (strcmp(argv[argIndex], "-eland") == 0)
+				filetype = ELAND;
 			else if (strcmp(argv[argIndex], "-fastq.gz") == 0)
 				filetype = FASTQ_GZ;
 			else if (strcmp(argv[argIndex], "-fasta.gz") == 0)
@@ -1612,6 +1454,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				filetype = RAW;
 			else if (strcmp(argv[argIndex], "-raw.gz") == 0)
 				filetype = RAW_GZ;
+			else if (strcmp(argv[argIndex], "-maq.gz") == 0)
+				filetype = MAQ_GZ;
 			else if (strcmp(argv[argIndex], "-short") == 0)
 				cat = 0;
 			else if (strcmp(argv[argIndex], "-shortPaired") ==
@@ -1660,12 +1504,6 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				reference_coordinate_double_strand = false;
 			} else if (strcmp(argv[argIndex], "-noHash") == 0) {
 				;
-			} else if (strcmp(argv[argIndex], "-create_binary") == 0) {
-				argIndex++;
-				if (argIndex >= argc) {
-					velvetLog("Expected <yes|no> after -create_binary\n");
-					exit(1);
-			}
 			}
 			else {
 				velvetLog("Unknown option: %s\n",
@@ -1684,28 +1522,37 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 
 		switch (filetype) {
 		case FASTA:
-			readFastAFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex, refCoords);
+			readFastAFile(outfile, argv[argIndex], cat, &sequenceIndex, refCoords);
 			break;
 		case FASTQ:
-			readFastQFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex);
+			readFastQFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case RAW:
-			readRawFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex);
+			readRawFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			break;
+		case GERALD:
+			readSolexaFile(outfile, argv[argIndex], cat, &sequenceIndex);
+			break;
+		case ELAND:
+			readElandFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case FASTA_GZ:
-			readFastAGZFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex);
+			readFastAGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case FASTQ_GZ:
-			readFastQGZFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex);
+			readFastQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case RAW_GZ:
-			readRawGZFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex);
+			readRawGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case SAM:
-			readSAMFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex, refCoords);
+			readSAMFile(outfile, argv[argIndex], cat, &sequenceIndex, refCoords);
 			break;
 		case BAM:
-			readBAMFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex, refCoords);
+			readBAMFile(outfile, argv[argIndex], cat, &sequenceIndex, refCoords);
+			break;
+		case MAQ_GZ:
+			readMAQGZFile(outfile, argv[argIndex], cat, &sequenceIndex);
 			break;
 		default:
 			velvetLog("Screw up in parser... exiting\n");
@@ -1717,14 +1564,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 	}
 
 	destroyReferenceCoordinateTable(refCoords);
-	if (isCreateBinary()) {
-		closeCnySeqForWrite(seqWriteInfo);
-	} else {
-		fclose(seqWriteInfo->m_pFile);
-}
-	if (seqWriteInfo) {
-	    free(seqWriteInfo);
-	}
+	fclose(outfile);
 }
 
 void createReadPairingArray(ReadSet* reads)
@@ -1811,7 +1651,8 @@ boolean isSecondInPair(ReadSet * reads, IDnum index)
 	return reads->secondInPair[index / 8] & (1 << (index & 7));
 }
 
-void computeSecondInPair(ReadSet * reads)
+
+static void computeSecondInPair(ReadSet * reads)
 {
 	IDnum index;
 	Category currentCat = 0;
@@ -1839,18 +1680,10 @@ void computeSecondInPair(ReadSet * reads)
 					phase = 0;
 				}
 			}
-			else {
+			else
 				phase = 1;
-				if (index > 0 && previousCat & 1 && !isSecondInPair(reads, index - 1))
-				    reads->categories[index - 1] = (reads->categories[index - 1] / 2) * 2;
-			}
 		}
 		previousCat = currentCat;
-	}
-
-	// Safeguard against odd sets of reads
-	if (!isSecondInPair(reads, reads->readCount - 1)) {
-		reads->categories[reads->readCount - 1] = (reads->categories[reads->readCount - 1] / 2) * 2;
 	}
 }
 
@@ -2080,7 +1913,7 @@ void destroyReadSet(ReadSet * reads)
 ShortLength *getSequenceLengths(ReadSet * reads, int wordLength)
 {
 	ShortLength *lengths = callocOrExit(reads->readCount, ShortLength);
-	IDnum index;
+	ShortLength index;
 	int lengthOffset = wordLength - 1;
 
 	for (index = 0; index < reads->readCount; index++)

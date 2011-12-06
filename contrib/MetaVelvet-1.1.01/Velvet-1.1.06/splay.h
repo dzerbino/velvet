@@ -18,15 +18,26 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#ifndef _CORRECTEDGRAPH_H_
-#define _CORRECTEDGRAPH_H_
+#ifndef _Splay_H
+#define _Splay_H
 
-void clipTipsHard(Graph * graph, boolean conserveLong);
+#include <stdio.h>
 
-void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories, boolean conserveLong);
+typedef struct splayNode_st SplayTree;
 
-// Black arts:
-void setMaxReadLength(int value);
-void setMaxGaps(int value);
-void setMaxDivergence(double value);
+// Deallocates tree memory
+void destroyAllSplayTrees();
+
+// Finds occurrence of kmer in the tree
+// If found, returns TRUE, and seqID and coordinate are accordingly modified
+// If not, a new leaf is added to the tree, with the seqID and position data
+boolean findOrInsertOccurenceInSplayTree(Kmer * kmer, IDnum * seqID,
+					 Coordinate * position,
+					 SplayTree ** T);
+
+#ifdef _OPENMP
+/* Initialises the per-thread RecycleBin array */
+void initSplayTreeMemory(void);
+#endif
+
 #endif

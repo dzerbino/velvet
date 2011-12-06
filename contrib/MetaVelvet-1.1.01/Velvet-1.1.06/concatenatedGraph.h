@@ -18,15 +18,13 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#ifndef _CORRECTEDGRAPH_H_
-#define _CORRECTEDGRAPH_H_
+#ifndef _CONCATENATEDGRAPH_H_
+#define _CONCATENATEDGRAPH_H_
 
-void clipTipsHard(Graph * graph, boolean conserveLong);
+// Concatenates short read markers from node B to the end of nodeA 
+void concatenateReadStarts(Node * nodeA, Node * nodeB, Graph * graph);
 
-void correctGraph(Graph * graph, ShortLength *sequenceLengths, Category * sequenceCategories, boolean conserveLong);
+// Concatenates all pairs of nodes which form a linear structure
+void concatenateGraph(Graph * graph);
 
-// Black arts:
-void setMaxReadLength(int value);
-void setMaxGaps(int value);
-void setMaxDivergence(double value);
 #endif

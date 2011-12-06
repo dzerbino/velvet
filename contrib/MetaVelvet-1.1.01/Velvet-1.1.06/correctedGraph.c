@@ -128,7 +128,7 @@ static Ticket *newTicket()
 		ticketMemory =
 		    newRecycleBin(sizeof(Ticket), TICKET_BLOCK_SIZE);
 
-	return allocatePointer(ticketMemory);
+	return (Ticket*)allocatePointer(ticketMemory);
 }
 
 static boolean isPreviousToNode(Node * previous, Node * target)
@@ -2442,7 +2442,7 @@ static Coordinate getTipLength(Node * node)
 	return length;
 }
 
-void clipTipsHard(Graph * graph, boolean conserveLong)
+void clipTipsHard(Graph * graph)
 {
 	IDnum index;
 	Node *current, *twin;
@@ -2458,9 +2458,6 @@ void clipTipsHard(Graph * graph, boolean conserveLong)
 			current = getNodeInGraph(graph, index);
 
 			if (current == NULL)
-				continue;
-	
-			if (conserveLong && getMarker(current))
 				continue;
 
 			twin = getTwinNode(current);
@@ -2516,7 +2513,7 @@ static void tourBus(Node * startingPoint)
 	}
 }
 
-void correctGraph(Graph * argGraph, ShortLength * argSequenceLengths, Category * argSequenceCategories, boolean conserveLong)
+void correctGraph(Graph * argGraph, ShortLength * argSequenceLengths, Category * argSequenceCategories)
 {
 	IDnum nodes;
 	IDnum index;
@@ -2575,7 +2572,7 @@ void correctGraph(Graph * argGraph, ShortLength * argSequenceLengths, Category *
 	deactivateArcLookupTable(graph);
 	concatenateGraph(graph);
 
-	clipTipsHard(graph, conserveLong);
+	clipTipsHard(graph);
 
 	//Deallocating globals
 	free(times);
