@@ -1000,7 +1000,8 @@ PreGraph *emptyPreGraph_pg(IDnum sequenceCount, IDnum referenceCount, int wordLe
 	return newPreGraph;
 }
 
-static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
+#ifdef CNY_SEQS
+static Descriptor *newDescriptor_pg(Coordinate length, char **currString,
 				    Kmer * initialKmer, int wordLength)
 {
 	char letter;
@@ -1022,10 +1023,68 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 					       index);
 
 	for (index = wordLength - 1; index < totalLength; index++) {
-		letter = getc(file);
-		while (!isalpha(letter))
-			letter = getc(file);
+		letter = **currString;
+		*currString += 1;   // increment the pointer
 
+		//velvetLog("%c", letter);
+		switch (letter) {
+		case 'A':
+			nucleotide = ADENINE;
+			break;
+		case 'C':
+			nucleotide = CYTOSINE;
+			break;
+		case 'G':
+			nucleotide = GUANINE;
+			break;
+		case 'T':
+			nucleotide = THYMINE;
+			break;
+		default:
+			velvetLog("unexpected char %c in string\n", letter);
+			fflush(stdout);
+			exit(1);
+		}
+
+		writeNucleotideInDescriptor_pg(nucleotide, res, index);
+		pushNucleotide(initialKmer, nucleotide);
+	}
+
+	//velvetLog(" ");
+
+	return res;
+}
+#else
+static Descriptor *newDescriptor_pg(Coordinate length, SequencesReader *seqReadInfo,
+				    Kmer * initialKmer, int wordLength)
+{
+	char letter;
+	Nucleotide nucleotide;
+	Coordinate totalLength = length + wordLength - 1;
+	size_t arrayLength = totalLength / 4;
+	Descriptor *res;
+	Coordinate index;
+	Kmer kmerCopy;
+
+	if (totalLength % 4 > 0)
+		arrayLength++;
+
+	res = callocOrExit(arrayLength, Descriptor);
+
+	copyKmers(&kmerCopy, initialKmer);
+	for (index = wordLength - 2; index >= 0; index--)
+		writeNucleotideInDescriptor_pg(popNucleotide(&kmerCopy), res,
+					       index);
+
+	for (index = wordLength - 1; index < totalLength; index++) {
+		if (seqReadInfo->m_bIsBinary) {
+			letter = **seqReadInfo->m_ppCurrString;
+			*seqReadInfo->m_ppCurrString += 1;   // increment the pointer
+		} else {
+			letter = getc(seqReadInfo->m_pFile);
+			while (!isalpha(letter))
+				letter = getc(seqReadInfo->m_pFile);
+		}
 		//velvetLog("%c", letter);
 		switch (letter) {
 		case 'N':
@@ -1054,6 +1113,7 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 
 	return res;
 }
+#endif
 
 void allocatePreNodeSpace_pg(PreGraph * preGraph, IDnum preNodeCount)
 {
@@ -1117,9 +1177,8 @@ PreMarker * addPreMarker_pg(PreGraph * preGraph, IDnum nodeID, IDnum seqID, Coor
 
 	return preMarker;
 }
-
 void addPreNodeToPreGraph_pg(PreGraph * preGraph, Coordinate start,
-			     Coordinate finish, FILE * file,
+			     Coordinate finish, SequencesReader *seqReadInfo,
 			     Kmer * initialKmer, IDnum ID)
 {
 	PreNode *newnd = &(preGraph->preNodes[ID]);
@@ -1130,7 +1189,7 @@ void addPreNodeToPreGraph_pg(PreGraph * preGraph, Coordinate start,
 	newnd->length = finish - start;
 
 	newnd->descriptor =
-	    newDescriptor_pg(newnd->length, file, initialKmer,
+	    newDescriptor_pg(newnd->length, seqReadInfo, initialKmer,
 			     preGraph->wordLength);
 }
 

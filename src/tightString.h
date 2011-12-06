@@ -23,6 +23,13 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #include <stdio.h>
 
+typedef unsigned char Codon;
+
+struct tString_st {
+	Codon *sequence;
+	IDnum length;
+}  ATTRIBUTE_PACKED;
+
 //////////////////////////////////////////////////////////////
 // Creators and destructors
 /////////////////////////////////////////////////////////////

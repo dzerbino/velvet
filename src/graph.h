@@ -211,6 +211,7 @@ void resetNodeStatus(Graph * graph);
 Graph *importGraph(char *filename);
 void exportGraph(char *filename, Graph * graph, TightString * sequences);
 Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand);
+Graph *readConnectedGraphFile(char *connectedGraphFilename, boolean * double_strand);
 
 // Read starts
 void activateReadStarts(Graph * graph);

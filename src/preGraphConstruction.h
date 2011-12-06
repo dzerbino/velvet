@@ -21,6 +21,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #ifndef _PREGRAPHCONSTRUCTION_H_
 #define _PREGRAPHCONSTRUCTION_H_
 
-PreGraph *newPreGraph_pg(RoadMapArray * rdmaps, char *filename);
+PreGraph *newPreGraph_pg(RoadMapArray * rdmaps, SequencesReader *seqReadInfo);
 
 #endif
