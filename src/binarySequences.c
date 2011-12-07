@@ -1,5 +1,5 @@
 /*
-Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
+Copyright 2011 Convey Computer Corporation (info@conveycomputer.com)
 
     This file is part of Velvet.
 
