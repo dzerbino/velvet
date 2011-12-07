@@ -267,6 +267,9 @@ int main(int argc, char **argv)
 		free(seqFilename);
 		free(baseSeqName);
 		free(buf);
+		if (allSequences) {
+			destroyReadSet(allSequences);
+		}
 	}
 
 	return 0;
