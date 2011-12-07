@@ -792,7 +792,6 @@ static inline Descriptor *mergeDescriptors(Descriptor * descr,
 static void addBufferToDescriptor(Node * node, Coordinate length)
 {
 	Descriptor *descr;
-	Descriptor *twinDescr;
 	Coordinate newLength;
 	size_t arrayLength;
 	Node *twinNode;
@@ -804,7 +803,6 @@ static void addBufferToDescriptor(Node * node, Coordinate length)
 
 	twinNode = node->twinNode;
 	descr = node->descriptor;
-	twinDescr = twinNode->descriptor;
 
 	// Amendments for empty descriptors
 	if (descr == NULL) {
