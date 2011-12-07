@@ -102,6 +102,7 @@ void cnySeqInsertEnd(SequencesWriter *seqWriteInfo);
 void closeCnySeqForWrite(SequencesWriter *seqWriteInfo);
 
 #endif
+<<<<<<< HEAD:src/binarySequences.h
 /*
 Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 

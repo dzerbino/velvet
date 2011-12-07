@@ -741,6 +741,7 @@ void closeCnySeqForWrite(SequencesWriter *seqWriteInfo)
         free(seqWriteInfo->m_pWriteBuffer[2]);
 }
 
+<<<<<<< HEAD:src/binarySequences.c
 /*
 Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
@@ -1483,4 +1484,3 @@ void closeCnySeqForWrite(SequencesWriter *seqWriteInfo)
     if (seqWriteInfo->m_pWriteBuffer[2])
         free(seqWriteInfo->m_pWriteBuffer[2]);
 }
-
