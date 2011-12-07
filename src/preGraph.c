@@ -1000,61 +1000,6 @@ PreGraph *emptyPreGraph_pg(IDnum sequenceCount, IDnum referenceCount, int wordLe
 	return newPreGraph;
 }
 
-#ifdef CNY_SEQS
-static Descriptor *newDescriptor_pg(Coordinate length, char **currString,
-				    Kmer * initialKmer, int wordLength)
-{
-	char letter;
-	Nucleotide nucleotide;
-	Coordinate totalLength = length + wordLength - 1;
-	size_t arrayLength = totalLength / 4;
-	Descriptor *res;
-	Coordinate index;
-	Kmer kmerCopy;
-
-	if (totalLength % 4 > 0)
-		arrayLength++;
-
-	res = callocOrExit(arrayLength, Descriptor);
-
-	copyKmers(&kmerCopy, initialKmer);
-	for (index = wordLength - 2; index >= 0; index--)
-		writeNucleotideInDescriptor_pg(popNucleotide(&kmerCopy), res,
-					       index);
-
-	for (index = wordLength - 1; index < totalLength; index++) {
-		letter = **currString;
-		*currString += 1;   // increment the pointer
-
-		//velvetLog("%c", letter);
-		switch (letter) {
-		case 'A':
-			nucleotide = ADENINE;
-			break;
-		case 'C':
-			nucleotide = CYTOSINE;
-			break;
-		case 'G':
-			nucleotide = GUANINE;
-			break;
-		case 'T':
-			nucleotide = THYMINE;
-			break;
-		default:
-			velvetLog("unexpected char %c in string\n", letter);
-			fflush(stdout);
-			exit(1);
-		}
-
-		writeNucleotideInDescriptor_pg(nucleotide, res, index);
-		pushNucleotide(initialKmer, nucleotide);
-	}
-
-	//velvetLog(" ");
-
-	return res;
-}
-#else
 static Descriptor *newDescriptor_pg(Coordinate length, SequencesReader *seqReadInfo,
 				    Kmer * initialKmer, int wordLength)
 {
@@ -1113,7 +1058,6 @@ static Descriptor *newDescriptor_pg(Coordinate length, SequencesReader *seqReadI
 
 	return res;
 }
-#endif
 
 void allocatePreNodeSpace_pg(PreGraph * preGraph, IDnum preNodeCount)
 {
