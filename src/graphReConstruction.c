@@ -1129,7 +1129,7 @@ static void fillUpGraph(ReadSet * reads,
 	createNodeReadStartArrays(graph);
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
-	velvetLog(" === Ghost-Threaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
+	velvetLog(" === Ghost-Threaded in %ld.%06ld s\n", (long) diff.tv_sec, (long) diff.tv_usec);
 
 	gettimeofday(&start, NULL);
 #ifdef _OPENMP

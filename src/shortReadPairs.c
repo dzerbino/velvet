@@ -683,9 +683,9 @@ void checkNode(Node* node) {
 	if (getFinishOffset(marker1) == getFinishOffset(marker2))
 		abort();
 	printf(">>>> Node %li\n", (long) getNodeID(node));
-	printf("Marker1: %li - %li > %li (%li) \n", (long) getStartOffset(marker1), (long) getPassageMarkerLength(marker1), (long) getNodeLength(node) - getFinishOffset(marker1), (long) getFinishOffset(marker1));
+	printf("Marker1: %li - %li > %li (%li) \n", (long) getStartOffset(marker1), (long) getPassageMarkerLength(marker1), (long) (getNodeLength(node) - getFinishOffset(marker1)), (long) getFinishOffset(marker1));
 	printf("%s\n", readPassageMarker(marker1));
-	printf("Marker2: %li - %li > %li (%li) \n", (long) getStartOffset(marker2), (long) getPassageMarkerLength(marker2), (long) getNodeLength(node) - getFinishOffset(marker2), (long) getFinishOffset(marker2));
+	printf("Marker2: %li - %li > %li (%li) \n", (long) getStartOffset(marker2), (long) getPassageMarkerLength(marker2), (long) (getNodeLength(node) - getFinishOffset(marker2)), (long) getFinishOffset(marker2));
 
 	printf("%s\n", readPassageMarker(marker2));
 	if (getStartOffset(marker1) < getNodeLength(node) - getFinishOffset(marker2) 
