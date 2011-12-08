@@ -1168,7 +1168,7 @@ static void fillUpGraph(ReadSet * reads,
 	}
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
-	velvetLog(" === Threaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
+	velvetLog(" === Threaded in %ld.%06ld s\n", (long) diff.tv_sec, (long) diff.tv_usec);
 
 #ifdef _OPENMP
 	free(nodeLocks);
