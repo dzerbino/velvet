@@ -64,7 +64,7 @@ void logFinalStats(Graph * graph, Coordinate minContigKmerLength, char *director
 void exportUnusedReads(Graph* graph, ReadSet * reads, Coordinate minContigKmerLength, char* filename);
 
 void exportLongNodeMappings(char *filename, Graph * graph, ReadSet * reads,
-			     Coordinate minLength, char * sequencesFilename);
+			     Coordinate minLength, SequencesReader *seqReadInfo);
 
 void removeHighCoverageNodes(Graph * graph, double maxCov, boolean export, Coordinate minLength, char * filename);
 
