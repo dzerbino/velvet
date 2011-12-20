@@ -1655,11 +1655,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			} else if (strcmp(argv[argIndex], "-noHash") == 0) {
 				;
 			} else if (strcmp(argv[argIndex], "-create_binary") == 0) {
-				argIndex++;
-				if (argIndex >= argc) {
-					velvetLog("Expected <yes|no> after -create_binary\n");
-					exit(1);
-			}
+				;
 			}
 			else {
 				velvetLog("Unknown option: %s\n",

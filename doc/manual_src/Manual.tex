@@ -278,6 +278,14 @@ Once the Sequences file is prepared you can run velveth on the same directory, o
 > ./velveth output_directory/ 21 -reuse_Sequences
 \end{verbatim}
 
+\subsubsection{Using the binary version of Sequences}
+
+If you use Velvet on large datasets, your computer is probably spending a lot of time reading accessing the read sequences on the hard drive, possibly through a network. You can significantly speed up Velvet by working with a binary sequences file. This option is invoked during the hashing stage, velvetg adapts accordingly:
+
+\begin{verbatim}
+> ./velveth output_directory/ 21 -create_binary (..data files..)
+\end{verbatim}
+
 \subsection{Running velvetg}
 
 Velvetg is the core of Velvet where the de Bruijn graph is built then manipulated. Note that although velvetg saves some files during the process to avoid useless recalculations, the parameters are \textbf{not} saved from one run to the next. Therefore:
