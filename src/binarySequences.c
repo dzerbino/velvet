@@ -562,7 +562,7 @@ void cnySeqInsertStart(SequencesWriter *seqWriteInfo)
 }
 
 void cnySeqInsertSequenceName(const char *name, IDnum readID, SequencesWriter *seqWriteInfo) {
-	if (fprintf(seqWriteInfo->m_nameFile, "%s\t%li", name, (long) readID) < 0) {
+	if (fprintf(seqWriteInfo->m_nameFile, "%s\t%li\n", name, (long) readID) < 0) {
 		velvetLog("Unable to write in name file\n");
 		exit(1);
 	}
