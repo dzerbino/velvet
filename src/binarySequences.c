@@ -733,6 +733,11 @@ void closeCnySeqForWrite(SequencesWriter *seqWriteInfo)
 	exit(1);
     }
 
+    if (fclose(seqWriteInfo->m_nameFile) < 0) {
+	velvetLog("Unable to close names file\n");
+	exit(1);
+    }
+
     if (seqWriteInfo->m_pWriteBuffer[0])
         free(seqWriteInfo->m_pWriteBuffer[0]);
     if (seqWriteInfo->m_pWriteBuffer[1])
