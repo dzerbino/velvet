@@ -54,4 +54,8 @@ boolean isSecondInPair(ReadSet * reads, IDnum index);
 void detachDubiousReads(ReadSet * reads, boolean * dubiousReads);
 
 void destroyReadSet(ReadSet * reads);
+
+inline boolean isCreateBinary();
+void setCreateBinary(boolean val);
+
 #endif

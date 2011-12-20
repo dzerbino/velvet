@@ -33,6 +33,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "splayTable.h"
 #include "graph.h"
 #include "scaffold.h"
+#include "binarySequences.h"
 
 // PreGraph operations
 #include "preGraph.h"

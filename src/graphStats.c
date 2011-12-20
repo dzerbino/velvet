@@ -36,7 +36,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "utility.h"
 #include "recycleBin.h"
 #include "passageMarker.h"
-
+#include "binarySequences.h"
 
 static PassageMarkerList *copyMarkers(Node * node)
 {
@@ -1958,14 +1958,25 @@ struct referenceCoord_st {
 	boolean positive_strand;
 } ATTRIBUTE_PACKED;
 
-static ReferenceCoord * collectReferenceCoords(char * sequencesFilename, IDnum referenceCount) {
-	FILE * file = fopen(sequencesFilename, "r");
+static ReferenceCoord * collectReferenceCoords(SequencesReader *seqReadInfo, IDnum referenceCount) {
+	ReferenceCoord * refCoords = callocOrExit(referenceCount, ReferenceCoord);
+	IDnum refIndex = 0;
+	if (seqReadInfo->m_bIsBinary) {
+	    velvetLog("Creating placeholder reference headers\n");
+	    // binary seqs does not have reference header so a placeholder is created
+	    do {
+		refCoords[refIndex].name = callocOrExit(sizeof("PLACEHLDR.%ld PLACEHOLDER000") + 20, char);
+		sprintf(refCoords[refIndex].name, "PLACEHLDR.%ld PLACEHOLDER000", (int64_t) refIndex + 1);
+		refCoords[refIndex].start = 1;
+		refCoords[refIndex].finish = -1;
+		refCoords[refIndex].positive_strand = true;
+	    } while (++refIndex < referenceCount);
+	} else {
+	    FILE * file = fopen(seqReadInfo->m_seqFilename, "r");
 	char line[MAXLINE];
 	char name[5000];
 	Coordinate start, finish;
 	long long longlongvar;
-	IDnum refIndex = 0;
-	ReferenceCoord * refCoords = callocOrExit(referenceCount, ReferenceCoord);
 	int i;
 
 	while (fgets(line, MAXLINE, file)) {
@@ -2007,6 +2018,7 @@ static ReferenceCoord * collectReferenceCoords(char * sequencesFilename, IDnum r
 	}
 	
 	fclose(file);
+	}
 	return refCoords;
 }
 
@@ -2105,7 +2117,7 @@ static void exportLongNodeMapping(FILE * outfile, Node * node, ReadSet * reads, 
 }
 
 void exportLongNodeMappings(char *filename, Graph * graph, ReadSet * reads,
-			     Coordinate minLength, char * sequencesFilename)
+			     Coordinate minLength, SequencesReader *seqReadInfo)
 {
 	FILE * outfile;
 	IDnum nodeIndex, refIndex;
@@ -2116,7 +2128,7 @@ void exportLongNodeMappings(char *filename, Graph * graph, ReadSet * reads,
 	if (referenceCount == 0)	
 		return;
 
-	refCoords = collectReferenceCoords(sequencesFilename, referenceCount);
+	refCoords = collectReferenceCoords(seqReadInfo, referenceCount);
 
 	outfile = fopen(filename, "w");
 	if (outfile == NULL) {

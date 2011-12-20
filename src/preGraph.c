@@ -1000,7 +1000,7 @@ PreGraph *emptyPreGraph_pg(IDnum sequenceCount, IDnum referenceCount, int wordLe
 	return newPreGraph;
 }
 
-static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
+static Descriptor *newDescriptor_pg(Coordinate length, SequencesReader *seqReadInfo,
 				    Kmer * initialKmer, int wordLength)
 {
 	char letter;
@@ -1022,10 +1022,14 @@ static Descriptor *newDescriptor_pg(Coordinate length, FILE * file,
 					       index);
 
 	for (index = wordLength - 1; index < totalLength; index++) {
-		letter = getc(file);
-		while (!isalpha(letter))
-			letter = getc(file);
-
+		if (seqReadInfo->m_bIsBinary) {
+			letter = **seqReadInfo->m_ppCurrString;
+			*seqReadInfo->m_ppCurrString += 1;   // increment the pointer
+		} else {
+			letter = getc(seqReadInfo->m_pFile);
+			while (!isalpha(letter))
+				letter = getc(seqReadInfo->m_pFile);
+		}
 		//velvetLog("%c", letter);
 		switch (letter) {
 		case 'N':
@@ -1117,9 +1121,8 @@ PreMarker * addPreMarker_pg(PreGraph * preGraph, IDnum nodeID, IDnum seqID, Coor
 
 	return preMarker;
 }
-
 void addPreNodeToPreGraph_pg(PreGraph * preGraph, Coordinate start,
-			     Coordinate finish, FILE * file,
+			     Coordinate finish, SequencesReader *seqReadInfo,
 			     Kmer * initialKmer, IDnum ID)
 {
 	PreNode *newnd = &(preGraph->preNodes[ID]);
@@ -1130,7 +1133,7 @@ void addPreNodeToPreGraph_pg(PreGraph * preGraph, Coordinate start,
 	newnd->length = finish - start;
 
 	newnd->descriptor =
-	    newDescriptor_pg(newnd->length, file, initialKmer,
+	    newDescriptor_pg(newnd->length, seqReadInfo, initialKmer,
 			     preGraph->wordLength);
 }
 

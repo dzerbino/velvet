@@ -110,6 +110,7 @@ typedef struct tString_st TightString;
 // A simple container when reading files
 typedef struct readSet_st ReadSet;
 typedef struct sequenceReader_st SequenceReader;
+typedef struct sequencesReader_st SequencesReader;
 
 // Hash table structures
 typedef struct kmerOccurence_st KmerOccurence;

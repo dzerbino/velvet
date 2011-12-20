@@ -24,4 +24,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 Graph *importPreGraph(char *preGraphFilename, ReadSet * reads, char * roadmapFilename, 
 		      boolean readTracking, short int accelerationBits);
 
+Graph *importConnectedGraph(char *connectedGraphFilename, ReadSet * reads, char * roadmapFilename, 
+		      boolean readTracking, short int accelerationBits);
+
 #endif

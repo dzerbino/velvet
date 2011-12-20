@@ -62,6 +62,7 @@ static void printUsage()
 	puts("\t-strand_specific\t: for strand specific transcriptome sequencing data (default: off)");
 	puts("\t-reuse_Sequences\t: reuse Sequences file (or link) already in directory (no need to provide original filenames in this case (default: off)");
 	puts("\t-noHash\t\t\t: simply prepare Sequences file, do not hash reads or prepare Roadmaps file (default: off)");
+	puts("\t-create_binary <yes|no>\t: create binary CnyUnifiedSeq file (default: no)");
 	puts("");
 	puts("Synopsis:");
 	puts("");
@@ -88,7 +89,7 @@ int main(int argc, char **argv)
 	ReadSet *allSequences = NULL;
 	SplayTable *splayTable;
 	int hashLength, hashLengthStep, hashLengthMax, h;
-	char *directory, *filename, *seqFilename, *buf;
+	char *directory, *filename, *seqFilename, *baseSeqName, *buf;
 	boolean double_strand = true;
 	boolean noHash = false;
 	boolean multiple_kmers = false;
@@ -172,6 +173,19 @@ int main(int argc, char **argv)
 		hashLengthStep++;
 	}
 
+	// check if binary sequences should be used (default is yes)
+	int argIndex;
+	for (argIndex = 3; argIndex < argc; argIndex++) {
+		if (strcmp(argv[argIndex], "-create_binary") == 0) {
+			argIndex++;
+			if (argIndex >= argc) {
+				velvetLog("Expected <yes|no> after -create_binary\n");
+				exit(1);
+			}
+			setCreateBinary(strcmp(argv[argIndex], "yes") == 0);
+		}
+	}
+
 	for (h = hashLength; h < hashLengthMax; h += hashLengthStep) {
 
 		resetWordFilter(h);
@@ -187,6 +201,7 @@ int main(int argc, char **argv)
 
 		filename = mallocOrExit(strlen(directory) + 100, char);
 		seqFilename = mallocOrExit(strlen(directory) + 100, char);
+		baseSeqName = mallocOrExit(100, char);
 
 		dir = opendir(directory);
 
@@ -208,14 +223,27 @@ int main(int argc, char **argv)
 		logInstructions(argc, argv, directory);
 
 		strcpy(seqFilename, directory);
-		strcat(seqFilename, "/Sequences");
+		if (isCreateBinary()) {
+			// use the CNY unified seq writer
+			strcpy(baseSeqName, "/CnyUnifiedSeq");
+			// remove other style sequences file
+			sprintf(buf, "%s/Sequences", directory);
+			remove(buf);
+		} else {
+			strcpy(baseSeqName, "/Sequences");
+			// remove other style sequences file
+			sprintf(buf, "%s/CnyUnifiedSeq", directory);
+			remove(buf);
+		}
+		strcat(seqFilename, baseSeqName);
+
 		if ( h == hashLength ) {
 			parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand, &noHash);
 		} else {
 			if (argv[1][0] == '/')
-				sprintf(buf,"ln -s %s_%d/Sequences %s",argv[1],hashLength,seqFilename);
+				sprintf(buf,"ln -s %s_%d%s %s",argv[1],hashLength,baseSeqName,seqFilename);
 			else
-				sprintf(buf,"ln -s `pwd`/%s_%d/Sequences %s",argv[1],hashLength,seqFilename);
+				sprintf(buf,"ln -s `pwd`/%s_%d%s %s",argv[1],hashLength,baseSeqName,seqFilename);
 			system(buf);
 		}
 
@@ -223,8 +251,11 @@ int main(int argc, char **argv)
 			continue;
 
 		splayTable = newSplayTable(h, double_strand);
-
+		if (isCreateBinary()) {
+			allSequences = importCnyReadSet(seqFilename);
+		} else {
 		allSequences = importReadSet(seqFilename);
+		}
 		velvetLog("%li sequences in total.\n", (long) allSequences->readCount);
 
 		strcpy(filename, directory);
@@ -239,7 +270,11 @@ int main(int argc, char **argv)
 			free(directory);
 		free(filename);
 		free(seqFilename);
+		free(baseSeqName);
 		free(buf);
+		if (allSequences) {
+			destroyReadSet(allSequences);
+		}
 	}
 
 	return 0;

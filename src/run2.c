@@ -21,8 +21,12 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "run.h"
+
+#include "binarySequences.h"
+#include "globals.h"
 
 static void printUsage()
 {
@@ -78,8 +82,9 @@ int main(int argc, char **argv)
 	RoadMapArray *rdmaps;
 	PreGraph *preGraph;
 	Graph *graph;
-	char *directory, *graphFilename, *preGraphFilename, *seqFilename,
-	    *roadmapFilename, *lowCovContigsFilename, *highCovContigsFilename;
+	char *directory, *graphFilename, *connectedGraphFilename,
+	    *preGraphFilename, *seqFilename, *roadmapFilename,
+	    *lowCovContigsFilename, *highCovContigsFilename;
 	double coverageCutoff = -1;
 	double longCoverageCutoff = -1;
 	double maxCoverageCutoff = -1;
@@ -113,6 +118,7 @@ int main(int argc, char **argv)
 	boolean conserveLong = false;
 	boolean shadows[CATEGORIES];
 	int coverageMask = 1;
+	SequencesReader *seqReadInfo = NULL;
 
 	setProgramName("velvetg");
 
@@ -161,12 +167,14 @@ int main(int argc, char **argv)
 	// Memory allocation 
 	directory = argv[1];
 	graphFilename = mallocOrExit(strlen(directory) + 100, char);
+	connectedGraphFilename = mallocOrExit(strlen(directory) + 100, char);
 	preGraphFilename =
 	    mallocOrExit(strlen(directory) + 100, char);
 	roadmapFilename = mallocOrExit(strlen(directory) + 100, char);
 	seqFilename = mallocOrExit(strlen(directory) + 100, char);
 	lowCovContigsFilename = mallocOrExit(strlen(directory) + 100, char);
 	highCovContigsFilename = mallocOrExit(strlen(directory) + 100, char);
+
 	// Argument parsing
 	for (arg_index = 2; arg_index < argc; arg_index++) {
 		arg = argv[arg_index++];
@@ -358,14 +366,26 @@ int main(int argc, char **argv)
 	// Bookkeeping
 	logInstructions(argc, argv, directory);
 
+	seqReadInfo = callocOrExit(1, SequencesReader);
 	strcpy(seqFilename, directory);
+	// if binary CnyUnifiedSeq exists, use it.  Otherwise try Sequences
+	strcat(seqFilename, "/CnyUnifiedSeq");
+	if (access(seqFilename, R_OK) == 0) {
+		seqReadInfo->m_bIsBinary = true;
+	} else {
+		seqReadInfo->m_bIsBinary = false;
+		strcpy(seqFilename, directory);
 	strcat(seqFilename, "/Sequences");
-
+	}
+	seqReadInfo->m_seqFilename = seqFilename;
 	strcpy(roadmapFilename, directory);
 	strcat(roadmapFilename, "/Roadmaps");
 
 	strcpy(preGraphFilename, directory);
 	strcat(preGraphFilename, "/PreGraph");
+
+	strcpy(connectedGraphFilename, directory);
+	strcat(connectedGraphFilename, "/ConnectedGraph");
 
 	if (!readTracking) {
 		strcpy(graphFilename, directory);
@@ -384,11 +404,65 @@ int main(int argc, char **argv)
 	// Graph uploading or creation
 	if ((file = fopen(graphFilename, "r")) != NULL) {
 		fclose(file);
+
 		graph = importGraph(graphFilename);
+
+	} else if ((file = fopen(connectedGraphFilename, "r")) != NULL) {
+		fclose(file);
+		if (seqReadInfo->m_bIsBinary) {
+
+			sequences = importCnyReadSet(seqFilename);
+
+#if 0
+			// compare to velvet's version of a seq
+			ReadSet *compareSequences = NULL;
+			compareSeqFilename = mallocOrExit(strlen(directory) + 100, char);
+			strcpy(compareSeqFilename, directory);
+			strcat(compareSeqFilename, "/Sequences");
+			compareSequences = importReadSet(compareSeqFilename);
+			convertSequences(compareSequences);
+			if (sequences->readCount != compareSequences->readCount) {
+				printf("read count mismatch\n");
+				exit(1);
+			}
+			int i;
+			for (i = 0; i < sequences->readCount; i++) {
+				TightString *tString = getTightStringInArray(sequences->tSequences, i);
+				TightString *tStringCmp = getTightStringInArray(compareSequences->tSequences, i);
+				if (getLength(tString) != getLength(tStringCmp)) {
+					printf("sequence %d len mismatch\n", i);
+					exit(1);
+				}
+				if (strcmp(readTightString(tString), readTightString(tStringCmp)) != 0) {
+					printf("sequence %d cmp mismatch\n", i);
+					printf("seq %s != cmp %s\n", readTightString(tString), readTightString(tStringCmp));
+					exit(1);
+				}
+			}
+#endif
+		} else {
+			sequences = importReadSet(seqFilename);
+			convertSequences(sequences);
+		}
+		seqReadInfo->m_sequences = sequences;
+
+		graph =
+		    importConnectedGraph(connectedGraphFilename, sequences,
+				   roadmapFilename, readTracking, accelerationBits);
+
+		sequenceLengths =
+		    getSequenceLengths(sequences, getWordLength(graph));
+		correctGraph(graph, sequenceLengths, sequences->categories, conserveLong);
+		exportGraph(graphFilename, graph, sequences->tSequences);
 	} else if ((file = fopen(preGraphFilename, "r")) != NULL) {
 		fclose(file);
+		if (seqReadInfo->m_bIsBinary) {
+			sequences = importCnyReadSet(seqFilename);
+		} else {
 		sequences = importReadSet(seqFilename);
 		convertSequences(sequences);
+		}
+		seqReadInfo->m_sequences = sequences;
 		graph =
 		    importPreGraph(preGraphFilename, sequences,
 				   roadmapFilename, readTracking, accelerationBits);
@@ -400,15 +474,50 @@ int main(int argc, char **argv)
 		fclose(file);
 
 		rdmaps = importRoadMapArray(roadmapFilename);
-		preGraph = newPreGraph_pg(rdmaps, seqFilename);
+		if (seqReadInfo->m_bIsBinary) {
+			// pull in sequences first and use in preGraph
+			sequences = importCnyReadSet(seqFilename);
+			seqReadInfo->m_sequences = sequences;
+#if 0
+			// compare to velvet's version of a seq
+			ReadSet *compareSequences = NULL;
+			char *compareSeqFilename = mallocOrExit(strlen(directory) + 100, char);
+			strcpy(compareSeqFilename, directory);
+			strcat(compareSeqFilename, "/Sequences");
+			compareSequences = importReadSet(compareSeqFilename);
+			convertSequences(compareSequences);
+			if (sequences->readCount != compareSequences->readCount) {
+				printf("read count mismatch\n");
+				exit(1);
+			}
+			int i;
+			for (i = 0; i < sequences->readCount; i++) {
+				TightString *tString = getTightStringInArray(sequences->tSequences, i);
+				TightString *tStringCmp = getTightStringInArray(compareSequences->tSequences, i);
+				if (getLength(tString) != getLength(tStringCmp)) {
+					printf("sequence %d len mismatch\n", i);
+					exit(1);
+				}
+				if (strcmp(readTightString(tString), readTightString(tStringCmp)) != 0) {
+					printf("sequence %d cmp mismatch\n", i);
+					printf("seq %s != cmp %s\n", readTightString(tString), readTightString(tStringCmp));
+					exit(1);
+				}
+			}
+			printf("sequence files match!\n");
+#endif
+		}
+		preGraph = newPreGraph_pg(rdmaps, seqReadInfo);
 		concatenatePreGraph_pg(preGraph);
 		if (!conserveLong)
 		    clipTips_pg(preGraph);
 		exportPreGraph_pg(preGraphFilename, preGraph);
 		destroyPreGraph_pg(preGraph);
-
+		if (!seqReadInfo->m_bIsBinary) {
 		sequences = importReadSet(seqFilename);
 		convertSequences(sequences);
+			seqReadInfo->m_sequences = sequences;
+		}
 		graph =
 		    importPreGraph(preGraphFilename, sequences,
 				   roadmapFilename, readTracking, accelerationBits);
@@ -459,8 +568,13 @@ int main(int argc, char **argv)
 	}
 
 	if (sequences == NULL) {
+		if (seqReadInfo->m_bIsBinary) {
+			sequences = importCnyReadSet(seqFilename);
+		} else {
 		sequences = importReadSet(seqFilename);
 		convertSequences(sequences);
+	}
+		seqReadInfo->m_sequences = sequences;
 	}
 
 	if (minContigLength < 2 * getWordLength(graph))
@@ -501,8 +615,10 @@ int main(int argc, char **argv)
 		pebbleRounds += pairedCategories(sequences);
 		detachDubiousReads(sequences, dubious);
 		activateGapMarkers(graph);
+
 		for ( ;pebbleRounds > 0; pebbleRounds--)
 			exploitShortReadPairs(graph, sequences, dubious, shadows, scaffolding);
+
 	} else {
 		velvetLog("WARNING: NO EXPECTED COVERAGE PROVIDED\n");
 		velvetLog("Velvet will be unable to resolve any repeats\n");
@@ -525,7 +641,7 @@ int main(int argc, char **argv)
 		strcpy(graphFilename, directory);
 		strcat(graphFilename, "/contig-alignments.psa");
 		exportLongNodeMappings(graphFilename, graph, sequences,
-					     minContigKmerLength, seqFilename);
+					     minContigKmerLength, seqReadInfo);
 	}
 
 	strcpy(graphFilename, directory);
@@ -581,11 +697,16 @@ int main(int argc, char **argv)
 	free(sequenceLengths);
 	destroyGraph(graph);
 	free(graphFilename);
+	free(connectedGraphFilename);
 	free(preGraphFilename);
 	free(seqFilename);
 	free(roadmapFilename);
 	free(lowCovContigsFilename);
 	free(highCovContigsFilename);
 	destroyReadSet(sequences);
+	if (seqReadInfo) {
+		free(seqReadInfo);
+	}
+
 	return 0;
 }
