@@ -831,10 +831,12 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	long long previous_pos = -1;
 	int previous_orientation = 0;
 	boolean previous_paired = false;
+	boolean bin_start = false;
 	ReferenceCoordinate * refCoord;
 	char c;
 	int cigar_index;
 	long long cigar_num;
+	RefInfoList *refTail = NULL;
 
 	if (cat == REFERENCE) {
 		velvetLog("SAM file %s cannot contain reference sequences.\n", filename);
@@ -905,14 +907,14 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				}
 
 				// Determine if paired to previous read
+				bin_start = false;
 				if (readCount > 0) {
-					if (isCreateBinary()) {
-						cnySeqInsertStart(seqWriteInfo);
-					}
 					if (cat % 2) {
 						if (previous_paired) {
 							// Last read paired to penultimate read
 							if (isCreateBinary()) {
+								cnySeqInsertStart(seqWriteInfo);
+								bin_start = true;
 								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 								sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 								cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -928,6 +930,8 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						}  else if (strcmp(qname, previous_qname) == 0) {
 							// Last read paired to current reads
 							if (isCreateBinary()) {
+								cnySeqInsertStart(seqWriteInfo);
+								bin_start = true;
 								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 								sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 								cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -940,6 +944,8 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						} else {
 							// Last read unpaired
 							if (isCreateBinary()) {
+								cnySeqInsertStart(seqWriteInfo);
+								bin_start = true;
 								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 								sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 								cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -953,6 +959,8 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					} else {
 						// Unpaired dataset 
 						if (isCreateBinary()) {
+							cnySeqInsertStart(seqWriteInfo);
+							bin_start = true;
 							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 							sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 							cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -960,7 +968,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 							(long) ((*sequenceIndex)++), (int) cat);
 							writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-					}
+						}
 					}
 
 					if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
@@ -975,16 +983,34 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 										if (refCoord->positive_strand) {
 											if (isCreateBinary()) {
 												seqWriteInfo->m_bIsRef = true;
-												seqWriteInfo->m_referenceID = (long) previous_orientation * refCoord->referenceID;
-												seqWriteInfo->m_pos = (long long) (previous_pos - refCoord->start);
+												RefInfoList *refElem = callocOrExit(1, RefInfoList);
+												refElem->m_elem.m_referenceID = (long) previous_orientation * refCoord->referenceID;
+												refElem->m_elem.m_pos = (long long) (previous_pos - refCoord->start);
+												refElem->next = NULL;
+												if (seqWriteInfo->m_refInfoHead == NULL) {
+													seqWriteInfo->m_refInfoHead = refElem;
+												} else {
+													refTail->next = refElem;
+												}
+												refTail = refElem;
+												seqWriteInfo->m_refCnt++;
 											} else {
 												velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 									}
 										} else {
 											if (isCreateBinary()) {
 												seqWriteInfo->m_bIsRef = true;
-												seqWriteInfo->m_referenceID = (long) - previous_orientation * refCoord->referenceID;
-												seqWriteInfo->m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
+												RefInfoList *refElem = callocOrExit(1, RefInfoList);
+												refElem->m_elem.m_referenceID = (long) - previous_orientation * refCoord->referenceID;
+												refElem->m_elem.m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
+												refElem->next = NULL;
+												if (seqWriteInfo->m_refInfoHead == NULL) {
+													seqWriteInfo->m_refInfoHead = refElem;
+												} else {
+													refTail->next = refElem;
+												}
+												refTail = refElem;
+												seqWriteInfo->m_refCnt++;
 											} else {										
 												velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 											}
@@ -1007,10 +1033,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							}
 						}
 					} 
-					if (isCreateBinary()) {
+					if (isCreateBinary() && (bin_start == true)) {
 						// end previous seq
 						cnySeqInsertEnd(seqWriteInfo);
-				}
+					}
 				}
 
 				strcpy(previous_qname, qname);
@@ -1026,14 +1052,14 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			}
 		}
 
+	bin_start = false;
 	if (readCount) {
-		if (isCreateBinary()) {
-			cnySeqInsertStart(seqWriteInfo);
-		}
 		if (cat % 2) {
 			if (previous_paired) {
 				// Last read paired to penultimate read
 				if (isCreateBinary()) {
+					cnySeqInsertStart(seqWriteInfo);
+					bin_start = true;
 					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 					sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 					cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1045,6 +1071,8 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			} else {
 				// Last read unpaired
 				if (isCreateBinary()) {
+					cnySeqInsertStart(seqWriteInfo);
+					bin_start = true;
 					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 					sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 					cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1057,6 +1085,8 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		} else {
 			// Unpaired dataset 
 			if (isCreateBinary()) {
+				cnySeqInsertStart(seqWriteInfo);
+				bin_start = true;
 				cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 				sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 				cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1064,7 +1094,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 				(long) ((*sequenceIndex)++), (int) cat);
 				writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-		}
+			}
 		}
 
 		if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
@@ -1079,16 +1109,34 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							if (refCoord->positive_strand) {
 								if (isCreateBinary()) {
 									seqWriteInfo->m_bIsRef = true;
-									seqWriteInfo->m_referenceID = (long) previous_orientation * refCoord->referenceID;
-									seqWriteInfo->m_pos = (long long) (previous_pos - refCoord->start);
+									RefInfoList *refElem = callocOrExit(1, RefInfoList);
+									refElem->m_elem.m_referenceID = (long) previous_orientation * refCoord->referenceID;
+									refElem->m_elem.m_pos = (long long) (previous_pos - refCoord->start);
+									refElem->next = NULL;
+									if (seqWriteInfo->m_refInfoHead == NULL) {
+										seqWriteInfo->m_refInfoHead = refElem;
+									} else {
+										refTail->next = refElem;
+									}
+									refTail = refElem;
+									seqWriteInfo->m_refCnt++;
 								} else {
 									velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 						}
 							} else {
 								if (isCreateBinary()) {
 									seqWriteInfo->m_bIsRef = true;
-									seqWriteInfo->m_referenceID = (long) - previous_orientation * refCoord->referenceID;
-									seqWriteInfo->m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
+									RefInfoList *refElem = callocOrExit(1, RefInfoList);
+									refElem->m_elem.m_referenceID = (long) - previous_orientation * refCoord->referenceID;
+									refElem->m_elem.m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
+									refElem->next = NULL;
+									if (seqWriteInfo->m_refInfoHead == NULL) {
+										seqWriteInfo->m_refInfoHead = refElem;
+									} else {
+										refTail->next = refElem;
+									}
+									refTail = refElem;
+									seqWriteInfo->m_refCnt++;
 								} else {
 									velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 								}
@@ -1111,9 +1159,9 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				}
 			}
 		}
-		if (isCreateBinary()) {
+		if (isCreateBinary() && (bin_start == true)) {
 			cnySeqInsertEnd(seqWriteInfo);
-	}
+		}
 	}
 
 	fclose(file);
@@ -1150,12 +1198,14 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	long long previous_pos = -1;
 	int previous_orientation = 0;
 	boolean previous_paired = false;
+	boolean bin_start = false;
 	int previous_flagbits = 0;
 	char ** refNames;
 	ReferenceCoordinate * refCoord;
 	char c;
 	int cigar_index;
 	long long cigar_num;
+	RefInfoList *refTail = NULL;
 
 	if (cat == REFERENCE) {
 		velvetLog("BAM file %s cannot contain reference sequences.\n", filename);
@@ -1277,14 +1327,14 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			}
 
 			// Determine if paired to previous read
+			bin_start = false;
 			if (readCount > 0) {
-				if (isCreateBinary()) {
-					cnySeqInsertStart(seqWriteInfo);
-				}
 				if (cat % 2) {
 					 if (previous_paired) {
 						// Last read paired to penultimate read
 						 if (isCreateBinary()) {
+							 cnySeqInsertStart(seqWriteInfo);
+							 bin_start = true;
 							 cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 							 sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 							 cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1300,6 +1350,8 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					} else if (strcmp(qname, previous_qname) == 0) {
 						// Last read paired to current reads
 						if (isCreateBinary()) {
+							cnySeqInsertStart(seqWriteInfo);
+							bin_start = true;
 							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 							sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 							cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1312,6 +1364,8 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					} else {
 						// Last read unpaired
 						if (isCreateBinary()) {
+							cnySeqInsertStart(seqWriteInfo);
+							bin_start = true;
 							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 							sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 							cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1325,6 +1379,8 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				} else {
 					// Unpaired dataset 
 					if (isCreateBinary()) {
+						cnySeqInsertStart(seqWriteInfo);
+						bin_start = true;
 						cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 						sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 						cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1332,7 +1388,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 						(long) ((*sequenceIndex)++), (int) cat);
 						writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-				}
+					}
 				}
 
 				if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
@@ -1347,16 +1403,34 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 									if (refCoord->positive_strand) {
 										if (isCreateBinary()) {
 											seqWriteInfo->m_bIsRef = true;
-											seqWriteInfo->m_referenceID = (long) previous_orientation * refCoord->referenceID;
-											seqWriteInfo->m_pos = (long long) (previous_pos - refCoord->start);
+											RefInfoList *refElem = callocOrExit(1, RefInfoList);
+											refElem->m_elem.m_referenceID = (long) previous_orientation * refCoord->referenceID;
+											refElem->m_elem.m_pos = (long long) (previous_pos - refCoord->start);
+											refElem->next = NULL;
+											if (seqWriteInfo->m_refInfoHead == NULL) {
+												seqWriteInfo->m_refInfoHead = refElem;
+											} else {
+												refTail->next = refElem;
+											}
+											refTail = refElem;
+											seqWriteInfo->m_refCnt++;
 										} else {
 											velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 								}
 									} else {
 										if (isCreateBinary()) {
 											seqWriteInfo->m_bIsRef = true;
-											seqWriteInfo->m_referenceID = (long) - previous_orientation * refCoord->referenceID;
-											seqWriteInfo->m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
+											RefInfoList *refElem = callocOrExit(1, RefInfoList);
+											refElem->m_elem.m_referenceID = (long) - previous_orientation * refCoord->referenceID;
+											refElem->m_elem.m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
+											refElem->next = NULL;
+											if (seqWriteInfo->m_refInfoHead == NULL) {
+												seqWriteInfo->m_refInfoHead = refElem;
+											} else {
+												refTail->next = refElem;
+											}
+											refTail = refElem;
+											seqWriteInfo->m_refCnt++;
 										} else {
 											velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 										}
@@ -1379,10 +1453,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						}
 					}
 				}
-				if (isCreateBinary()) {
+				if (isCreateBinary() && (bin_start == true)) {
 					// end previous seq
 					cnySeqInsertEnd(seqWriteInfo);
-			}
+				}
 			}
 
 			strcpy(previous_qname, qname);
@@ -1400,13 +1474,12 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	}
 
 	if (readCount) {
-		if (isCreateBinary()) {
-			cnySeqInsertStart(seqWriteInfo);
-		}
 		if (cat % 2) {
 			if (previous_paired) {
 				// Last read paired to penultimate read
 				if (isCreateBinary()) {
+					cnySeqInsertStart(seqWriteInfo);
+					bin_start = true;
 					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 					sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 					cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1418,6 +1491,8 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			} else {
 				// Last read unpaired
 				if (isCreateBinary()) {
+					cnySeqInsertStart(seqWriteInfo);
+					bin_start = true;
 					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 					sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 					cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1430,6 +1505,8 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		} else {
 			// Unpaired dataset 
 			if (isCreateBinary()) {
+				cnySeqInsertStart(seqWriteInfo);
+				bin_start = true;
 				cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 				sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 				cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -1452,16 +1529,34 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							if (refCoord->positive_strand) {
 								if (isCreateBinary()) {
 									seqWriteInfo->m_bIsRef = true;
-									seqWriteInfo->m_referenceID = (long) previous_orientation * refCoord->referenceID;
-									seqWriteInfo->m_pos = (long long) (previous_pos - refCoord->start);
+									RefInfoList *refElem = callocOrExit(1, RefInfoList);
+									refElem->m_elem.m_referenceID = (long) previous_orientation * refCoord->referenceID;
+									refElem->m_elem.m_pos = (long long) (previous_pos - refCoord->start);
+									refElem->next = NULL;
+									if (seqWriteInfo->m_refInfoHead == NULL) {
+										seqWriteInfo->m_refInfoHead = refElem;
+									} else {
+										refTail->next = refElem;
+									}
+									refTail = refElem;
+									seqWriteInfo->m_refCnt++;
 								} else {
 									velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
 						}
 							} else {
 								if (isCreateBinary()) {
 									seqWriteInfo->m_bIsRef = true;
-									seqWriteInfo->m_referenceID = (long) - previous_orientation * refCoord->referenceID;
-									seqWriteInfo->m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
+									RefInfoList *refElem = callocOrExit(1, RefInfoList);
+									refElem->m_elem.m_referenceID = (long) - previous_orientation * refCoord->referenceID;
+									refElem->m_elem.m_pos = (long long) (refCoord->finish - previous_pos - strlen(previous_seq));
+									refElem->next = NULL;
+									if (seqWriteInfo->m_refInfoHead == NULL) {
+										seqWriteInfo->m_refInfoHead = refElem;
+									} else {
+										refTail->next = refElem;
+									}
+									refTail = refElem;
+									seqWriteInfo->m_refCnt++;
 								} else {
 									velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) - previous_orientation * refCoord->referenceID, (long long) (refCoord->finish - previous_pos - strlen(previous_seq)));
 								}
@@ -1484,9 +1579,9 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				}
 			}
 		}
-		if (isCreateBinary()) {
+		if (isCreateBinary() && (bin_start == true)) {
 			cnySeqInsertEnd(seqWriteInfo);
-	}
+		}
 	}
 
 	free(seq);
