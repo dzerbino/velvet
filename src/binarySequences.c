@@ -151,7 +151,8 @@ boolean advanceCnySeqCurrentRead(SequencesReader *seqReadInfo)
 	// Perform consistency check, unused bits of previous sequence should have a fixed pattern
 	uint8_t finalNuclOffset = 1;
 	if (seqReadInfo->m_bIsRef) {
-		finalNuclOffset += (sizeof(seqReadInfo->m_referenceID) + sizeof(seqReadInfo->m_pos));
+		finalNuclOffset += (sizeof(seqReadInfo->m_refCnt));
+		finalNuclOffset += (sizeof(RefInfo) * seqReadInfo->m_refCnt);
 	}
 	if ((seqReadInfo->m_currentReadLength & 3) != 0 && ((seqReadInfo->m_pNextReadPtr - finalNuclOffset) >= seqReadInfo->m_pReadBuffer)) {
 		uint8_t mask = 0xFF << (seqReadInfo->m_currentReadLength & 3) * 2;
@@ -166,6 +167,7 @@ boolean advanceCnySeqCurrentRead(SequencesReader *seqReadInfo)
 
 	// clear ref flag before each code check
 	seqReadInfo->m_bIsRef = false;
+	seqReadInfo->m_refCnt = 0;
 
 	for(;;) {
 		int32_t	code = readCnySeqUint8(seqReadInfo);
@@ -182,7 +184,8 @@ boolean advanceCnySeqCurrentRead(SequencesReader *seqReadInfo)
 				if (code & 0x20) {
 				    // ref info present
 				    seqReadInfo->m_bIsRef = true;
-				    seqReadInfo->m_pNextReadPtr += (sizeof(seqReadInfo->m_referenceID) + sizeof(seqReadInfo->m_pos));
+				    seqReadInfo->m_pNextReadPtr += (sizeof(seqReadInfo->m_refCnt));
+				    // length is updated once count is read
 				}
 				break;
 			case 0xc0:	// new file / category
@@ -299,8 +302,16 @@ ReadSet *importCnyReadSet(char *filename)
 		reads->tSequences[sequenceIndex].sequence = tmp;
 		getCnySeqNucl(&seqReadInfo, tmp);
 		if (seqReadInfo.m_bIsRef) {
-			seqReadInfo.m_referenceID = readCnySeqUint32(&seqReadInfo);
-			seqReadInfo.m_pos = readCnySeqUint32(&seqReadInfo);
+			seqReadInfo.m_refCnt = readCnySeqUint32(&seqReadInfo);
+			// now the next ptr is advanced
+			seqReadInfo.m_pNextReadPtr += (sizeof(RefInfo) * seqReadInfo.m_refCnt);
+			RefInfo refElem;
+			uint32_t refIdx;
+			for (refIdx = 0; refIdx < seqReadInfo.m_refCnt; refIdx++) {
+				// not actually used so just read past refs
+				refElem.m_referenceID = readCnySeqUint32(&seqReadInfo);
+				refElem.m_pos = readCnySeqUint32(&seqReadInfo);
+			}
 		}
 		tmp += arrayLength;
 		if (sequenceIndex < sequenceCount) {
@@ -610,23 +621,50 @@ void cnySeqInsertEnd(SequencesWriter *seqWriteInfo)
 	}
 	if (seqWriteInfo->m_bIsRef) {
 	    // write out map info
-
 	    alignCnySeqToNextByteBoundary(seqWriteInfo);
 
 	    int idx;
 	    for (idx = 0; idx < 4; idx += 1) {
 		if (seqWriteInfo->m_pHostBufPtr == seqWriteInfo->m_pHostBufPtrMax)
 		    cnySeqHostBufferFull(seqWriteInfo);
-		*seqWriteInfo->m_pHostBufPtr++ = (seqWriteInfo->m_referenceID >> (idx*8)) & 0xff;
+		*seqWriteInfo->m_pHostBufPtr++ = (seqWriteInfo->m_refCnt >> (idx*8)) & 0xff;
 		seqWriteInfo->m_insertCurrentIndex += 4; // single byte
 	    }
-	    for (idx = 0; idx < 4; idx += 1) {
-		if (seqWriteInfo->m_pHostBufPtr == seqWriteInfo->m_pHostBufPtrMax)
-		    cnySeqHostBufferFull(seqWriteInfo);
-		*seqWriteInfo->m_pHostBufPtr++ = (seqWriteInfo->m_pos >> (idx*8)) & 0xff;
-		seqWriteInfo->m_insertCurrentIndex += 4; // single byte
+	    int refIdx;
+	    RefInfoList *refElem = seqWriteInfo->m_refInfoHead;
+	    RefInfoList *prev = NULL;
+	    for (refIdx = 0; refIdx < seqWriteInfo->m_refCnt; refIdx++) {
+
+		    if (refElem == NULL) {
+			    velvetLog("reference but element %d NULL\n", refIdx);
+			    exit(1);
+		    }
+		    alignCnySeqToNextByteBoundary(seqWriteInfo);
+
+		    for (idx = 0; idx < 4; idx += 1) {
+			    if (seqWriteInfo->m_pHostBufPtr == seqWriteInfo->m_pHostBufPtrMax)
+				    cnySeqHostBufferFull(seqWriteInfo);
+			    *seqWriteInfo->m_pHostBufPtr++ = (refElem->m_elem.m_referenceID >> (idx*8)) & 0xff;
+			    seqWriteInfo->m_insertCurrentIndex += 4; // single byte
+		    }
+		    for (idx = 0; idx < 4; idx += 1) {
+			    if (seqWriteInfo->m_pHostBufPtr == seqWriteInfo->m_pHostBufPtrMax)
+				    cnySeqHostBufferFull(seqWriteInfo);
+			    *seqWriteInfo->m_pHostBufPtr++ = (refElem->m_elem.m_pos >> (idx*8)) & 0xff;
+			    seqWriteInfo->m_insertCurrentIndex += 4; // single byte
+		    }
+
+		    prev = refElem;
+		    refElem = refElem->next;
+		    free(prev);
+	    }
+	    if (refElem != NULL) {
+		    velvetLog("more than %d elements in ref\n", seqWriteInfo->m_refCnt);
+		    exit(1);
 	    }
 	    seqWriteInfo->m_bIsRef = false;
+	    seqWriteInfo->m_refInfoHead = NULL;
+	    seqWriteInfo->m_refCnt = 0;
 
 	}
 

@@ -990,8 +990,16 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 				cmpString.sequence = mallocOrExit((seqReadInfo.m_currentReadLength + 3) / 4, uint8_t );
 				getCnySeqNucl(&seqReadInfo, cmpString.sequence);
 				if (seqReadInfo.m_bIsRef) {
-					seqReadInfo.m_referenceID = readCnySeqUint32(&seqReadInfo);
-					seqReadInfo.m_pos = readCnySeqUint32(&seqReadInfo);
+					seqReadInfo.m_refCnt = readCnySeqUint32(&seqReadInfo);
+					// now the next ptr is advanced
+					seqReadInfo.m_pNextReadPtr += (sizeof(RefInfo) * seqReadInfo.m_refCnt);
+					RefInfo refElem;
+					uint32_t refIdx;
+					for (refIdx = 0; refIdx < seqReadInfo.m_refCnt; refIdx++) {
+						// not actually used so just read past refs
+						refElem.m_referenceID = readCnySeqUint32(&seqReadInfo);
+						refElem.m_pos = readCnySeqUint32(&seqReadInfo);
+					}
 				}
 				advanceCnySeqCurrentRead(&seqReadInfo);
 				free(cmpString.sequence);
@@ -1047,6 +1055,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		mapCoords = callocOrExit(sequenceCount + 1, Coordinate *);
 		mapCount = callocOrExit(sequenceCount + 1, Coordinate);
 
+		RefInfo *refArray = NULL;
 		if (seqReadInfo.m_bIsBinary) {
 			TightString cmpString;
 			for (seqID = referenceSequenceCount + 1; seqID < sequenceCount + 1; seqID++) {
@@ -1054,8 +1063,15 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 				cmpString.sequence = mallocOrExit((seqReadInfo.m_currentReadLength + 3) / 4, uint8_t );
 				getCnySeqNucl(&seqReadInfo, cmpString.sequence);
 				if (seqReadInfo.m_bIsRef) {
-					seqReadInfo.m_referenceID = readCnySeqUint32(&seqReadInfo);
-					seqReadInfo.m_pos = readCnySeqUint32(&seqReadInfo);
+					seqReadInfo.m_refCnt = readCnySeqUint32(&seqReadInfo);
+					// now the next ptr is advanced
+					seqReadInfo.m_pNextReadPtr += (sizeof(RefInfo) * seqReadInfo.m_refCnt);
+					refArray = callocOrExit(seqReadInfo.m_refCnt, RefInfo);
+					uint32_t refIdx;
+					for (refIdx = 0; refIdx < seqReadInfo.m_refCnt; refIdx++) {
+						refArray[refIdx].m_referenceID = readCnySeqUint32(&seqReadInfo);
+						refArray[refIdx].m_pos = readCnySeqUint32(&seqReadInfo);
+					}
 				}
 				// optional test to ensure reference mapping seqIDs are in sync
 #if 1
@@ -1075,7 +1091,6 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 				free(cmpStr);
 #endif
 				free(cmpString.sequence);
-				advanceCnySeqCurrentRead(&seqReadInfo);
 
 				// set prior count
 				mapCount[seqID - 1] = counter;
@@ -1085,15 +1100,19 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 				mapCoords[seqID] = callocOrExit(maxCount, Coordinate);
 
 				if (seqReadInfo.m_bIsRef) {
-					mapReferenceIDs[seqID][counter] = (IDnum) seqReadInfo.m_referenceID;
-					mapCoords[seqID][counter] = (Coordinate) seqReadInfo.m_pos;
+					while (counter < seqReadInfo.m_refCnt) {
+						mapReferenceIDs[seqID][counter] = (IDnum) refArray[counter].m_referenceID;
+						mapCoords[seqID][counter] = (Coordinate) refArray[counter].m_pos;
 
-					if (++counter == maxCount) {
-						maxCount *= 2;
-						mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
-						mapCoords[seqID] = reallocOrExit(mapCoords, maxCount, Coordinate);
+						if (++counter == maxCount) {
+							maxCount *= 2;
+							mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
+							mapCoords[seqID] = reallocOrExit(mapCoords, maxCount, Coordinate);
+						}
 					}
+					free(refArray);
 				}
+				advanceCnySeqCurrentRead(&seqReadInfo);
 			}
 		} else {
 			// Parse file for mapping info
