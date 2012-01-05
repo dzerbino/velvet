@@ -21,6 +21,13 @@ Copyright 2011 Convey Computer Corporation (info@conveycomputer.com)
 #ifndef _BINARYSEQUENCES_H_
 #define _BINARYSEQUENCES_H_
 
+struct refInfo_st {
+	int32_t         m_referenceID;
+	int32_t         m_pos;
+};
+typedef struct refInfo_st RefInfo;
+
+
 typedef struct {
 	Category	m_numCategories;
 	uint32_t	m_magic;
@@ -54,8 +61,7 @@ struct sequencesReader_st {
 	uint8_t *	m_pNextReadPtr;
 	uint64_t	m_currentNuclReadIdx;
 	uint64_t	m_currentReadLength;
-	int32_t         m_referenceID;
-	int32_t         m_pos;
+	uint32_t        m_refCnt;
 	boolean         m_bIsRef;
 	char **		m_ppCurrString;
 };
@@ -68,6 +74,12 @@ uint32_t readCnySeqUint32(SequencesReader *seqReadInfo);
 boolean advanceCnySeqCurrentRead(SequencesReader *seqReadInfo);
 FILE *openCnySeqForRead(const char *fileName, CnyUnifiedSeqFileHeader *seqFileHeader);
 void resetCnySeqCurrentRead(SequencesReader *seqReadInfo);
+
+struct refInfoList_st {
+	RefInfo		m_elem;
+	struct refInfoList_st *next;
+};
+typedef struct refInfoList_st RefInfoList;
 
 // Writing
 struct sequencesWriter_st {
@@ -87,8 +99,8 @@ struct sequencesWriter_st {
 	uint8_t *	m_pHostLengthBufPtrMax;
 	uint8_t *	m_pHostBufPtrMax;
 	int64_t		m_hostBufferFilePos[3];
-	int32_t         m_referenceID;
-	int32_t         m_pos;
+	RefInfoList *	m_refInfoHead;
+	uint32_t        m_refCnt;
 	boolean         m_bIsRef;
 };
 typedef struct sequencesWriter_st SequencesWriter;
