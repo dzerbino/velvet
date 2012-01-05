@@ -1001,6 +1001,23 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 						refElem.m_pos = readCnySeqUint32(&seqReadInfo);
 					}
 				}
+				// optional test to ensure reference mapping seqIDs are in sync
+#if 0
+				TightString *tString;
+				tString = getTightStringInArray(array, index);
+				if (getLength(tString) != seqReadInfo.m_currentReadLength) {
+					velvetLog("Error: TightString len mismatch, %d != %ld\n", getLength(tString), seqReadInfo.m_currentReadLength);
+					exit(1);
+				}
+				char *str = readTightString(tString);
+				char *cmpStr = readTightString(&cmpString);
+				if (strcmp(str, cmpStr) != 0) {
+					printf("seq %s != cmp %s\n", str, cmpStr);
+					exit(1);
+				}
+				free(str);
+				free(cmpStr);
+#endif
 				advanceCnySeqCurrentRead(&seqReadInfo);
 				free(cmpString.sequence);
 			}
@@ -1074,7 +1091,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 					}
 				}
 				// optional test to ensure reference mapping seqIDs are in sync
-#if 1
+#if 0
 				TightString *tString;
 				tString = getTightStringInArray(array, seqID - 1);
 				if (getLength(tString) != seqReadInfo.m_currentReadLength) {

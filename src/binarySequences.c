@@ -362,8 +362,6 @@ static void cnySeqHostBufferFull(SequencesWriter *seqWriteInfo)
 		exit(1);
 	    }
 
-	    // also need to copy to coprocessor memory
-
 	    seqWriteInfo->m_pHostBufPtr = seqWriteInfo->m_pWriteBuffer[2];
 	    seqWriteInfo->m_pHostBufPtrMax = seqWriteInfo->m_pHostBufPtr + WRITE_BUF_SIZE;
 	    seqWriteInfo->m_hostBufferFilePos[2] = seqWriteInfo->m_hostBufferFilePos[2] + WRITE_BUF_SIZE;
@@ -583,10 +581,6 @@ void cnySeqInsertEnd(SequencesWriter *seqWriteInfo)
 {
     uint8_t *tmp;
 
-    if (seqWriteInfo->m_bIsRef && seqWriteInfo->m_insertLength < SHORT_NUCL_LENGTH) {
-	moveCnySeqNucleotides(seqWriteInfo);
-    }
-
     // fill last few empty nucleotides with a fixed pattern for consistency checking
     if ((seqWriteInfo->m_insertCurrentIndex & 0x3) != 0) {
 	*seqWriteInfo->m_pHostBufPtr |= 0xAA << ((seqWriteInfo->m_insertCurrentIndex & 0x3)*2);
@@ -602,27 +596,18 @@ void cnySeqInsertEnd(SequencesWriter *seqWriteInfo)
 
     if (seqWriteInfo->m_insertLength >= SHORT_NUCL_LENGTH || seqWriteInfo->m_bIsRef) {
 	if (seqWriteInfo->m_bIsRef) {
-	    // set ref bit
-	    *(seqWriteInfo->m_pHostLengthBufPtr++) = 0xa0 | ((seqWriteInfo->m_insertLength >> 32) & 0x1f);
-	} else {
-	    // one byte control, four byte length
-	    *(seqWriteInfo->m_pHostLengthBufPtr++) = 0x80 | ((seqWriteInfo->m_insertLength >> 32) & 0x1f);
-	}
-	int idx;
-	for (idx = 0; idx < 4; idx += 1) {
-	    if (seqWriteInfo->m_pHostLengthBufPtr == seqWriteInfo->m_pHostLengthBufPtrMax) {
-		if (seqWriteInfo->m_hostBuffersInUse < 2) {
-		    velvetLog("CnySeq m_hostBuffersInUse %d\n", seqWriteInfo->m_hostBuffersInUse);
-		    exit(1);
-		}
-		seqWriteInfo->m_pHostLengthBufPtr = seqWriteInfo->m_pWriteBuffer[1];
-	    }
-	    *seqWriteInfo->m_pHostLengthBufPtr++ = (seqWriteInfo->m_insertLength >> (idx*8)) & 0xff;
-	}
-	if (seqWriteInfo->m_bIsRef) {
-	    // write out map info
 	    alignCnySeqToNextByteBoundary(seqWriteInfo);
 
+	    if (seqWriteInfo->m_insertLength < SHORT_NUCL_LENGTH) {
+		    // the align above points to next byte,
+		    // need to back up to last byte of nucl seq
+		    seqWriteInfo->m_pHostBufPtr -= 1;
+		    moveCnySeqNucleotides(seqWriteInfo);
+		    // move to next byte
+		    seqWriteInfo->m_pHostBufPtr += 1;
+	    }
+
+	    // write out map info
 	    int idx;
 	    for (idx = 0; idx < 4; idx += 1) {
 		if (seqWriteInfo->m_pHostBufPtr == seqWriteInfo->m_pHostBufPtrMax)
@@ -664,8 +649,22 @@ void cnySeqInsertEnd(SequencesWriter *seqWriteInfo)
 	    }
 	    seqWriteInfo->m_bIsRef = false;
 	    seqWriteInfo->m_refInfoHead = NULL;
-	    seqWriteInfo->m_refCnt = 0;
-
+	    seqWriteInfo->m_refCnt = 0;	    // set ref bit
+	    *(seqWriteInfo->m_pHostLengthBufPtr++) = 0xa0 | ((seqWriteInfo->m_insertLength >> 32) & 0x1f);
+	} else {
+	    // one byte control, four byte length
+	    *(seqWriteInfo->m_pHostLengthBufPtr++) = 0x80 | ((seqWriteInfo->m_insertLength >> 32) & 0x1f);
+	}
+	int idx;
+	for (idx = 0; idx < 4; idx += 1) {
+	    if (seqWriteInfo->m_pHostLengthBufPtr == seqWriteInfo->m_pHostLengthBufPtrMax) {
+		if (seqWriteInfo->m_hostBuffersInUse < 2) {
+		    velvetLog("CnySeq m_hostBuffersInUse %d\n", seqWriteInfo->m_hostBuffersInUse);
+		    exit(1);
+		}
+		seqWriteInfo->m_pHostLengthBufPtr = seqWriteInfo->m_pWriteBuffer[1];
+	    }
+	    *seqWriteInfo->m_pHostLengthBufPtr++ = (seqWriteInfo->m_insertLength >> (idx*8)) & 0xff;
 	}
 
     } else {
