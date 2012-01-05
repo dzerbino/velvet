@@ -832,6 +832,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	int previous_orientation = 0;
 	boolean previous_paired = false;
 	boolean bin_start = false;
+	boolean seq_written = false;
 	ReferenceCoordinate * refCoord;
 	char c;
 	int cigar_index;
@@ -908,6 +909,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 
 				// Determine if paired to previous read
 				bin_start = false;
+				seq_written = false;
 				if (readCount > 0) {
 					if (cat % 2) {
 						if (previous_paired) {
@@ -923,9 +925,11 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 								(long) ((*sequenceIndex)++), (int) cat);
 								writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 							}
+							seq_written = true;
 							previous_paired = false;
 						} else if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
 							// New multi-mapping issue
+							seq_written = false;
 							previous_paired = false;
 						}  else if (strcmp(qname, previous_qname) == 0) {
 							// Last read paired to current reads
@@ -940,6 +944,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 								(long) ((*sequenceIndex)++), (int) cat);
 								writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 							}
+							seq_written = true;
 							previous_paired = true;
 						} else {
 							// Last read unpaired
@@ -954,6 +959,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 								(long) ((*sequenceIndex)++), (int) cat - 1);
 								writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 							}
+							seq_written = true;
 							previous_paired = false;
 						}
 					} else {
@@ -969,9 +975,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							(long) ((*sequenceIndex)++), (int) cat);
 							writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 						}
+						seq_written = true;
 					}
 
-					if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+					if ((seq_written == true) && (refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 						if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
 							;
 						else {
@@ -996,7 +1003,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 												seqWriteInfo->m_refCnt++;
 											} else {
 												velvetFprintf(seqWriteInfo->m_pFile, "M\t%li\t%lli\n", (long) previous_orientation * refCoord->referenceID, (long long) (previous_pos - refCoord->start));
-									}
+											}
 										} else {
 											if (isCreateBinary()) {
 												seqWriteInfo->m_bIsRef = true;
@@ -1053,6 +1060,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		}
 
 	bin_start = false;
+	seq_written = false;
 	if (readCount) {
 		if (cat % 2) {
 			if (previous_paired) {
@@ -1068,6 +1076,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					(long) ((*sequenceIndex)++), (int) cat);
 					writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 				}
+				seq_written = true;
 			} else {
 				// Last read unpaired
 				if (isCreateBinary()) {
@@ -1080,7 +1089,8 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 					(long) ((*sequenceIndex)++), (int) cat - 1);
 					writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-			}
+				}
+				seq_written = true;
 			}
 		} else {
 			// Unpaired dataset 
@@ -1095,9 +1105,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				(long) ((*sequenceIndex)++), (int) cat);
 				writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 			}
+			seq_written = true;
 		}
 
-		if ((refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+		if ((seq_written == true) && (refCoord = findReferenceCoordinate(refCoords, previous_rname, (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 			if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
 				;
 			else {
@@ -1199,6 +1210,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	int previous_orientation = 0;
 	boolean previous_paired = false;
 	boolean bin_start = false;
+	boolean seq_written = false;
 	int previous_flagbits = 0;
 	char ** refNames;
 	ReferenceCoordinate * refCoord;
@@ -1328,6 +1340,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 
 			// Determine if paired to previous read
 			bin_start = false;
+			seq_written = false;
 			if (readCount > 0) {
 				if (cat % 2) {
 					 if (previous_paired) {
@@ -1343,9 +1356,11 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							(long) ((*sequenceIndex)++), (int) cat);
 							 writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 						 }
+						 seq_written = true;
 						previous_paired = false;
 					} else if (strcmp(qname, previous_qname) == 0 && strcmp(qname_pairing, previous_qname_pairing) == 0) {
 						// New multi-mapping issue
+						seq_written = false;
 						previous_paired = false;
 					} else if (strcmp(qname, previous_qname) == 0) {
 						// Last read paired to current reads
@@ -1360,6 +1375,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							(long) ((*sequenceIndex)++), (int) cat);
 							writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 						}
+						seq_written = true;
 						previous_paired = true;
 					} else {
 						// Last read unpaired
@@ -1374,6 +1390,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 							(long) ((*sequenceIndex)++), (int) cat - 1);
 							writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 						}
+						seq_written = true;
 						previous_paired = false;
 					}
 				} else {
@@ -1389,9 +1406,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						(long) ((*sequenceIndex)++), (int) cat);
 						writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 					}
+					seq_written = true;
 				}
 
-				if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+				if ((seq_written == true) && !(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 					if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
 						;
 					else {
@@ -1473,6 +1491,8 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		}
 	}
 
+	bin_start = false;
+	seq_written = false;
 	if (readCount) {
 		if (cat % 2) {
 			if (previous_paired) {
@@ -1488,6 +1508,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					(long) ((*sequenceIndex)++), (int) cat);
 					writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
 				}
+				seq_written = true;
 			} else {
 				// Last read unpaired
 				if (isCreateBinary()) {
@@ -1500,7 +1521,8 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 					(long) ((*sequenceIndex)++), (int) cat - 1);
 					writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-			}
+				}
+				seq_written = true;
 			}
 		} else {
 			// Unpaired dataset 
@@ -1514,10 +1536,11 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 				(long) ((*sequenceIndex)++), (int) cat);
 				writeFastaSequence(seqWriteInfo->m_pFile, previous_seq);
-		}
+			}
+			seq_written = true;
 		}
 
-		if (!(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
+		if ((seq_written == true) && !(previous_flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[previous_rID], (Coordinate) previous_pos, (Coordinate) previous_pos + strlen(previous_seq) - 1, previous_orientation))) {
 			if (strlen(previous_cigar) == 1 && previous_cigar[0] == '*')
 				;
 			else {
