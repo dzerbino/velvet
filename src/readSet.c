@@ -833,6 +833,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	boolean previous_paired = false;
 	boolean bin_start = false;
 	boolean seq_written = false;
+	Category prev_cat = cat;
 	ReferenceCoordinate * refCoord;
 	char c;
 	int cigar_index;
@@ -915,6 +916,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						if (previous_paired) {
 							// Last read paired to penultimate read
 							if (isCreateBinary()) {
+								if (prev_cat != cat) {
+									inputCnySeqFileStart(cat, seqWriteInfo);
+									prev_cat = cat;
+								}
 								cnySeqInsertStart(seqWriteInfo);
 								bin_start = true;
 								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -934,6 +939,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						}  else if (strcmp(qname, previous_qname) == 0) {
 							// Last read paired to current reads
 							if (isCreateBinary()) {
+								if (prev_cat != cat) {
+									inputCnySeqFileStart(cat, seqWriteInfo);
+									prev_cat = cat;
+								}
 								cnySeqInsertStart(seqWriteInfo);
 								bin_start = true;
 								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -949,6 +958,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 						} else {
 							// Last read unpaired
 							if (isCreateBinary()) {
+								if (prev_cat != cat - 1) {
+									inputCnySeqFileStart(cat - 1, seqWriteInfo);
+									prev_cat = cat - 1;
+								}
 								cnySeqInsertStart(seqWriteInfo);
 								bin_start = true;
 								cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -965,6 +978,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					} else {
 						// Unpaired dataset 
 						if (isCreateBinary()) {
+							if (prev_cat != cat) {
+								inputCnySeqFileStart(cat, seqWriteInfo);
+								prev_cat = cat;
+							}
 							cnySeqInsertStart(seqWriteInfo);
 							bin_start = true;
 							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1066,6 +1083,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			if (previous_paired) {
 				// Last read paired to penultimate read
 				if (isCreateBinary()) {
+					if (prev_cat != cat) {
+						inputCnySeqFileStart(cat, seqWriteInfo);
+						prev_cat = cat;
+					}
 					cnySeqInsertStart(seqWriteInfo);
 					bin_start = true;
 					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1080,6 +1101,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			} else {
 				// Last read unpaired
 				if (isCreateBinary()) {
+					if (prev_cat != cat - 1) {
+						inputCnySeqFileStart(cat - 1, seqWriteInfo);
+						prev_cat = cat - 1;
+					}
 					cnySeqInsertStart(seqWriteInfo);
 					bin_start = true;
 					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1095,6 +1120,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		} else {
 			// Unpaired dataset 
 			if (isCreateBinary()) {
+				if (prev_cat != cat) {
+					inputCnySeqFileStart(cat, seqWriteInfo);
+					prev_cat = cat;
+				}
 				cnySeqInsertStart(seqWriteInfo);
 				bin_start = true;
 				cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1211,6 +1240,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	boolean previous_paired = false;
 	boolean bin_start = false;
 	boolean seq_written = false;
+	Category prev_cat = cat;
 	int previous_flagbits = 0;
 	char ** refNames;
 	ReferenceCoordinate * refCoord;
@@ -1346,6 +1376,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					 if (previous_paired) {
 						// Last read paired to penultimate read
 						 if (isCreateBinary()) {
+							 if (prev_cat != cat) {
+								 inputCnySeqFileStart(cat, seqWriteInfo);
+								 prev_cat = cat;
+							 }
 							 cnySeqInsertStart(seqWriteInfo);
 							 bin_start = true;
 							 cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1365,6 +1399,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					} else if (strcmp(qname, previous_qname) == 0) {
 						// Last read paired to current reads
 						if (isCreateBinary()) {
+							if (prev_cat != cat) {
+								inputCnySeqFileStart(cat, seqWriteInfo);
+								prev_cat = cat;
+							}
 							cnySeqInsertStart(seqWriteInfo);
 							bin_start = true;
 							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1380,6 +1418,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					} else {
 						// Last read unpaired
 						if (isCreateBinary()) {
+							if (prev_cat != cat - 1) {
+								inputCnySeqFileStart(cat - 1, seqWriteInfo);
+								prev_cat = cat - 1;
+							}
 							cnySeqInsertStart(seqWriteInfo);
 							bin_start = true;
 							cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1396,6 +1438,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				} else {
 					// Unpaired dataset 
 					if (isCreateBinary()) {
+						if (prev_cat != cat) {
+							inputCnySeqFileStart(cat, seqWriteInfo);
+							prev_cat = cat;
+						}
 						cnySeqInsertStart(seqWriteInfo);
 						bin_start = true;
 						cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1498,6 +1544,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			if (previous_paired) {
 				// Last read paired to penultimate read
 				if (isCreateBinary()) {
+					if (prev_cat != cat) {
+						inputCnySeqFileStart(cat, seqWriteInfo);
+						prev_cat = cat;
+					}
 					cnySeqInsertStart(seqWriteInfo);
 					bin_start = true;
 					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1512,6 +1562,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			} else {
 				// Last read unpaired
 				if (isCreateBinary()) {
+					if (prev_cat != cat - 1) {
+						inputCnySeqFileStart(cat - 1, seqWriteInfo);
+						prev_cat = cat - 1;
+					}
 					cnySeqInsertStart(seqWriteInfo);
 					bin_start = true;
 					cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
@@ -1527,6 +1581,10 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		} else {
 			// Unpaired dataset 
 			if (isCreateBinary()) {
+				if (prev_cat != cat) {
+					inputCnySeqFileStart(cat, seqWriteInfo);
+					prev_cat = cat;
+				}
 				cnySeqInsertStart(seqWriteInfo);
 				bin_start = true;
 				cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
