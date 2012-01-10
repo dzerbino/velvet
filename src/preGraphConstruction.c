@@ -522,7 +522,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			if (currentPosition != nextStop) {
 				if (seqReadInfo->m_bIsBinary) {
 					if (readIndex >= tString->length) {
-						velvetLog("readIndex %ld beyond string len %d\n", (uint64_t) readIndex, tString->length);
+						velvetLog("readIndex %ld beyond string len %ld\n", (uint64_t) readIndex, (uint64_t) tString->length);
 						exit(1);
 					}
 				}
