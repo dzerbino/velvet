@@ -295,7 +295,7 @@ ReadSet *importCnyReadSet(char *filename)
 		reads->tSequences[sequenceIndex].length = seqReadInfo.m_currentReadLength;
 		arrayLength = (reads->tSequences[sequenceIndex].length + 3) / 4;
 		if ((tmp + arrayLength) > arrayEnd) {
-			velvetLog("array location 0x%lx for seq %d beyond end 0x%lx\n", (uint64_t) tmp, sequenceIndex, (uint64_t) arrayEnd);
+			velvetLog("array location 0x%lx for seq %ld beyond end 0x%lx\n", (uint64_t) tmp, (uint64_t) sequenceIndex, (uint64_t) arrayEnd);
 			exit(1);
 		}
 		totalLength += arrayLength;
