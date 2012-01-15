@@ -36,6 +36,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "kmer.h"
 #include "kmerOccurenceTable.h"
 #include "recycleBin.h"
+#include "binarySequences.h"
 
 typedef struct mask_st Mask;
 
@@ -622,7 +623,7 @@ static void computeClearHSPs(TightString * array, boolean second_in_pair, SplayT
 	Kmer polyA;
 	Nucleotide nucleotide;
 	KmerOccurence * hit;
-	
+
 	int penalty;
 	TightString * tString;
 	Coordinate length;
@@ -925,6 +926,25 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	IDnum kmerCount;
 	IDnum referenceSequenceCount = 0;
 	struct timeval start, end, diff;
+	SequencesReader seqReadInfo;
+	memset(&seqReadInfo, 0, sizeof(seqReadInfo));
+	if (isCreateBinary()) {
+		seqReadInfo.m_bIsBinary = true;
+		seqReadInfo.m_pFile = openCnySeqForRead(seqFilename, &seqReadInfo.m_unifiedSeqFileHeader);
+		if (!seqReadInfo.m_pFile) {
+			exitErrorf(EXIT_FAILURE, true, "Could not open %s", seqFilename);
+		}
+		seqReadInfo.m_numCategories = seqReadInfo.m_unifiedSeqFileHeader.m_numCategories;
+		seqReadInfo.m_minSeqLen = seqReadInfo.m_unifiedSeqFileHeader.m_minSeqLen;
+		seqReadInfo.m_maxSeqLen = seqReadInfo.m_unifiedSeqFileHeader.m_maxSeqLen;
+		seqReadInfo.m_bIsRef = false;
+		seqReadInfo.m_pReadBuffer = mallocOrExit(USF_READ_BUF_SIZE, uint8_t );
+		seqReadInfo.m_pCurrentReadPtr = seqReadInfo.m_pReadBufEnd = 0;
+
+		resetCnySeqCurrentRead(&seqReadInfo);
+	} else {
+		seqReadInfo.m_bIsBinary = false;
+	}
 	IDnum ** mapReferenceIDs = NULL;
 	Coordinate ** mapCoords = NULL;
 	Coordinate * mapCount = NULL;
@@ -937,7 +957,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	Coordinate maxCount = 20;
 	Coordinate counter = 0;
 	// DEBUG 
-	Mask ** referenceMasks;
+	Mask ** referenceMasks = NULL;
 
 	if (outfile == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", filename);
@@ -972,15 +992,59 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	if (referenceSequenceCount && (kmerCount = countReferenceKmers(reads, table->WORDLENGTH)) > 0) {
 		table->kmerOccurenceTable = newKmerOccurenceTable(24 , table->WORDLENGTH);
 		allocateKmerOccurences(kmerCount, table->kmerOccurenceTable);
-		seqFile = fopen(seqFilename, "r");
-		
-		if (seqFile == NULL)
-			exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", seqFilename);
-		else
-			velvetLog("Reading mapping info from file %s\n", seqFilename);
+		if (seqReadInfo.m_bIsBinary) {
+			referenceMasks = callocOrExit(referenceSequenceCount, Mask*);
+			// binary seqs have no Ns so just advance past the references
+			for (index = 0; index < referenceSequenceCount; index++) {
+				TightString cmpString;
+				cmpString.length = seqReadInfo.m_currentReadLength;
+				cmpString.sequence = mallocOrExit((seqReadInfo.m_currentReadLength + 3) / 4, uint8_t );
+				getCnySeqNucl(&seqReadInfo, cmpString.sequence);
+				if (seqReadInfo.m_bIsRef) {
+					seqReadInfo.m_refCnt = readCnySeqUint32(&seqReadInfo);
+					// now the next ptr is advanced
+					seqReadInfo.m_pNextReadPtr += (sizeof(RefInfo) * seqReadInfo.m_refCnt);
+					RefInfo refElem;
+					uint32_t refIdx;
+					for (refIdx = 0; refIdx < seqReadInfo.m_refCnt; refIdx++) {
+						// not actually used so just read past refs
+						refElem.m_referenceID = readCnySeqUint32(&seqReadInfo);
+						refElem.m_pos = readCnySeqUint32(&seqReadInfo);
+					}
+				}
+				// optional test to ensure reference mapping seqIDs are in sync
+#if 0
+				TightString *tString;
+				tString = getTightStringInArray(array, index);
+				if (getLength(tString) != seqReadInfo.m_currentReadLength) {
+					velvetLog("Error: TightString len mismatch, %d != %ld\n", getLength(tString), seqReadInfo.m_currentReadLength);
+					exit(1);
+				}
+				char *str = readTightString(tString);
+				char *cmpStr = readTightString(&cmpString);
+				if (strcmp(str, cmpStr) != 0) {
+					printf("seq %s != cmp %s\n", str, cmpStr);
+					exit(1);
+				}
+				free(str);
+				free(cmpStr);
+#endif
+				advanceCnySeqCurrentRead(&seqReadInfo);
+				free(cmpString.sequence);
+			}
+		} else {
+			seqFile = fopen(seqFilename, "r");
 
-		// Skip through reference headers quickly
-		referenceMasks = scanReferenceSequences(seqFile, referenceSequenceCount);
+			if (seqFile == NULL)
+				exitErrorf(EXIT_FAILURE, true, "Couldn't write to file %s", seqFilename);
+			else
+				velvetLog("Reading mapping info from file %s\n", seqFilename);
+
+			seqReadInfo.m_pFile = seqFile;
+
+			// Skip through reference headers quickly
+			referenceMasks = scanReferenceSequences(seqFile, referenceSequenceCount);
+		}
 
 #ifdef _OPENMP
 		producing = 1;
@@ -1019,34 +1083,102 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		mapCoords = callocOrExit(sequenceCount + 1, Coordinate *);
 		mapCount = callocOrExit(sequenceCount + 1, Coordinate);
 
-		// Parse file for mapping info
-		while (seqFile && (c = getc(seqFile)) != EOF) {
+		RefInfo *refArray = NULL;
+		if (seqReadInfo.m_bIsBinary) {
+			TightString cmpString;
+			for (seqID = referenceSequenceCount + 1; seqID < sequenceCount + 1; seqID++) {
+				cmpString.length = seqReadInfo.m_currentReadLength;
+				cmpString.sequence = mallocOrExit((seqReadInfo.m_currentReadLength + 3) / 4, uint8_t );
+				getCnySeqNucl(&seqReadInfo, cmpString.sequence);
+				if (seqReadInfo.m_bIsRef) {
+					seqReadInfo.m_refCnt = readCnySeqUint32(&seqReadInfo);
+					// now the next ptr is advanced
+					seqReadInfo.m_pNextReadPtr += (sizeof(RefInfo) * seqReadInfo.m_refCnt);
+					refArray = callocOrExit(seqReadInfo.m_refCnt, RefInfo);
+					uint32_t refIdx;
+					for (refIdx = 0; refIdx < seqReadInfo.m_refCnt; refIdx++) {
+						refArray[refIdx].m_referenceID = readCnySeqUint32(&seqReadInfo);
+						refArray[refIdx].m_pos = readCnySeqUint32(&seqReadInfo);
+					}
+				}
+				// optional test to ensure reference mapping seqIDs are in sync
+#if 0
+				TightString *tString;
+				tString = getTightStringInArray(array, seqID - 1);
+				if (getLength(tString) != seqReadInfo.m_currentReadLength) {
+					velvetLog("Error: TightString len mismatch, %d != %ld\n", getLength(tString), seqReadInfo.m_currentReadLength);
+					exit(1);
+				}
+				char *str = readTightString(tString);
+				char *cmpStr = readTightString(&cmpString);
+				if (strcmp(str, cmpStr) != 0) {
+					printf("seq %s != cmp %s\n", str, cmpStr);
+					exit(1);
+				}
+				free(str);
+				free(cmpStr);
+#endif
+				free(cmpString.sequence);
 
-			if (c == '>') {
-				mapCount[seqID] = counter;
+				// set prior count
+				mapCount[seqID - 1] = counter;
 				counter = 0;
 				maxCount = 20;
-				fgets(line, MAXLINE, seqFile);
-				sscanf(line,"%*s\t%li\t", &long_var);
-				seqID = (IDnum) long_var;
 				mapReferenceIDs[seqID] = callocOrExit(maxCount, IDnum);
 				mapCoords[seqID] = callocOrExit(maxCount, Coordinate);
-			} else if (c == 'M') {
-				fgets(line, MAXLINE, seqFile);
-				sscanf(line,"\t%li\t%lli\n", &long_var, &longlong_var);
-				mapReferenceIDs[seqID][counter] = (IDnum) long_var;
-				mapCoords[seqID][counter] = (Coordinate) longlong_var;
 
-				if (++counter == maxCount) {
-					maxCount *= 2;
-					mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
-					mapCoords[seqID] = reallocOrExit(mapCoords, maxCount, Coordinate);
+				if (seqReadInfo.m_bIsRef) {
+					while (counter < seqReadInfo.m_refCnt) {
+						mapReferenceIDs[seqID][counter] = (IDnum) refArray[counter].m_referenceID;
+						mapCoords[seqID][counter] = (Coordinate) refArray[counter].m_pos;
+
+						if (++counter == maxCount) {
+							maxCount *= 2;
+							mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
+							mapCoords[seqID] = reallocOrExit(mapCoords, maxCount, Coordinate);
+						}
+					}
+					free(refArray);
+				}
+				advanceCnySeqCurrentRead(&seqReadInfo);
+			}
+		} else {
+			// Parse file for mapping info
+			while (seqFile && (c = getc(seqFile)) != EOF) {
+
+				if (c == '>') {
+					mapCount[seqID] = counter;
+					counter = 0;
+					maxCount = 20;
+					fgets(line, MAXLINE, seqFile);
+					sscanf(line,"%*s\t%li\t", &long_var);
+					seqID = (IDnum) long_var;
+					mapReferenceIDs[seqID] = callocOrExit(maxCount, IDnum);
+					mapCoords[seqID] = callocOrExit(maxCount, Coordinate);
+				} else if (c == 'M') {
+					fgets(line, MAXLINE, seqFile);
+					sscanf(line,"\t%li\t%lli\n", &long_var, &longlong_var);
+					mapReferenceIDs[seqID][counter] = (IDnum) long_var;
+					mapCoords[seqID][counter] = (Coordinate) longlong_var;
+
+					if (++counter == maxCount) {
+						maxCount *= 2;
+						mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
+						mapCoords[seqID] = reallocOrExit(mapCoords, maxCount, Coordinate);
+					}
 				}
 			}
 		}
 	}
 	if (seqFile)
 		fclose(seqFile);
+
+	if (seqReadInfo.m_bIsBinary) {
+		if (seqReadInfo.m_pReadBuffer) {
+			free(seqReadInfo.m_pReadBuffer);
+		}
+		fclose(seqReadInfo.m_pFile);
+	}
 
 #ifdef _OPENMP
 	producing = 1;
@@ -1107,7 +1239,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
-	velvetLog(" === Sequences loaded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
+	velvetLog(" === Sequences loaded in %ld.%06ld s\n", (long) diff.tv_sec, (long) diff.tv_usec);
 
 	fclose(outfile);
 
@@ -1115,6 +1247,9 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		free(mapReferenceIDs);
 		free(mapCoords);
 		free(mapCount);
+	}
+	if (referenceMasks) {
+		free(referenceMasks);
 	}
 	//free(reads->tSequences);
 	//reads->tSequences = NULL;

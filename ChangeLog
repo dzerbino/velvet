@@ -412,3 +412,7 @@ V 1.1.07
 V 1.1.08
 - Negative marker bug in TourBus
 - Better reading of SAM/BAM files
+- Added conserveLong option
+
+V 1.2.01
+- David Soper's create_binary option

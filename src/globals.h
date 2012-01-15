@@ -37,8 +37,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #endif
 
 #define VERSION_NUMBER 1
-#define RELEASE_NUMBER 1
-#define UPDATE_NUMBER 07
+#define RELEASE_NUMBER 2
+#define UPDATE_NUMBER 01
 
 #define MAXLINE 5000 
 
@@ -110,6 +110,7 @@ typedef struct tString_st TightString;
 // A simple container when reading files
 typedef struct readSet_st ReadSet;
 typedef struct sequenceReader_st SequenceReader;
+typedef struct sequencesReader_st SequencesReader;
 
 // Hash table structures
 typedef struct kmerOccurence_st KmerOccurence;

@@ -35,7 +35,8 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "concatenatedPreGraph.h"
 #include "utility.h"
 #include "kmer.h"
-
+#include "tightString.h"
+#include "binarySequences.h"
 #define ADENINE 0
 #define CYTOSINE 1
 #define GUANINE 2
@@ -381,18 +382,20 @@ static void convertMarker(InsertionMarker * marker, IDnum nodeID)
 
 // Creates the preNode using insertion marker and annotation lists for each sequence
 static void
+// Creates the preNode using insertion marker and annotation lists for each sequence
 createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	       IDnum * markerCounters, InsertionMarker * insertionMarkers,
 	       InsertionMarker * veryLastMarker, IDnum * chains,
-	       char *sequenceFilename, int WORDLENGTH)
+	       SequencesReader *seqReadInfo, int WORDLENGTH)
 {
+	char *sequenceFilename = seqReadInfo->m_seqFilename;
 	Annotation *annot = rdmaps->annotations;
 	IDnum latestPreNodeID;
 	InsertionMarker *currentMarker = insertionMarkers;
 	IDnum sequenceIndex;
 	Coordinate currentPosition, nextStop;
 	IDnum preNodeCounter = 1;
-	FILE *file = fopen(sequenceFilename, "r");
+	FILE *file = NULL;
 	char line[50000];
 	int lineLength = 50000;
 	Coordinate readIndex;
@@ -403,11 +406,15 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	IDnum annotIndex, lastAnnotIndex;
 	IDnum markerIndex, lastMarkerIndex;
 
+	if (!seqReadInfo->m_bIsBinary) {
+		file = fopen(sequenceFilename, "r");
 	if (file == NULL) 
 		exitErrorf(EXIT_FAILURE, true, "Could not read %s", sequenceFilename);
 	// Reading sequence descriptor in first line
 	if (!fgets(line, lineLength, file))
 		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
+		seqReadInfo->m_pFile = file;
+	}
 
 	// Now that we have read all of the annotations, we go on to create the preNodes and tie them up
 	for (sequenceIndex = 1;
@@ -417,9 +424,11 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			velvetLog("Sequence %li / %li\n", (long) sequenceIndex,
 			       (long) sequenceCount_pg(preGraph));
 
+		if (!seqReadInfo->m_bIsBinary) {
 		while (line[0] != '>')
 			if (!fgets(line, lineLength, file))
 				exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
+		}
 
 		rdmap = getRoadMapInArray(rdmaps, sequenceIndex - 1);
 		annotIndex = 0;
@@ -432,8 +441,22 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		tooShort = false;
 		clearKmer(&initialKmer);
 		//velvetLog("Initial kmer: ");
+		TightString *tString = NULL;
+		char *strString = NULL;
+		if (seqReadInfo->m_bIsBinary) {
+			tString = getTightStringInArray(seqReadInfo->m_sequences->tSequences, sequenceIndex - 1);
+			strString = readTightString(tString);
+		}
 		for (readIndex = 0; readIndex < WORDLENGTH - 1;
 		     readIndex++) {
+			if (seqReadInfo->m_bIsBinary) {
+				if (readIndex >= tString->length) {
+					tooShort = true;
+					break;
+				}
+
+				c = strString[readIndex];
+			} else {
 			c = getc(file);
 			while (c == '\n' || c == '\r') 
 				c = getc(file);
@@ -442,6 +465,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				ungetc(c, file);
 				tooShort = true;
 				break;
+			}
 			}
 			switch (c) {
 			case 'A':
@@ -468,11 +492,20 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 		if (tooShort) {
 			//velvetLog("Skipping short read.. %d\n", sequenceIndex);
 			chains[sequenceIndex] = preNodeCounter;
+			if (seqReadInfo->m_bIsBinary) {
+				free(strString);
+			} else {
 			if (!fgets(line, lineLength, file) && sequenceIndex < sequenceCount_pg(preGraph))
 				exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
+			}
 			continue;
 		}
 
+		char *currString = NULL;
+		if (seqReadInfo->m_bIsBinary) {
+			currString = &strString[readIndex];
+			seqReadInfo->m_ppCurrString = &currString;
+		}
 		latestPreNodeID = 0;
 
 		while (annotIndex < lastAnnotIndex) {
@@ -487,12 +520,18 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 			}
 
 			if (currentPosition != nextStop) {
+				if (seqReadInfo->m_bIsBinary) {
+					if (readIndex >= tString->length) {
+						velvetLog("readIndex %ld beyond string len %ld\n", (uint64_t) readIndex, (uint64_t) tString->length);
+						exit(1);
+					}
+				}
 				//if (sequenceIndex == 481)
 				//	velvetLog("Adding pre nodes from %lli to %lli\n", (long long) currentPosition, (long long) nextStop);
 				addPreNodeToPreGraph_pg(preGraph,
 							currentPosition,
 							nextStop,
-							file,
+							seqReadInfo,
 							&initialKmer,
 							preNodeCounter);
 				if (latestPreNodeID == 0) {
@@ -518,9 +557,14 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				     readIndex <
 				     getAnnotationLength(annot);
 				     readIndex++) {
+					if (seqReadInfo->m_bIsBinary) {
+						c = *currString;
+						currString += 1;   // increment the pointer
+					} else {
 					c = getc(file);
 					while (!isalpha(c))
 						c = getc(file);
+					}
 
 					//if (sequenceIndex == 481)
 					//	velvetLog("(%c)", c);
@@ -570,7 +614,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				//	velvetLog("Adding pre nodes from %lli to %lli\n", (long long) currentPosition, (long long) nextStop);
 				addPreNodeToPreGraph_pg(preGraph,
 							currentPosition,
-							nextStop, file,
+							nextStop, seqReadInfo,
 							&initialKmer,
 							preNodeCounter);
 				if (latestPreNodeID == 0)
@@ -582,18 +626,23 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 				    (currentMarker);
 			}
 		}
-
+		if (seqReadInfo->m_bIsBinary) {
+			free(strString);
+		} else {
 		// End of sequence
 		if (!fgets(line, lineLength, file) && sequenceIndex < sequenceCount_pg(preGraph))
 			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
 		//velvetLog(" \n");
+		}
 
 		if (latestPreNodeID == 0)
 			chains[sequenceIndex] = preNodeCounter;
 	}
 
 	free(markerCounters);
+	if (!seqReadInfo->m_bIsBinary) {
 	fclose(file);
+	}
 
 }
 
@@ -893,7 +942,7 @@ cleanUpMemory(PreGraph * preGraph, RoadMapArray * rdmaps, IDnum * chains)
 }
 
 // The full monty, wrapped up in one function
-PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
+PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, SequencesReader *seqReadInfo)
 {
 	int WORDLENGTH = rdmapArray->WORDLENGTH;
 	IDnum sequenceCount = rdmapArray->length;
@@ -917,7 +966,7 @@ PreGraph *newPreGraph_pg(RoadMapArray * rdmapArray, char *sequenceFilename)
 	       (long) preNodeCount_pg(preGraph));
 	createPreNodes(rdmapArray, preGraph, markerCounters,
 		       insertionMarkers, veryLastMarker, chains,
-		       sequenceFilename, WORDLENGTH);
+		       seqReadInfo, WORDLENGTH);
 
 	velvetLog("Adjusting marker info...\n");
 	convertInsertionMarkers(insertionMarkers, veryLastMarker, chains);

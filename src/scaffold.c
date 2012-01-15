@@ -1642,7 +1642,7 @@ static Connection **computeNodeToNodeMappings(ReadOccurence ** readNodes,
 #endif
 	gettimeofday(&end, NULL);
 	timersub(&end, &start, &diff);
-	velvetLog(" === Nodes Scaffolded in %ld.%06ld s\n", diff.tv_sec, diff.tv_usec);
+	velvetLog(" === Nodes Scaffolded in %ld.%06ld s\n", (long) diff.tv_sec, (long) diff.tv_usec);
 
 	PEBBLE_ROUND_NUM++;
 

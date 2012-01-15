@@ -792,7 +792,6 @@ static inline Descriptor *mergeDescriptors(Descriptor * descr,
 static void addBufferToDescriptor(Node * node, Coordinate length)
 {
 	Descriptor *descr;
-	Descriptor *twinDescr;
 	Coordinate newLength;
 	size_t arrayLength;
 	Node *twinNode;
@@ -804,7 +803,6 @@ static void addBufferToDescriptor(Node * node, Coordinate length)
 
 	twinNode = node->twinNode;
 	descr = node->descriptor;
-	twinDescr = twinNode->descriptor;
 
 	// Amendments for empty descriptors
 	if (descr == NULL) {
@@ -2420,6 +2418,203 @@ Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 	return graph;
 }
 
+Graph *readConnectedGraphFile(char *connectedGraphFilename, boolean * double_strand)
+{
+	FILE *file = fopen(connectedGraphFilename, "r");
+	const int maxline = MAXLINE;
+	char line[MAXLINE];
+	Coordinate coverage;
+	Arc *arc;
+	IDnum originID, destinationID, multiplicity;
+	boolean finished = false;
+	long long_var3;
+
+	Graph *graph;
+	IDnum nodeCounter, sequenceCount;
+
+	Node *node, *twin;
+	IDnum nodeID = 0;
+	Coordinate index, nodeLength;
+	char c;
+	int wordLength, wordShift;
+	size_t arrayLength;
+	short short_var;
+	long long_var, long_var2;
+	long long longlong_var;
+
+	if (file == NULL)
+		exitErrorf(EXIT_FAILURE, true, "Could not open %s", connectedGraphFilename);
+
+	velvetLog("Reading connected graph file %s\n", connectedGraphFilename);
+
+	// First  line
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
+	sscanf(line, "%ld\t%ld\t%i\t%hi\n", &long_var, &long_var2,
+			&wordLength, &short_var);
+	nodeCounter = (IDnum) long_var;
+	sequenceCount = (IDnum) long_var2;
+	*double_strand = (boolean) short_var;
+	wordShift = wordLength - 1;
+	graph = emptyGraph(sequenceCount, wordLength);
+	graph->double_stranded = *double_strand;
+	resetWordFilter(wordLength);
+	allocateNodeSpace(graph, nodeCounter);
+	velvetLog("Graph has %ld nodes and %ld sequences\n", (long) nodeCounter,
+			(long) sequenceCount);
+
+	// Read nodes
+	if (nodeCounter == 0)
+		return graph;
+
+	if (!fgets(line, maxline, file))
+		exitErrorf(EXIT_FAILURE, true, "PreGraph file incomplete");
+	while (!finished && strncmp(line, "NODE", 4) == 0) {
+		strtok(line, "\t\n");
+		sscanf(strtok(NULL, "\t\n"), "%ld", &long_var);
+		nodeID = (IDnum) long_var;
+		node = addEmptyNodeToGraph(graph, nodeID);
+		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
+		node->length = (Coordinate) longlong_var;
+		nodeLength = node->length;
+
+#ifndef SINGLE_COV_CAT
+		Category cat;
+		Coordinate originalCoverage;
+		for (cat = 0; cat < CATEGORIES; cat++) {
+			sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
+			coverage = (Coordinate) longlong_var;
+			setVirtualCoverage(node, cat, coverage);
+			sscanf(strtok(NULL, "\t\n"), "%lld",
+					&longlong_var);
+			originalCoverage = (Coordinate) longlong_var;
+			setOriginalVirtualCoverage(node, cat,
+					originalCoverage);
+		}
+#else
+		sscanf(strtok(NULL, "\t\n"), "%lld", &longlong_var);
+		coverage = (Coordinate) longlong_var;
+		setVirtualCoverage(node, coverage);
+#endif
+
+		arrayLength = node->length / 4;
+		if (node->length % 4 > 0)
+			arrayLength++;
+		node->descriptor =
+			callocOrExit(arrayLength, Descriptor);
+
+		twin = node->twinNode;
+		twin->length = node->length;
+		twin->descriptor =
+			callocOrExit(arrayLength, Descriptor);   
+
+		index = 0;
+		while ((c = getc(file)) != '\n') {
+			if (c == 'A') {
+				if (index - wordShift >= 0)
+					writeNucleotideInDescriptor(ADENINE,
+							node->
+							descriptor,
+							index - wordShift);
+				if (nodeLength - index - 1 >= 0) {
+#ifndef COLOR
+					writeNucleotideInDescriptor(THYMINE,
+							twin->
+							descriptor,
+							nodeLength - index - 1);
+#else
+					writeNucleotideInDescriptor(ADENINE,
+							twin->
+							descriptor,
+							nodeLength - index - 1);
+#endif
+				}
+			} else if (c == 'C') {
+				if (index - wordShift >= 0)
+					writeNucleotideInDescriptor(CYTOSINE,
+							node->
+							descriptor,
+							index - wordShift);
+				if (nodeLength - index - 1 >= 0) {
+#ifndef COLOR
+					writeNucleotideInDescriptor(GUANINE,
+							twin->
+							descriptor,
+							nodeLength - index - 1);
+#else
+					writeNucleotideInDescriptor(CYTOSINE,
+							twin->
+							descriptor,
+							nodeLength - index - 1);
+#endif
+				}
+			} else if (c == 'G') {
+				if (index - wordShift >= 0)
+					writeNucleotideInDescriptor(GUANINE,
+							node->
+							descriptor,
+							index - wordShift);
+				if (nodeLength - index - 1 >= 0) {
+#ifndef COLOR
+					writeNucleotideInDescriptor(CYTOSINE,
+							twin->
+							descriptor,
+							nodeLength - index - 1);
+#else
+					writeNucleotideInDescriptor(GUANINE,
+							twin->
+							descriptor,
+							nodeLength - index - 1);
+#endif
+				}
+			} else if (c == 'T') {
+				if (index - wordShift >= 0)
+					writeNucleotideInDescriptor(THYMINE,
+							node->
+							descriptor,
+							index - wordShift);
+				if (nodeLength - index - 1 >= 0) {
+#ifndef COLOR
+					writeNucleotideInDescriptor(ADENINE,
+							twin->
+							descriptor,
+							nodeLength - index - 1);
+#else
+					writeNucleotideInDescriptor(THYMINE,
+							twin->
+							descriptor,
+							nodeLength - index - 1);
+#endif
+				}
+			}
+
+			index++;
+		}
+
+		if (fgets(line, maxline, file) == NULL) {
+			finished = true;
+		}
+	}
+
+	// Read arcs
+	while (!finished && line[0] == 'A') {
+		sscanf(line, "ARC\t%ld\t%ld\t%ld\n", &long_var,
+				&long_var2, &long_var3);
+		originID = (IDnum) long_var;
+		destinationID = (IDnum) long_var2;
+		multiplicity = (IDnum) long_var3;
+		arc =
+			createArc(getNodeInGraph(graph, originID),
+					getNodeInGraph(graph, destinationID), graph);
+		setMultiplicity(arc, multiplicity);
+		if (fgets(line, maxline, file) == NULL)
+			finished = true;
+	}
+
+	fclose(file);
+	return graph;
+}
+
 // Prints out the information relative to the topology of a node into a new file
 // Internal to exportDOTGraph()
 void DOTNode(Node * node, FILE * outfile)
@@ -2702,6 +2897,7 @@ void addReadStart(Node * node, IDnum seqID, Coordinate position,
 	array[arrayLength].readID = seqID;
 	array[arrayLength].position = position;
 	array[arrayLength].offset = (ShortLength) offset;
+	// printf("node %d, seq %d, pos %ld, offset %ld\n", getNodeID(node), seqID, position, offset);
 	graph->nodeReadCounts[nodeIndex]++;
 }
 
