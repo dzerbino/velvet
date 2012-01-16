@@ -1711,5 +1711,7 @@ void concatenateReferenceMarkers_pg(IDnum preNodeAID, IDnum preNodeBID, PreGraph
 }
 
 boolean hasPreMarkers(IDnum nodeID, PreGraph * preGraph) {
+	if (nodeID < 0)
+		nodeID = -nodeID;
 	return preGraph->nodeReferenceMarkerCounts[nodeID] > 0;
 }
