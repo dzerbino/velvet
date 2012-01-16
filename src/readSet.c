@@ -818,7 +818,7 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 	velvetLog("Done\n");
 }
 
-static void addMapping(boolean orientation, Coordinate pos, char * seq, ReferenceCoordinate * refCoord, char * buffer, SequencesWriter * seqWriteInfo, RefInfoList * refTail, size_t * buffer_size) {
+static void addMapping(boolean orientation, Coordinate pos, char * seq, ReferenceCoordinate * refCoord, char * buffer, SequencesWriter * seqWriteInfo, RefInfoList ** refTail, size_t * buffer_size) {
 	if (isCreateBinary()) {
 		seqWriteInfo->m_bIsRef = true;
 		RefInfoList *refElem = callocOrExit(1, RefInfoList);
@@ -833,9 +833,9 @@ static void addMapping(boolean orientation, Coordinate pos, char * seq, Referenc
 		if (seqWriteInfo->m_refInfoHead == NULL) {
 			seqWriteInfo->m_refInfoHead = refElem;
 		} else {
-			refTail->next = refElem;
+			(*refTail)->next = refElem;
 		}
-		refTail = refElem;
+		*refTail = refElem;
 		seqWriteInfo->m_refCnt++;
 	} else {
 		if (refCoord->positive_strand) {
@@ -858,7 +858,6 @@ static void writeMappedSequence(IDnum * sequenceIndex, Category cat, Category pr
 			prev_cat = cat;
 		}
 		cnySeqInsertStart(seqWriteInfo);
-		puts("START");
 		cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 		sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 		cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
@@ -871,7 +870,7 @@ static void writeMappedSequence(IDnum * sequenceIndex, Category cat, Category pr
 	}
 }
 
-static void readCigar(char * cigar, boolean orientation, Coordinate pos, char * seq, ReferenceCoordinate * refCoord, char * buffer, SequencesWriter * seqWriteInfo, RefInfoList * refTail, size_t * buffer_size) {
+static void readCigar(char * cigar, boolean orientation, Coordinate pos, char * seq, ReferenceCoordinate * refCoord, char * buffer, SequencesWriter * seqWriteInfo, RefInfoList ** refTail, size_t * buffer_size) {
 	long long cigar_num;
 	int cigar_index;
 	char c;
@@ -996,14 +995,17 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 
 					previous_paired = (cat % 2 && strcmp(qname, previous_qname) == 0);
 
-					if (isCreateBinary() && readCount > 1)
-						cnySeqInsertEnd(seqWriteInfo);
 					writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, buffer, seqWriteInfo);
+					if (isCreateBinary()) {
+						// end previous seq
+						cnySeqInsertEnd(seqWriteInfo);
+					}
 					prev_cat = apparentCat;
 				}
 
-				if (!(flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, rname, (Coordinate) pos, (Coordinate) pos + strlen(seq) - 1, orientation)))
-					readCigar(cigar, orientation, pos, seq, refCoord, buffer, seqWriteInfo, refTail, &buffer_size);
+				if (!(flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, rname, (Coordinate) pos, (Coordinate) pos + strlen(seq) - 1, orientation))) {
+					readCigar(cigar, orientation, pos, seq, refCoord, buffer, seqWriteInfo, &refTail, &buffer_size);
+				}
 
 				strcpy(previous_qname, qname);
 				strcpy(previous_qname_pairing, qname_pairing);
@@ -1020,11 +1022,10 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			apparentCat = cat - 1;
 		else
 			apparentCat = cat;
-		if (isCreateBinary() && readCount)
-			cnySeqInsertEnd(seqWriteInfo);
 		writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, buffer, seqWriteInfo);
-		if (isCreateBinary())
+		if (isCreateBinary()) {
 			cnySeqInsertEnd(seqWriteInfo);
+		}
 	}
 
 	free(buffer);
@@ -1195,11 +1196,15 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				previous_paired = (cat % 2 && strcmp(qname, previous_qname) == 0);
 
 				writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, mapBuffer, seqWriteInfo);
+				if (isCreateBinary()) {
+					// end previous seq
+					cnySeqInsertEnd(seqWriteInfo);
+				}
 				prev_cat = apparentCat;
 			}
 
 			if (!(flagbits & 0x4) && (refCoord = findReferenceCoordinate(refCoords, refNames[rID], (Coordinate) pos, (Coordinate) pos + strlen(seq) - 1, orientation)))
-				readCigar(cigar, orientation, pos, seq, refCoord, mapBuffer, seqWriteInfo, refTail, &mapBuffer_size);
+				readCigar(cigar, orientation, pos, seq, refCoord, mapBuffer, seqWriteInfo, &refTail, &mapBuffer_size);
 
 			strcpy(previous_qname, qname);
 			strcpy(previous_qname_pairing, qname_pairing);
@@ -1216,8 +1221,9 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		else
 			apparentCat = cat;
 		writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, mapBuffer, seqWriteInfo);
-		if (isCreateBinary())
+		if (isCreateBinary()) {
 			cnySeqInsertEnd(seqWriteInfo);
+		}
 	}
 
 	free(seq);
