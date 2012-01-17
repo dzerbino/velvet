@@ -936,6 +936,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	if (isCreateBinary()) {
 		inputCnySeqFileStart(cat, seqWriteInfo);
 	}
+	strcpy(previous_qname, "");
 	for (lineno = 1; fgets(line, sizeof(line), file); lineno++) {
 		if (line[0] != '@') {
 			char *qname, *flag, *seq, *rname, *cigar;
@@ -1121,6 +1122,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	if (isCreateBinary()) {
 		inputCnySeqFileStart(cat, seqWriteInfo);
 	}
+	strcpy(previous_qname, "");
 	readCount = 0;
 	for (recno = 1; gzread(file, buffer, 4) == 4; recno++) {
 		int blockSize = int32(buffer);
