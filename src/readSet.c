@@ -987,13 +987,14 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				}
 
 				// Determine if paired to previous read
-				if (readCount && (strcmp(qname, previous_qname) != 0 || strcmp(qname_pairing, previous_qname_pairing) != 0)) {
-					if (cat % 2 && !previous_paired)
+				boolean same_name = (strcmp(qname, previous_qname) == 0);
+				if (readCount && (!same_name || strcmp(qname_pairing, previous_qname_pairing) != 0)) {
+					if (cat % 2 && !same_name && !previous_paired)
 						apparentCat = cat - 1;
 					else
 						apparentCat = cat;
 
-					previous_paired = (cat % 2 && strcmp(qname, previous_qname) == 0);
+					previous_paired = (cat % 2 && same_name);
 
 					writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, buffer, seqWriteInfo);
 					if (isCreateBinary()) {
@@ -1187,13 +1188,14 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			}
 
 			// Determine if paired to previous read
-			if (readCount > 0 && (strcmp(qname, previous_qname) != 0 || strcmp(qname_pairing, previous_qname_pairing) != 0)) {
-				if (cat % 2 && !previous_paired)
+			boolean same_name = (strcmp(qname, previous_qname) == 0);
+			if (readCount > 0 && (!same_name || strcmp(qname_pairing, previous_qname_pairing) != 0)) {
+				if (cat % 2 && !same_name && !previous_paired)
 					apparentCat = cat - 1;
 				else
 					apparentCat = cat;
 
-				previous_paired = (cat % 2 && strcmp(qname, previous_qname) == 0);
+				previous_paired = (cat % 2 && same_name);
 
 				writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, mapBuffer, seqWriteInfo);
 				if (isCreateBinary()) {
