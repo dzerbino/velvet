@@ -416,3 +416,7 @@ V 1.1.08
 
 V 1.2.01
 - David Soper's create_binary option
+
+V 1.2.02
+- Strict Columbus
+- Recast SAM/BAM parser for pattern structure
