@@ -727,14 +727,6 @@ void projectGraphToFile(Graph * graph, char *filename, int WORDLENGTH,
 	fclose(outfile);
 }
 
-typedef struct mask_st Mask;
-
-struct mask_st {
-	Coordinate start;
-	Coordinate finish;
-	Mask* next;
-}; 
-
 static RecycleBin * maskMemory = NULL;
 
 static Mask *allocateMask()

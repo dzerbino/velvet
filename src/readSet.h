@@ -34,6 +34,12 @@ struct readSet_st {
 	IDnum readCount;
 };
 
+struct mask_st {
+	Coordinate start;
+	Coordinate finish;
+	Mask* next;
+}; 
+
 ReadSet *newReadSet();
 
 ShortLength *getSequenceLengths(ReadSet * reads, int wordLength);

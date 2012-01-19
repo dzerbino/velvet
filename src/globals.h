@@ -148,4 +148,6 @@ typedef struct dfibheap_el DFibHeapNode;
 
 typedef struct nodeList_st NodeList;
 
+typedef struct mask_st Mask;
+
 #endif

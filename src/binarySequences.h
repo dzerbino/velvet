@@ -21,6 +21,8 @@ Copyright 2011 Convey Computer Corporation (info@conveycomputer.com)
 #ifndef _BINARYSEQUENCES_H_
 #define _BINARYSEQUENCES_H_
 
+#include "recycleBin.h"
+
 struct refInfo_st {
 	int32_t         m_referenceID;
 	int32_t         m_pos;
@@ -49,6 +51,7 @@ struct sequencesReader_st {
 	ReadSet *       m_sequences;
 	boolean		m_bIsBinary;
 	// following are only used by the binary code
+	char *		m_namesFilename;
         CnyUnifiedSeqFileHeader m_unifiedSeqFileHeader;
 	Category	m_numCategories;
 	Category	m_currCategory;
@@ -102,11 +105,17 @@ struct sequencesWriter_st {
 	RefInfoList *	m_refInfoHead;
 	uint32_t        m_refCnt;
 	boolean         m_bIsRef;
+	Mask **         m_referenceMask;
+	Mask *          m_current;
+	Coordinate      m_position;
+	boolean         m_openMask;
+	RecycleBin *    m_maskMemory;
 };
 typedef struct sequencesWriter_st SequencesWriter;
 
 SequencesWriter * openCnySeqForWrite(const char *unifiedSeqFileName);
-void cnySeqInsertSequenceName(const char *name, IDnum readID, SequencesWriter *seqWriteInfo);
+void cnySeqInsertSequenceName(const char *name, IDnum readID, SequencesWriter *seqWriteInfo, Category cat);
+void cnySeqInsertReferenceMask(SequencesWriter *seqWriteInfo, Mask *referenceMask);
 void cnySeqInsertNucleotideString(const char *pReadBuf, SequencesWriter *seqWriteInfo);
 void inputCnySeqFileStart(Category category, SequencesWriter *seqWriteInfo);
 void cnySeqInsertStart(SequencesWriter *seqWriteInfo);

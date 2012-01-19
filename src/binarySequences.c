@@ -571,12 +571,24 @@ void cnySeqInsertStart(SequencesWriter *seqWriteInfo)
 	cnySeqHostBufferFull(seqWriteInfo);
     }
 
+    seqWriteInfo->m_position = 0;
+    seqWriteInfo->m_openMask = false;
 }
 
-void cnySeqInsertSequenceName(const char *name, IDnum readID, SequencesWriter *seqWriteInfo) {
-	if (fprintf(seqWriteInfo->m_nameFile, "%s\t%li\n", name, (long) readID) < 0) {
+void cnySeqInsertSequenceName(const char *name, IDnum readID, SequencesWriter *seqWriteInfo, Category cat) {
+	if (fprintf(seqWriteInfo->m_nameFile, "%s\t%li\t%li\n", name, (long) readID, (long) cat) < 0) {
 		velvetLog("Unable to write in name file\n");
 		exit(1);
+	}
+}
+
+void cnySeqInsertReferenceMask(SequencesWriter *seqWriteInfo, Mask *referenceMask) {
+	Mask *tmp;
+	for (tmp = referenceMask; tmp; tmp = tmp->next) {
+		if (fprintf(seqWriteInfo->m_nameFile, "%li\t%li\n", (long) tmp->start, (long) tmp->finish) < 0) {
+			velvetLog("Unable to write ref in name file\n");
+			exit(1);
+		}
 	}
 }
 
@@ -733,6 +745,17 @@ void cnySeqInsertEnd(SequencesWriter *seqWriteInfo)
 
 	    seqWriteInfo->m_hostBuffersInUse = 1;
 	    break;
+    }
+
+    // if ref masks, write mapping info to the names file
+    if (seqWriteInfo->m_referenceMask && *(seqWriteInfo->m_referenceMask)) {
+	    cnySeqInsertReferenceMask(seqWriteInfo, *(seqWriteInfo->m_referenceMask));
+	    // free memory and clear list
+	    if (seqWriteInfo->m_maskMemory) {
+		    destroyRecycleBin(seqWriteInfo->m_maskMemory);
+		    seqWriteInfo->m_maskMemory = NULL;
+	    }
+	    *(seqWriteInfo->m_referenceMask) = NULL;
     }
 }
 
