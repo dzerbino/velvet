@@ -1173,16 +1173,16 @@ static void exportPreMarker(FILE * outfile, PreMarker* preMarker) {
 	velvetFprintf(outfile, "%li\t%lli\t%lli\t%lli\n", (long) preMarker->preNodeID, (long long) preMarker->preNodeStart, (long long) preMarker->referenceStart, (long long) preMarker->length);
 }
 
-static void exportPreReference_pg(FILE * outfile, IDnum index, PreGraph * preGraph) {
+static void exportPreReference_pg(FILE * outfile, IDnum refIndex, PreGraph * preGraph) {
 	PreMarker * preMarker;
-	IDnum nodeID;
+	IDnum nodeID, index;
 
-	velvetFprintf(outfile, "SEQ\t%li\n", (long) index);
+	velvetFprintf(outfile, "SEQ\t%li\n", (long) refIndex);
 
 	for (nodeID = 1; nodeID <= preGraph->preNodeCount; nodeID++) {
 		for (index = 0; index < preGraph->nodeReferenceMarkerCounts[nodeID]; index++) {
 			preMarker = &(preGraph->nodeReferenceMarkers[nodeID][index]);
-			if (!preMarker->previous) {
+			if (preMarker->referenceID == refIndex && !preMarker->previous) {
 				for (;preMarker;preMarker = preMarker->next) {
 					exportPreMarker(outfile, preMarker);
 				}
