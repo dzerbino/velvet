@@ -959,6 +959,7 @@ static void writeMappedSequence(IDnum * sequenceIndex, Category cat, Category pr
 		cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 		sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
 		cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
+		cnySeqInsertEnd(seqWriteInfo);
 	} else {
 		velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
 		(long) ((*sequenceIndex)++), (int) cat);
@@ -1099,10 +1100,6 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 					previous_paired = (cat % 2 && same_name);
 
 					writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, buffer, seqWriteInfo);
-					if (isCreateBinary()) {
-						// end previous seq
-						cnySeqInsertEnd(seqWriteInfo);
-					}
 					prev_cat = apparentCat;
 				}
 
@@ -1126,9 +1123,6 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		else
 			apparentCat = cat;
 		writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, buffer, seqWriteInfo);
-		if (isCreateBinary()) {
-			cnySeqInsertEnd(seqWriteInfo);
-		}
 	}
 
 	free(buffer);
@@ -1304,10 +1298,6 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				previous_paired = (cat % 2 && same_name);
 
 				writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, mapBuffer, seqWriteInfo);
-				if (isCreateBinary()) {
-					// end previous seq
-					cnySeqInsertEnd(seqWriteInfo);
-				}
 				prev_cat = apparentCat;
 			}
 
@@ -1329,9 +1319,6 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		else
 			apparentCat = cat;
 		writeMappedSequence(sequenceIndex, apparentCat, prev_cat, previous_seq, previous_qname, previous_qname_pairing, mapBuffer, seqWriteInfo);
-		if (isCreateBinary()) {
-			cnySeqInsertEnd(seqWriteInfo);
-		}
 	}
 
 	free(seq);
