@@ -214,8 +214,9 @@ static void sortReferenceCoordinateTable(ReferenceCoordinateTable * table) {
 static void velvetifySequence(char * str, SequencesWriter *seqWriteInfo) {
 	int i;
 	char c;
+	size_t length = strlen(str);
 
-	for (i = 0; i < strlen(str); i++) {
+	for (i = 0; i < length; i++) {
 		c = str[i];
 		switch (c) {
 		case '\n':
