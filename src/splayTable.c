@@ -38,14 +38,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "recycleBin.h"
 #include "binarySequences.h"
 
-typedef struct mask_st Mask;
-
-struct mask_st {
-	Coordinate start;
-	Coordinate finish;
-	Mask* next;
-}; 
-
 static RecycleBin * maskMemory = NULL;
 
 static Mask *allocateMask()
@@ -914,6 +906,65 @@ Mask ** scanReferenceSequences(FILE * file, IDnum referenceSequenceCount) {
 	return referenceMasks;
 }
 
+Mask ** scanBinaryReferenceSequences(SequencesReader *seqReadInfo, IDnum referenceSequenceCount) {
+	Mask ** referenceMasks = callocOrExit(referenceSequenceCount, Mask*);
+	IDnum index;
+	char line[MAXLINE];
+	char c = '\0';
+	FILE *file = fopen(seqReadInfo->m_namesFilename, "r");
+	if (file == NULL) {
+		exitErrorf(EXIT_FAILURE, true, "Couldn't read file %s", seqReadInfo->m_namesFilename);
+	} else {
+		velvetLog("Reading mapping info from %s\n", seqReadInfo->m_namesFilename);
+	}
+
+	// Search sequences for masks
+	for (index = 0; index < referenceSequenceCount; index++) {
+		Mask * current = NULL;
+		long start = 0;
+		long finish = 0;
+		long number;
+		long cat;
+
+		// Read through header
+		if ((c = getc(file)) != '>') {
+			exitErrorf(EXIT_FAILURE, false, "names line did not start with >");
+		}
+		fgets(line, MAXLINE, file);
+		sscanf(line, "%*[^\t]\t%li\t%li\n", &number, &cat);
+		// ensure is is a ref cat
+		if ((IDnum) number != index + 1) {
+			exitErrorf(EXIT_FAILURE, false, "sequence %ld != expected %ld", number, (long) index);
+		}
+		if ((Category) cat != REFERENCE) {
+			exitErrorf(EXIT_FAILURE, false, "unexpected category %ld", cat);
+		}
+
+		// Read through the reference maps
+		while ((c = getc(file))) {
+			if (c == EOF || c == '>') {
+				break;
+			}
+			ungetc(c, file);
+			fgets(line, MAXLINE, file);
+			sscanf(line, "%li\t%li\n", &start, &finish);
+			if (referenceMasks[index] == NULL) {
+				referenceMasks[index] = newMask(start);
+				referenceMasks[index]->finish = finish;
+				current = referenceMasks[index];
+			} else {
+				current->next = newMask(start);
+				current->next->finish = finish;
+				current = current->next;		
+			}
+		}
+		ungetc(c, file);
+	}
+
+	fclose(file);
+	return referenceMasks;
+}
+
 void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 						SplayTable * table,
 						char *filename, char* seqFilename)
@@ -934,6 +985,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		if (!seqReadInfo.m_pFile) {
 			exitErrorf(EXIT_FAILURE, true, "Could not open %s", seqFilename);
 		}
+		seqReadInfo.m_namesFilename = mallocOrExit(strlen(seqFilename) + sizeof(".names"), char);
+		sprintf(seqReadInfo.m_namesFilename, "%s.names", seqFilename);
 		seqReadInfo.m_numCategories = seqReadInfo.m_unifiedSeqFileHeader.m_numCategories;
 		seqReadInfo.m_minSeqLen = seqReadInfo.m_unifiedSeqFileHeader.m_minSeqLen;
 		seqReadInfo.m_maxSeqLen = seqReadInfo.m_unifiedSeqFileHeader.m_maxSeqLen;
@@ -993,7 +1046,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 		table->kmerOccurenceTable = newKmerOccurenceTable(24 , table->WORDLENGTH);
 		allocateKmerOccurences(kmerCount, table->kmerOccurenceTable);
 		if (seqReadInfo.m_bIsBinary) {
-			referenceMasks = callocOrExit(referenceSequenceCount, Mask*);
+			referenceMasks = scanBinaryReferenceSequences(&seqReadInfo, referenceSequenceCount);
 			// binary seqs have no Ns so just advance past the references
 			for (index = 0; index < referenceSequenceCount; index++) {
 				TightString cmpString;
@@ -1151,7 +1204,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 					counter = 0;
 					maxCount = 20;
 					fgets(line, MAXLINE, seqFile);
-					sscanf(line,"%*s\t%li\t", &long_var);
+					sscanf(line,"%*[^\t]\t%li\t", &long_var);
 					seqID = (IDnum) long_var;
 					mapReferenceIDs[seqID] = callocOrExit(maxCount, IDnum);
 					mapCoords[seqID] = callocOrExit(maxCount, Coordinate);
@@ -1250,6 +1303,9 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 	}
 	if (referenceMasks) {
 		free(referenceMasks);
+	}
+	if (seqReadInfo.m_namesFilename) {
+		free(seqReadInfo.m_namesFilename);
 	}
 	//free(reads->tSequences);
 	//reads->tSequences = NULL;

@@ -30,7 +30,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "tightString.h"
 #include "readSet.h"
 #include "utility.h"
-
 #include "binarySequences.h"
 
 #if !defined(BUNDLEDZLIB)
@@ -48,6 +47,23 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #else
 #  define SET_BINARY_MODE(file)
 #endif
+
+static Mask *allocateMask(SequencesWriter *seqWriteInfo)
+{
+	if (seqWriteInfo->m_maskMemory == NULL)
+		seqWriteInfo->m_maskMemory = newRecycleBin(sizeof(Mask), 10000);
+
+	return (Mask *) allocatePointer(seqWriteInfo->m_maskMemory);
+}
+
+static Mask * newMask(SequencesWriter *seqWriteInfo, Coordinate position)
+{
+	Mask * mask = allocateMask(seqWriteInfo);
+	mask->start = position;
+	mask->finish = position;
+	mask->next = NULL;
+	return mask;
+}
 
 //
 // cmd line args can override the createBinary flag
@@ -195,11 +211,11 @@ static void sortReferenceCoordinateTable(ReferenceCoordinateTable * table) {
 // File reading 
 //////////////////////////////////////////////////////////////////////////
 
-static void velvetifySequence(char * str) {
-	int i = strlen(str) - 1;
+static void velvetifySequence(char * str, SequencesWriter *seqWriteInfo) {
+	int i;
 	char c;
 
-	for (i = strlen(str) - 1; i >= 0; i--) {
+	for (i = 0; i < strlen(str); i++) {
 		c = str[i];
 		switch (c) {
 		case '\n':
@@ -225,6 +241,25 @@ static void velvetifySequence(char * str) {
 			break;
 		default:
 			str[i] = 'N';
+		}
+		// non NULL indicates ref masks are being created
+		if (seqWriteInfo->m_referenceMask != NULL) {
+			if (str[i] == 'N') {
+				if (seqWriteInfo->m_openMask) {
+					seqWriteInfo->m_current->finish++;
+				} else if (*(seqWriteInfo->m_referenceMask) == NULL) {
+					*(seqWriteInfo->m_referenceMask) = newMask(seqWriteInfo, seqWriteInfo->m_position);
+					seqWriteInfo->m_current = *(seqWriteInfo->m_referenceMask);
+				} else {
+					seqWriteInfo->m_current->next = newMask(seqWriteInfo, seqWriteInfo->m_position);
+					seqWriteInfo->m_current = seqWriteInfo->m_current->next;		
+				}
+				seqWriteInfo->m_openMask = true;
+				seqWriteInfo->m_position += 1;
+			} else if (str[i] != '\0') {
+				seqWriteInfo->m_openMask = false;
+				seqWriteInfo->m_position += 1;
+			}
 		}
 	} 
 }
@@ -312,6 +347,12 @@ static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	char c;
 	char str[100];
 	Coordinate start;
+	seqWriteInfo->m_referenceMask = NULL;
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
 
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
@@ -345,7 +386,7 @@ static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 			}
 			cnySeqInsertStart(seqWriteInfo);
 			sprintf(name, ">%s", line + 1);
-			cnySeqInsertSequenceName(name, (long) ((*sequenceIndex)++), seqWriteInfo);
+			cnySeqInsertSequenceName(name, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
 		} else {
 			velvetFprintf(seqWriteInfo->m_pFile,">%s\t%ld\t%d\n", line + 1, (long) ((*sequenceIndex)++), (int) cat);
 		}
@@ -354,7 +395,7 @@ static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 		if(!fgets(line, maxline, file))
 			exitErrorf(EXIT_FAILURE, true, "%s incomplete.", filename);
 
-		velvetifySequence(line);
+		velvetifySequence(line, seqWriteInfo);
 		if (isCreateBinary()) {
 			cnySeqInsertNucleotideString(line, seqWriteInfo);
 		} else {
@@ -376,6 +417,10 @@ static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 		cnySeqInsertEnd(seqWriteInfo);
 	}
 	fclose(file);
+	if (seqWriteInfo->m_referenceMask) {
+		free(seqWriteInfo->m_referenceMask);
+		seqWriteInfo->m_referenceMask = NULL;
+	}
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
@@ -390,6 +435,12 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	IDnum counter = 0;
 	char str[100];
 	Coordinate start;
+	seqWriteInfo->m_referenceMask = NULL;
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
 	else 
@@ -410,6 +461,7 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				cnySeqInsertEnd(seqWriteInfo);
 			}
 			cnySeqInsertStart(seqWriteInfo);
+			cnySeqInsertSequenceName(">RAW", (long) ((*sequenceIndex)++), seqWriteInfo, cat);
 		} else {
 			velvetFprintf(seqWriteInfo->m_pFile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
 		}
@@ -422,7 +474,7 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 #endif
 			exit(1);
 		}
-		velvetifySequence(line);
+		velvetifySequence(line, seqWriteInfo);
 		if (isCreateBinary()) {
 			cnySeqInsertNucleotideString(line, seqWriteInfo);
 		} else {
@@ -439,6 +491,10 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 		cnySeqInsertEnd(seqWriteInfo);
 	}
 	fclose(file);
+	if (seqWriteInfo->m_referenceMask) {
+		free(seqWriteInfo->m_referenceMask);
+		seqWriteInfo->m_referenceMask = NULL;
+	}
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
@@ -456,6 +512,12 @@ static void readFastQGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 	char c;
 	char str[100];
 	Coordinate start;
+	seqWriteInfo->m_referenceMask = NULL;
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
 
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "rb");
@@ -491,7 +553,7 @@ static void readFastQGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 			}
 			cnySeqInsertStart(seqWriteInfo);
 			sprintf(name, ">%s", line + 1);
-			cnySeqInsertSequenceName(name, (long) ((*sequenceIndex)++), seqWriteInfo);
+			cnySeqInsertSequenceName(name, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
 		} else {
 			velvetFprintf(seqWriteInfo->m_pFile,">%s\t%ld\t%d\n", line + 1, (long) ((*sequenceIndex)++), (int) cat);
 		}
@@ -499,7 +561,7 @@ static void readFastQGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 
 		gzgets(file, line, maxline);
 
-		velvetifySequence(line);
+		velvetifySequence(line, seqWriteInfo);
 		if (isCreateBinary()) {
 			cnySeqInsertNucleotideString(line, seqWriteInfo);
 		} else {
@@ -520,6 +582,10 @@ static void readFastQGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 	}
 
 	gzclose(file);
+	if (seqWriteInfo->m_referenceMask) {
+		free(seqWriteInfo->m_referenceMask);
+		seqWriteInfo->m_referenceMask = NULL;
+	}
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
@@ -534,6 +600,12 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	IDnum counter = 0;
 	char str[100];
 	Coordinate start;
+	seqWriteInfo->m_referenceMask = NULL;
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "rb");
 	else { 
@@ -556,6 +628,7 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 				cnySeqInsertEnd(seqWriteInfo);
 			}
 			cnySeqInsertStart(seqWriteInfo);
+			cnySeqInsertSequenceName(">RAW", (long) ((*sequenceIndex)++), seqWriteInfo, cat);
 		} else {
 			velvetFprintf(seqWriteInfo->m_pFile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
 		}
@@ -569,7 +642,7 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 			exit(1);
 		}
 
-		velvetifySequence(line);
+		velvetifySequence(line, seqWriteInfo);
 		if (isCreateBinary()) {
 			cnySeqInsertNucleotideString(line, seqWriteInfo);
 		} else {
@@ -586,6 +659,10 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 		cnySeqInsertEnd(seqWriteInfo);
 	}
 	gzclose(file);
+	if (seqWriteInfo->m_referenceMask) {
+		free(seqWriteInfo->m_referenceMask);
+		seqWriteInfo->m_referenceMask = NULL;
+	}
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
@@ -653,6 +730,12 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	Coordinate i;
 	Coordinate start;
 	int offset = 0;
+	seqWriteInfo->m_referenceMask = NULL;
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
 	else
@@ -685,7 +768,7 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 					cnySeqInsertEnd(seqWriteInfo);
 				}
 				cnySeqInsertStart(seqWriteInfo);
-				cnySeqInsertSequenceName(line, (long) ((*sequenceIndex)++), seqWriteInfo);
+				cnySeqInsertSequenceName(line, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
 			} else {
 				if (offset != 0) { 
 					velvetFprintf(seqWriteInfo->m_pFile, "\n");
@@ -696,7 +779,7 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 			}
 			counter++;
 		} else {
-			velvetifySequence(line);
+			velvetifySequence(line, seqWriteInfo);
 			if (isCreateBinary()) {
 				cnySeqInsertNucleotideString(line, seqWriteInfo);
 			} else {
@@ -723,8 +806,13 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	}
 	fclose(file);
 
-	if (cat == REFERENCE)
+	if (cat == REFERENCE) {
 		fillReferenceCoordinateTable(filename, refCoords, counter);
+	}
+	if (seqWriteInfo->m_referenceMask) {
+		free(seqWriteInfo->m_referenceMask);
+		seqWriteInfo->m_referenceMask = NULL;
+	}
 
 	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
@@ -742,6 +830,12 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 	char str[100];
 	Coordinate i, start;
 	int offset = 0;
+	seqWriteInfo->m_referenceMask = NULL;
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "rb");
 	else { 
@@ -776,7 +870,7 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 					cnySeqInsertEnd(seqWriteInfo);
 				}
 				cnySeqInsertStart(seqWriteInfo);
-				cnySeqInsertSequenceName(line, (long) ((*sequenceIndex)++), seqWriteInfo);
+				cnySeqInsertSequenceName(line, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
 			} else {
 				if (offset != 0) { 
 					velvetFprintf(seqWriteInfo->m_pFile, "\n");
@@ -787,7 +881,7 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 			}
 			counter++;
 		} else {
-			velvetifySequence(line);
+			velvetifySequence(line, seqWriteInfo);
 			if (isCreateBinary()) {
 				cnySeqInsertNucleotideString(line, seqWriteInfo);
 			} else {
@@ -814,6 +908,10 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 	}
 	gzclose(file);
 
+	if (seqWriteInfo->m_referenceMask) {
+		free(seqWriteInfo->m_referenceMask);
+		seqWriteInfo->m_referenceMask = NULL;
+	}
 	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
 }
@@ -860,7 +958,7 @@ static void writeMappedSequence(IDnum * sequenceIndex, Category cat, Category pr
 		cnySeqInsertStart(seqWriteInfo);
 		cnySeqInsertNucleotideString(previous_seq, seqWriteInfo);
 		sprintf(print_qname, ">%s%s", previous_qname, previous_qname_pairing);
-		cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo);
+		cnySeqInsertSequenceName(print_qname, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
 		cnySeqInsertEnd(seqWriteInfo);
 	} else {
 		velvetFprintf(seqWriteInfo->m_pFile, ">%s%s\t%ld\t%d\n", previous_qname, previous_qname_pairing,
@@ -916,6 +1014,9 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	Category apparentCat;
 	ReferenceCoordinate * refCoord;
 	RefInfoList *refTail = NULL;
+	seqWriteInfo->m_referenceMask = NULL;   // no ref masks for SAM/BAM
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
 
 	size_t buffer_size = 5000;
 	char * buffer = callocOrExit(buffer_size, char);
@@ -1009,7 +1110,7 @@ static void readSAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 				strcpy(previous_qname, qname);
 				strcpy(previous_qname_pairing, qname_pairing);
 				strcpy(previous_seq, seq);
-				velvetifySequence(previous_seq);
+				velvetifySequence(previous_seq, seqWriteInfo);
 
 				readCount++;
 			}
@@ -1058,6 +1159,9 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	Category apparentCat;
 	char ** refNames;
 	ReferenceCoordinate * refCoord;
+	seqWriteInfo->m_referenceMask = NULL;   // no ref masks for SAM/BAM
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
 
 	RefInfoList *refTail = NULL;
 	size_t mapBuffer_size = 1000;
@@ -1203,7 +1307,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 			strcpy(previous_qname, qname);
 			strcpy(previous_qname_pairing, qname_pairing);
 			strcpy(previous_seq, seq);
-			velvetifySequence(previous_seq);
+			velvetifySequence(previous_seq, seqWriteInfo);
 
 			readCount++;
 		}

@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 		hashLengthStep++;
 	}
 
-	// check if binary sequences should be used (default is yes)
+	// check if binary sequences should be used
 	int argIndex;
 	for (argIndex = 3; argIndex < argc; argIndex++)
 		if (strcmp(argv[argIndex], "-create_binary") == 0)
