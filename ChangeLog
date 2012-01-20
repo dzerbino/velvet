@@ -420,3 +420,5 @@ V 1.2.01
 V 1.2.02
 - Strict Columbus
 - Recast SAM/BAM parser for pattern structure
+- David Soper changes to conserve reference masking of gaps
+- David Soper changes to store multiple mappings per sequence
