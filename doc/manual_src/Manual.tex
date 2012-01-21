@@ -286,8 +286,6 @@ If you use Velvet on large datasets, your computer is probably spending a lot of
 > ./velveth output_directory/ 21 -create_binary (..data files..)
 \end{verbatim}
 
-\textbf{Note:} A slight discrepancy exists between the binary and non-binary mode of Velvet. If you are running the Columbus module and your reference contains N's, they are simply converted to A's in the binary version, whereas the traditional version masks these gaps.
-
 \subsection{Running velvetg}
 
 Velvetg is the core of Velvet where the de Bruijn graph is built then manipulated. Note that although velvetg saves some files during the process to avoid useless recalculations, the parameters are \textbf{not} saved from one run to the next. Therefore:
