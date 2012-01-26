@@ -422,3 +422,8 @@ V 1.2.02
 - Recast SAM/BAM parser for pattern structure
 - David Soper changes to conserve reference masking of gaps
 - David Soper changes to store multiple mappings per sequence
+
+V 1.2.03
+- Comments in FastA headers are now discarded
+- Print reference mapping stats, and optional warning
+- Updated some warning printouts

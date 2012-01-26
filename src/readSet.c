@@ -98,6 +98,7 @@ struct referenceCoordinate_st {
 	Coordinate start;
 	Coordinate finish;
 	IDnum referenceID;
+	IDnum counter;
 	boolean positive_strand;
 }  ATTRIBUTE_PACKED;
 
@@ -133,10 +134,29 @@ static ReferenceCoordinateTable * newReferenceCoordinateTable() {
 	return table;
 }
 
+static void printReferenceCoordinateTableStats(ReferenceCoordinateTable * table) {
+	IDnum index;
+	IDnum counter = 0;
+
+	velvetLog("Reference mapping counters\n");
+	velvetLog("Name\tRead mappings\n");
+
+	for (index = 0; index < table->arrayLength; index++) {
+		velvetLog("%s\t%li\n", table->array[index].name, (long) table->array[index].counter);
+		counter += table->array[index].counter;
+	}
+
+	if (counter == 0) {
+		velvetLog("WARNING: None of your read mappings recognized the reference sequence!\n");
+		velvetLog("Double check that the names are identical between reference fasta headers and SAM/BAM sequences.\n");
+	}
+}
+
 static void destroyReferenceCoordinateTable(ReferenceCoordinateTable * table) {
 	IDnum index;
 
 	if (table->array) {
+		printReferenceCoordinateTableStats(table);
 		for (index = 0; index < table->arrayLength; index++)
 			free(table->array[index].name);
 		free(table->array);
@@ -201,6 +221,7 @@ static void addReferenceCoordinate(ReferenceCoordinateTable * table, char * name
 	refCoord->finish = finish;
 	refCoord->referenceID = table->arrayLength;
 	refCoord->positive_strand = positive_strand;
+	refCoord->counter = 0;
 }
 
 static void sortReferenceCoordinateTable(ReferenceCoordinateTable * table) {
@@ -693,18 +714,18 @@ static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTabl
 			name = callocOrExit(strlen(line), char);
 
 			if (strchr(line, ':')) {
-				sscanf(strtok(line, ":-\r\n"), ">%s", name);
-				sscanf(strtok(NULL, ":-\r\n"), "%lli", &start);
-				sscanf(strtok(NULL, ":-\r\n"), "%lli", &finish);
+				sscanf(strtok(line, ":-\r\n\t "), ">%s", name);
+				sscanf(strtok(NULL, ":-\r\n\t "), "%lli", &start);
+				sscanf(strtok(NULL, ":-\r\n\t "), "%lli", &finish);
 				if (start <= finish)
 					addReferenceCoordinate(refCoords, name, start, finish, true);
 				else
 					addReferenceCoordinate(refCoords, name, finish, start, false);
 			} else {
-				for (i = strlen(line) - 1;
-				     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
-					line[i] = '\0';
-				}
+				// Chomping EOL characters and comments
+				for (i=strlen(line) - 1; i >= 0; i--)
+					if (line[i] == '\n' || line[i] == '\r' || line[i] == ' ' || line[i] == '\t')
+						line[i] = '\0';
 
 				strcpy(name, line + 1);
 				addReferenceCoordinate(refCoords, name, 1, -1, true);
@@ -734,35 +755,44 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	seqWriteInfo->m_referenceMask = NULL;
 	seqWriteInfo->m_position = 0;
 	seqWriteInfo->m_openMask = false;
-	if (isCreateBinary() && (cat == REFERENCE)) {
-		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
-	}
+
+	// Choosing file or stdin
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
 	else
 		file = stdin;
 
+	// Opening the file
 	if (file != NULL)
 		velvetLog("Reading FastA file %s;\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
+	// Binary file stuff
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
 	if (isCreateBinary()) {
 		inputCnySeqFileStart(cat, seqWriteInfo);
 	}
+
 	// Checking if FastA
 	c = getc(file);
 	if (c != EOF && c != '>') 
 		exitErrorf(EXIT_FAILURE, false, "%s does not seem to be in FastA format", filename);
 	ungetc(c, file);	
 
+	// Going through the lines
 	while (fgets(line, maxline, file)) {
 		if (line[0] == '>') {
-			for (i = strlen(line) - 1;
-					i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
-				line[i] = '\0';
-			}
+			// Header line
 
+			// Chomping EOL characters and comments
+			for (i=strlen(line) - 1; i >= 0; i--)
+				if (line[i] == '\n' || line[i] == '\r' || line[i] == ' ' || line[i] == '\t')
+					line[i] = '\0';
+
+			// Memorizing line
 			if (isCreateBinary()) {
 				if (counter > 0) {
 					// end previous seq
@@ -784,25 +814,25 @@ static void readFastAFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 			if (isCreateBinary()) {
 				cnySeqInsertNucleotideString(line, seqWriteInfo);
 			} else {
-			start = 0;
-			while (start < strlen(line)) {
-				strncpy(str, line + start, 60 - offset);
-				str[60 - offset] = '\0';
-					velvetFprintf(seqWriteInfo->m_pFile, "%s", str);
-				offset += strlen(str);
-				if (offset >= 60) {
-						velvetFprintf(seqWriteInfo->m_pFile, "\n");
-					offset = 0;
+				start = 0;
+				while (start < strlen(line)) {
+					strncpy(str, line + start, 60 - offset);
+					str[60 - offset] = '\0';
+						velvetFprintf(seqWriteInfo->m_pFile, "%s", str);
+					offset += strlen(str);
+					if (offset >= 60) {
+							velvetFprintf(seqWriteInfo->m_pFile, "\n");
+						offset = 0;
+					}
+					start += strlen(str);
 				}
-				start += strlen(str);
 			}
 		}
-	}
 	}
 	if (isCreateBinary()) {
 		cnySeqInsertEnd(seqWriteInfo);
 	} else {
-	if (offset != 0) 
+		if (offset != 0) 
 			velvetFprintf(seqWriteInfo->m_pFile, "\n");
 	}
 	fclose(file);
@@ -834,9 +864,8 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 	seqWriteInfo->m_referenceMask = NULL;
 	seqWriteInfo->m_position = 0;
 	seqWriteInfo->m_openMask = false;
-	if (isCreateBinary() && (cat == REFERENCE)) {
-		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
-	}
+
+	// Choose file or stdin
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "rb");
 	else { 
@@ -844,14 +873,20 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 		SET_BINARY_MODE(stdin);
 	}
 
+	// Open file
 	if (file != NULL)
 		velvetLog("Reading zipped FastA file %s;\n", filename);
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
+	// Binary file stuff
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
 	if (isCreateBinary()) {
 		inputCnySeqFileStart(cat, seqWriteInfo);
 	}
+
 	// Checking if FastA
 	c = gzgetc(file);
 	if (c != EOF && c != '>') 
@@ -860,11 +895,14 @@ static void readFastAGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 
 	while (gzgets(file, line, maxline)) {
 		if (line[0] == '>') {
-			for (i = strlen(line) - 1;
-					i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
-				line[i] = '\0';
-			}
+			// Header info
 
+			// Chomping EOL characters and comments
+			for (i=strlen(line) - 1; i >= 0; i--)
+				if (line[i] == '\n' || line[i] == '\r' || line[i] == ' ' || line[i] == '\t')
+					line[i] = '\0';
+
+			// Memorize line
 			if (isCreateBinary()) {
 				if (counter > 0) {
 					// end previous seq
@@ -947,6 +985,9 @@ static void addMapping(boolean orientation, Coordinate pos, char * seq, Referenc
 			buffer = reallocOrExit(buffer, *buffer_size, char);
 		}
 	}
+
+	// Increment counter
+	refCoord->counter++;
 }
 
 static void writeMappedSequence(IDnum * sequenceIndex, Category cat, Category prev_cat, char * previous_seq, char * previous_qname, char * previous_qname_pairing, char * buffer, SequencesWriter * seqWriteInfo) {

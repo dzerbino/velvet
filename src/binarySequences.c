@@ -291,7 +291,7 @@ ReadSet *importCnyReadSet(char *filename)
 		if (sizeof(ShortLength) == sizeof(int16_t) && seqReadInfo.m_currentReadLength > SHRT_MAX) {
 			velvetLog("Read %li of length %lli, longer than limit %i\n",
 					(long) sequenceIndex + 1, (long long) seqReadInfo.m_currentReadLength, SHRT_MAX);
-			velvetLog("You should modify ShortLength to int32_t in globals.h (around) line 84, recompile and re-run\n");
+			velvetLog("You should recompile Velvet with the LONGSEQUENCES option.\n");
 			exit(1);
 		}
 		// only use tString to reduce memory use
