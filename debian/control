@@ -1,17 +1,12 @@
-Source: velvet
+Source: velvet1.2.20
 Section: science
 Priority: optional
 Maintainer: Debian Med Packaging Team <debian-med-packaging@lists.alioth.debian.org>
-DM-Upload-Allowed: yes
-Uploaders: Charles Plessy <plessy@debian.org>,
- The Genome Institute <gmt@genome.wustl.edu>
 Build-Depends: cdbs, debhelper (>= 7.1), zlib1g-dev, help2man
 Standards-Version: 3.8.3
 Homepage: http://www.ebi.ac.uk/~zerbino/velvet/
-Vcs-Browser: http://svn.debian.org/wsvn/debian-med/trunk/packages/velvet/trunk/?rev=0&sc=0
-Vcs-Svn: svn://svn.debian.org/svn/debian-med/trunk/packages/velvet/trunk/
 
-Package: velvet
+Package: velvet1.2.20
 Architecture: any
 Multi-Arch: foreign
 Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -26,7 +21,7 @@ Description: Nucleic acid sequence assembler for very short reads
  high quality unique contigs. It then uses paired read information, if
  available, to retrieve the repeated areas between contigs.
 
-Package: velvet-example
+Package: velvet-example1.2.20
 Architecture: all
 Depends: ${misc:Depends}
 Description: Example data for the Velvet sequence assembler
