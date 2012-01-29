@@ -1,11 +1,11 @@
-velvet (1.2.02-1) unstable; urgency=low
+velvet1.2.02 (1.2.02-1) unstable; urgency=low
 
   * New upstream release.
   * Branched from the github repo, and all additional files in the 1.2.02 release tarball are part of this package.
 
  -- Scott Smith <ssmith@genome.wustl.edu>  Sat, 28 Jan 2012 17:37:06 +0900
 
-velvet (1.2.02-1) unstable; urgency=low
+velvet0.7.56 (0.7.56-1) unstable; urgency=low
 
   * New upstream version.
   * Repackaged the upstream directory to remove the convenience copy
