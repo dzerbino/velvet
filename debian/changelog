@@ -20,13 +20,13 @@ velvet0.7.56 (0.7.56-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Mon, 25 Jan 2010 13:03:06 +0900
 
-velvet (0.7.55-1) unstable; urgency=low
+velvet0.7.55-1 (0.7.55-1) unstable; urgency=low
 
   * New upstream version
 
  -- Andreas Tille <tille@debian.org>  Fri, 25 Sep 2009 14:52:41 +0200
 
-velvet (0.7.53-1) unstable; urgency=low
+velvet0.7.53-1 (0.7.53-1) unstable; urgency=low
 
   * New upstream release:
     - Ignored reads in Pebble corrected
@@ -35,7 +35,7 @@ velvet (0.7.53-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Fri, 04 Sep 2009 13:42:22 +0900
 
-velvet (0.7.52-1) unstable; urgency=low
+velvet0.7.52-1 (0.7.52-1) unstable; urgency=low
 
   * New upstream release:
     V 0.7.51
@@ -61,7 +61,7 @@ velvet (0.7.52-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Thu, 03 Sep 2009 20:00:54 +0900
 
-velvet (0.7.50-1) unstable; urgency=low
+velvet0.7.50-1 (0.7.50-1) unstable; urgency=low
 
   * New upstream release:
     V 0.7.49
@@ -77,7 +77,7 @@ velvet (0.7.50-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Wed, 19 Aug 2009 21:58:49 +0900
 
-velvet (0.7.48-1) unstable; urgency=low
+velvet0.7.48-1 (0.7.48-1) unstable; urgency=low
 
   * New upstream release:
     - Accelerated concatenation (pre-graph and graph)
@@ -87,7 +87,7 @@ velvet (0.7.48-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Tue, 11 Aug 2009 19:54:03 +0900
 
-velvet (0.7.47-1) unstable; urgency=low
+velvet0.7.47-1 (0.7.47-1) unstable; urgency=low
 
   * New upstream release correcting bugs and enhancing documentation.
   * Multi-Arch support (‘foreign’) in debian/control.
@@ -95,7 +95,7 @@ velvet (0.7.47-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Thu, 30 Jul 2009 13:43:13 +0900
 
-velvet (0.7.44-1) unstable; urgency=low
+velvet0.7.44-1 (0.7.44-1) unstable; urgency=low
 
   * New upstream release.
   * Added bibliographic information in BibTeX format in debian/references.
@@ -113,7 +113,7 @@ velvet (0.7.44-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Sun, 12 Jul 2009 00:24:56 +0900
 
-velvet (0.7.37-1) unstable; urgency=low
+velvet0.7.37-1 (0.7.37-1) unstable; urgency=low
 
   * New upstream release. 
     - Small formatting change to error messages
@@ -128,7 +128,7 @@ velvet (0.7.37-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Sat, 27 Jun 2009 12:27:27 +0900
 
-velvet (0.7.34-1) unstable; urgency=low
+velvet0.7.34-1 (0.7.34-1) unstable; urgency=low
 
   * New upstream release correcting multiple bugs, changing the stats output,
     allowing optional scaffolding and multiple rounds of Pebble.
@@ -141,7 +141,7 @@ velvet (0.7.34-1) unstable; urgency=low
 
  -- Charles Plessy <plessy@debian.org>  Tue, 09 Jun 2009 21:28:03 +0900
 
-velvet (0.7.31-1) unstable; urgency=low
+velvet0.7.31-1 (0.7.31-1) unstable; urgency=low
 
   * New upstream version
   * Standards-Version: 3.8.1 (no changes needed)
@@ -155,7 +155,7 @@ velvet (0.7.31-1) unstable; urgency=low
 
  -- Andreas Tille <tille@debian.org>  Fri, 27 Mar 2009 13:23:32 +0100
 
-velvet (0.7.24-1) unstable; urgency=low
+velvet0.7.24-1 (0.7.24-1) unstable; urgency=low
 
   * Initial release (Closes: #487026)
 

@@ -13,6 +13,7 @@ clean::
 	$(RM) zlib
 
 pkg=velvet
+VERSION=1.2.02
 
 DEB_MAKE_BUILD_TARGET = obj velveth velvetg Z_LIB_FILES='' LDFLAGS='-lm -lz' OPT=''
 
@@ -20,12 +21,26 @@ build/velvet::
 	make color CFLAGS='$(CFLAGS)' Z_LIB_FILES='' LDFLAGS='-lm -lz' OPT=''
 	mkdir -p $(CURDIR)/debian/$(pkg)/usr/share/man/man1/
 	help2man --no-info --name="simple hashing program" \
-	         $(CURDIR)/velveth > $(CURDIR)/debian/$(pkg)/usr/share/man/man1/velveth.1
+	         $(CURDIR)/velveth > $(CURDIR)/debian/$(pkg)/usr/share/man/man1/velveth$(VERSION).1
 	help2man --no-info --name="simple hashing program (colorspace version)" \
-	         $(CURDIR)/velveth_de > $(CURDIR)/debian/$(pkg)/usr/share/man/man1/velveth_de.1
+	         $(CURDIR)/velveth_de > $(CURDIR)/debian/$(pkg)/usr/share/man/man1/velveth_de$(VERSION).1
 	help2man --no-info --version-option=" " \
 	         --name="de Bruijn graph construction, error removal and repeat resolution" \
-	         $(CURDIR)/velvetg > $(CURDIR)/debian/$(pkg)/usr/share/man/man1/velvetg.1
+	         $(CURDIR)/velvetg > $(CURDIR)/debian/$(pkg)/usr/share/man/man1/velvetg$(VERSION).1
 	help2man --no-info --version-option=" " \
 	         --name="de Bruijn graph construction, error removal and repeat resolution (colorspace version)" \
-	         $(CURDIR)/velvetg_de > $(CURDIR)/debian/$(pkg)/usr/share/man/man1/velvetg_de.1
+	         $(CURDIR)/velvetg_de > $(CURDIR)/debian/$(pkg)/usr/share/man/man1/velvetg_de$(VERSION).1
+
+# ADDITIONS TO DO VERSIONED PACKAGES
+
+PKG=$(shell dh_listpackages)
+
+override_dh_auto_install:
+	dh_auto_install
+	for FILE in ./debian/$(PKG)/usr/bin/v*; do \
+	  mv $$FILE ./debian/$(PKG)/usr/bin/`basename $$FILE`$(VERSION); \
+	done
+	for FILE in ./debian/$(PKG)/usr/bin/*; do \
+	  mv $$FILE ./debian/$(PKG)/usr/share/velvet$(VERSION)/`basename $$FILE`; \
+	done
+
