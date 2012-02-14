@@ -427,3 +427,7 @@ V 1.2.03
 - Comments in FastA headers are now discarded
 - Print reference mapping stats, and optional warning
 - Updated some warning printouts
+
+V 1.2.04
+- Crashing bugs linked to empty readsets.
+- Realloc bug when a read has more then 20 mappings.

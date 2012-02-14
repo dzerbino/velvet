@@ -1187,8 +1187,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 
 						if (++counter == maxCount) {
 							maxCount *= 2;
-							mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
-							mapCoords[seqID] = reallocOrExit(mapCoords, maxCount, Coordinate);
+							mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs[seqID], maxCount, IDnum);
+							mapCoords[seqID] = reallocOrExit(mapCoords[seqID], maxCount, Coordinate);
 						}
 					}
 					free(refArray);
@@ -1216,8 +1216,8 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 
 					if (++counter == maxCount) {
 						maxCount *= 2;
-						mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs, maxCount, IDnum);
-						mapCoords[seqID] = reallocOrExit(mapCoords, maxCount, Coordinate);
+						mapReferenceIDs[seqID] = reallocOrExit(mapReferenceIDs[seqID], maxCount, IDnum);
+						mapCoords[seqID] = reallocOrExit(mapCoords[seqID], maxCount, Coordinate);
 					}
 				}
 			}

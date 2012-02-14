@@ -411,7 +411,7 @@ createPreNodes(RoadMapArray * rdmaps, PreGraph * preGraph,
 	if (file == NULL) 
 		exitErrorf(EXIT_FAILURE, true, "Could not read %s", sequenceFilename);
 	// Reading sequence descriptor in first line
-	if (!fgets(line, lineLength, file))
+	if (sequenceCount_pg(preGraph) > 0 && !fgets(line, lineLength, file))
 		exitErrorf(EXIT_FAILURE, true, "%s incomplete.", sequenceFilename);
 		seqReadInfo->m_pFile = file;
 	}

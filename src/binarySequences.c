@@ -158,6 +158,9 @@ boolean advanceCnySeqCurrentRead(SequencesReader *seqReadInfo)
 		uint8_t mask = 0xFF << (seqReadInfo->m_currentReadLength & 3) * 2;
 		if ((*(seqReadInfo->m_pNextReadPtr - finalNuclOffset) & mask) != (0xAA & mask)) {
 			velvetLog("Cny seq consistency check failed in advance\n");
+#ifdef DEBUG
+			abort();
+#endif
 			exit(1);
 		}
 	}
