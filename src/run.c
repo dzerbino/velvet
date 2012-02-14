@@ -239,7 +239,14 @@ int main(int argc, char **argv)
 				sprintf(buf,"ln -s %s_%d%s %s",argv[1],hashLength,baseSeqName,seqFilename);
 			else
 				sprintf(buf,"ln -s `pwd`/%s_%d%s %s",argv[1],hashLength,baseSeqName,seqFilename);
-			system(buf);
+			if (system(buf)) {
+				velvetLog("Command failed!\n");
+				velvetLog("%s\n", buf);
+#ifdef DEBUG
+				abort();
+#endif
+				exit(1);
+			}
 		}
 
 		if (noHash)
