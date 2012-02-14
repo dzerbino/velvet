@@ -149,7 +149,7 @@ uint32_t readCnySeqUint32(SequencesReader *seqReadInfo)
 boolean advanceCnySeqCurrentRead(SequencesReader *seqReadInfo)
 {
 	// Perform consistency check, unused bits of previous sequence should have a fixed pattern
-	uint8_t finalNuclOffset = 1;
+	uint32_t finalNuclOffset = 1;
 	if (seqReadInfo->m_bIsRef) {
 		finalNuclOffset += (sizeof(seqReadInfo->m_refCnt));
 		finalNuclOffset += (sizeof(RefInfo) * seqReadInfo->m_refCnt);
