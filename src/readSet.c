@@ -397,10 +397,10 @@ static void readFastQFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	}
 	while(fgets(line, maxline, file)) { 
 
-		for (i = strlen(line) - 1;
-		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
-			line[i] = '\0';
-		}
+		// Chomping EOL characters and comments
+		for (i=strlen(line) - 1; i >= 0; i--)
+			if (line[i] == '\n' || line[i] == '\r' || line[i] == ' ' || line[i] == '\t')
+				line[i] = '\0';
 		if (isCreateBinary()) {
 			if (counter > 0) {
 				// end previous seq
@@ -563,10 +563,10 @@ static void readFastQGZFile(SequencesWriter *seqWriteInfo, char *filename, Categ
 		inputCnySeqFileStart(cat, seqWriteInfo);
 	}
 	while (gzgets(file, line, maxline)) {
-		for (i = strlen(line) - 1;
-		     i >= 0 && (line[i] == '\n' || line[i] == '\r'); i--) {
-			line[i] = '\0';
-		}
+		// Chomping EOL characters and comments
+		for (i=strlen(line) - 1; i >= 0; i--)
+			if (line[i] == '\n' || line[i] == '\r' || line[i] == ' ' || line[i] == '\t')
+				line[i] = '\0';
 
 		if (isCreateBinary()) {
 			if (counter > 0) {
