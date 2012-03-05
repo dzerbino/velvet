@@ -434,3 +434,4 @@ V 1.2.04
 
 V 1.2.05
 - Scrubbing comments out of FastQ read names
+- Bug in multiple k-mer settings when kmax is equal to MAXKMERLENGTH

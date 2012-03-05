@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 		velvetLog
 		    ("Velvet can't handle k-mers as long as %i! We'll stick to %i if you don't mind.\n",
 		     hashLengthMax, MAXKMERLENGTH);
-		hashLengthMax = MAXKMERLENGTH;
+		hashLengthMax = MAXKMERLENGTH + 1;
 	} else if (!multiple_kmers && hashLength > MAXKMERLENGTH) {
 		velvetLog
 		    ("Velvet can't handle k-mers as long as %i! We'll stick to %i if you don't mind.\n",
