@@ -90,6 +90,7 @@ int main(int argc, char **argv)
 	SplayTable *splayTable;
 	int hashLength, hashLengthStep, hashLengthMax, h;
 	char *directory, *filename, *seqFilename, *baseSeqName, *buf;
+	char * token;
 	boolean double_strand = true;
 	boolean noHash = false;
 	boolean multiple_kmers = false;
@@ -127,50 +128,64 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	if ( strstr(argv[2],"," ) )
-	{
-		sscanf(argv[2],"%d,%d,%d",&hashLength,&hashLengthMax,&hashLengthStep);
-		multiple_kmers = true;
-	}
-	else
-	{
-		hashLength = atoi(argv[2]);
+	token = strtok(argv[2], ",");
+	hashLength = atoi(token);
+	token = strtok(NULL, ",");
+	if (token == NULL) {
+		multiple_kmers = false;
 		hashLengthMax = hashLength + 1;
+	} else {
+		multiple_kmers = true;
+		hashLengthMax = atoi(token);
+	}
+	token = strtok(NULL, ",");
+	if (token == NULL) {
 		hashLengthStep = 2;
+	} else {
+		hashLengthStep = atoi(token);
 	}
 
-	if (multiple_kmers && hashLengthMax > MAXKMERLENGTH) {
-		velvetLog
-		    ("Velvet can't handle k-mers as long as %i! We'll stick to %i if you don't mind.\n",
-		     hashLengthMax, MAXKMERLENGTH);
-		hashLengthMax = MAXKMERLENGTH + 1;
-	} else if (!multiple_kmers && hashLength > MAXKMERLENGTH) {
+	if (hashLength > MAXKMERLENGTH) {
 		velvetLog
 		    ("Velvet can't handle k-mers as long as %i! We'll stick to %i if you don't mind.\n",
 		     hashLength, MAXKMERLENGTH);
 		hashLength = MAXKMERLENGTH;
-	} else if (hashLength <= 0) {
+	} 
+	if (hashLength <= 0) {
 		velvetLog("Invalid hash length: %s\n", argv[2]);
 		printUsage();
 		return 0;
-	} else if ( hashLength > hashLengthMax ) {
-		velvetLog("hashLengthMin <= hashLengthMax is required %s", argv[2]);
-		printUsage();
-		return 0;
 	} 
-
 	if (hashLength % 2 == 0) {
 		velvetLog
 		    ("Velvet can't work with even length k-mers, such as %i. We'll use %i instead, if you don't mind.\n",
 		     hashLength, hashLength - 1);
 		hashLength--;
-	}
+	} 
 
-	if (hashLengthStep % 2 == 1) {
-		velvetLog
-		    ("Velvet can't work with an odd length k-mer step, such as %i. We'll use %i instead, if you don't mind.\n",
-		     hashLengthStep, hashLengthStep + 1);
-		hashLengthStep++;
+	if (multiple_kmers) {
+		if (hashLengthMax > MAXKMERLENGTH + 1) {
+			velvetLog
+			    ("Velvet can't handle k-mers as long as %i! We'll stick to %i if you don't mind.\n",
+			     hashLengthMax, MAXKMERLENGTH + 1);
+			hashLengthMax = MAXKMERLENGTH + 1;
+		} 
+		if (hashLengthMax <= hashLength) {
+			velvetLog("hashLengthMin < hashLengthMax is required %s", argv[2]);
+			printUsage();
+			return 0;
+		} 
+
+		if (hashLengthStep <= 0) {
+			velvetLog("Non-positive hash length! Setting it to 2\n");
+			hashLengthStep = 2;
+		}
+		if (hashLengthStep % 2 == 1) {
+			velvetLog
+			    ("Velvet can't work with an odd length k-mer step, such as %i. We'll use %i instead, if you don't mind.\n",
+			     hashLengthStep, hashLengthStep + 1);
+			hashLengthStep++;
+		}
 	}
 
 	// check if binary sequences should be used
@@ -235,6 +250,15 @@ int main(int argc, char **argv)
 		if ( h == hashLength ) {
 			parseDataAndReadFiles(seqFilename, argc - 2, &(argv[2]), &double_strand, &noHash);
 		} else {
+			sprintf(buf,"rm -f %s",seqFilename);
+			if (system(buf)) {
+				velvetLog("Command failed!\n");
+				velvetLog("%s\n", buf);
+#ifdef DEBUG
+				abort();
+#endif
+				exit(1);
+			}
 			if (argv[1][0] == '/')
 				sprintf(buf,"ln -s %s_%d%s %s",argv[1],hashLength,baseSeqName,seqFilename);
 			else
