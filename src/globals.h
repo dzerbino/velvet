@@ -42,9 +42,9 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 
 #define MAXLINE 5000 
 
-#define LONG 2 * CATEGORIES
-#define LONG_PAIRED 2 * CATEGORIES + 1
-#define REFERENCE 2 * CATEGORIES + 2
+#define LONG (2 * CATEGORIES)
+#define LONG_PAIRED (2 * CATEGORIES + 1)
+#define REFERENCE (2 * CATEGORIES + 2)
 
 /* NULL value for ArrayIdx */
 #define NULL_IDX 0

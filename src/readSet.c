@@ -1518,13 +1518,11 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				cat--;
 				cat *= 2;
 			} else if (strcmp(argv[argIndex], "-long") == 0)
-				cat = CATEGORIES * 2;
-			else if (strcmp(argv[argIndex], "-longPaired") ==
-				 0)
-				cat = CATEGORIES * 2 + 1;
-			else if (strcmp(argv[argIndex], "-reference") ==
-				 0)
-				cat = CATEGORIES * 2 + 2;
+				cat = LONG;		// CATEGORIES * 2;
+			else if (strcmp(argv[argIndex], "-longPaired") == 0)
+				cat = LONG_PAIRED;	// CATEGORIES * 2 + 1;
+			else if (strcmp(argv[argIndex], "-reference") == 0)
+				cat = REFERENCE;	// CATEGORIES * 2 + 2
 			else if (strcmp(argv[argIndex], "-strand_specific") == 0) {
 				*double_strand = false;
 				reference_coordinate_double_strand = false;
