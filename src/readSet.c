@@ -357,7 +357,61 @@ void goToEndOfLine(char *line, FILE * file)
 		c = fgetc(file);
 }
 
-// Imports sequences from a raw sequence file 
+static void writeSeqName(char*seq_name, SequencesWriter *seqWriteInfo, Category cat, IDnum *sequenceIndex)
+{
+	char name[5001];
+	if (isCreateBinary()) {
+	  	cnySeqInsertStart(seqWriteInfo);
+		sprintf(name, ">%s", seq_name);
+		cnySeqInsertSequenceName(name, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
+	} else {
+		velvetFprintf(seqWriteInfo->m_pFile,">%s\t%ld\t%d\n", seq_name, (long) ((*sequenceIndex)++), (int) cat);
+	}
+}
+
+static void writeSequence(char*seq, SequencesWriter *seqWriteInfo)
+{
+	char str[100];
+	velvetifySequence(seq, seqWriteInfo);
+	if (isCreateBinary()) {
+		cnySeqInsertNucleotideString(seq, seqWriteInfo);
+		cnySeqInsertEnd(seqWriteInfo);
+	} else {
+		Coordinate start = 0;
+		while (start <= strlen(seq)) {
+			strncpy(str, seq + start, 60);
+			str[60] = '\0';
+				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
+			start += 60;
+		}
+	}
+}
+
+static void initFastX(SequencesWriter *seqWriteInfo, Category cat)
+{
+	seqWriteInfo->m_referenceMask = NULL;
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
+
+	// Binary file stuff
+	if (isCreateBinary() && (cat == REFERENCE)) {
+		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
+	}
+	if (isCreateBinary()) {
+		inputCnySeqFileStart(cat, seqWriteInfo);
+	}
+}
+
+static void cleanupFastX(SequencesWriter *seqWriteInfo, Category cat)
+{
+	if (seqWriteInfo->m_referenceMask) {
+		free(seqWriteInfo->m_referenceMask);
+		seqWriteInfo->m_referenceMask = NULL;
+	}
+}
+
+
+// Imports sequences from a raw sequence file
 // Memory space allocated within this function.
 static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex)
 {
@@ -365,14 +419,9 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	const int maxline = 5000;
 	char line[5000];
 	IDnum counter = 0;
-	char str[100];
-	Coordinate start;
-	seqWriteInfo->m_referenceMask = NULL;
-	seqWriteInfo->m_position = 0;
-	seqWriteInfo->m_openMask = false;
-	if (isCreateBinary() && (cat == REFERENCE)) {
-		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
-	}
+
+	initFastX(seqWriteInfo, cat);
+
 	if (strcmp(filename, "-"))
 		file = fopen(filename, "r");
 	else 
@@ -383,22 +432,7 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
 	while(fgets(line, maxline, file)) { 
-		if (isCreateBinary()) {
-			if (counter > 0) {
-				// end previous seq
-				cnySeqInsertEnd(seqWriteInfo);
-			}
-			cnySeqInsertStart(seqWriteInfo);
-			cnySeqInsertSequenceName(">RAW", (long) ((*sequenceIndex)++), seqWriteInfo, cat);
-		} else {
-			velvetFprintf(seqWriteInfo->m_pFile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
-		}
-		counter++;
-
 		if (strlen(line) >= maxline - 1) {
 			velvetLog("Raw sequence files cannot contain reads longer than %i bp\n", maxline - 1);
 #ifdef DEBUG
@@ -406,27 +440,13 @@ static void readRawFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 #endif
 			exit(1);
 		}
-		velvetifySequence(line, seqWriteInfo);
-		if (isCreateBinary()) {
-			cnySeqInsertNucleotideString(line, seqWriteInfo);
-		} else {
-		start = 0;
-		while (start <= strlen(line)) {
-			strncpy(str, line + start, 60);
-			str[60] = '\0';
-				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
-			start += 60;
-		}
-	}
-	}
-	if (isCreateBinary()) {
-		cnySeqInsertEnd(seqWriteInfo);
+
+		writeSeqName("RAW", seqWriteInfo, cat, sequenceIndex);
+		writeSequence(line, seqWriteInfo);
+		counter++;
 	}
 	fclose(file);
-	if (seqWriteInfo->m_referenceMask) {
-		free(seqWriteInfo->m_referenceMask);
-		seqWriteInfo->m_referenceMask = NULL;
-	}
+	cleanupFastX(seqWriteInfo, cat);
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
@@ -439,14 +459,8 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	const int maxline = 5000;
 	char line[5000];
 	IDnum counter = 0;
-	char str[100];
-	Coordinate start;
-	seqWriteInfo->m_referenceMask = NULL;
-	seqWriteInfo->m_position = 0;
-	seqWriteInfo->m_openMask = false;
-	if (isCreateBinary() && (cat == REFERENCE)) {
-		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
-	}
+
+	initFastX(seqWriteInfo, cat);
 	if (strcmp(filename, "-"))
 		file = gzopen(filename, "rb");
 	else { 
@@ -459,22 +473,7 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 	else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
-	while (gzgets(file, line, maxline)) {
-		if (isCreateBinary()) {
-			if (counter > 0) {
-				// end previous seq
-				cnySeqInsertEnd(seqWriteInfo);
-			}
-			cnySeqInsertStart(seqWriteInfo);
-			cnySeqInsertSequenceName(">RAW", (long) ((*sequenceIndex)++), seqWriteInfo, cat);
-		} else {
-			velvetFprintf(seqWriteInfo->m_pFile,">RAW\t%ld\t%d\n", (long) ((*sequenceIndex)++), (int) cat);
-		}
-		counter++;
-
+	while(gzgets(file, line, maxline)) {
 		if (strlen(line) >= maxline - 1) {
 			velvetLog("Raw sequence files cannot contain reads longer than %i bp\n", maxline - 1);
 #ifdef DEBUG
@@ -483,27 +482,12 @@ static void readRawGZFile(SequencesWriter *seqWriteInfo, char *filename, Categor
 			exit(1);
 		}
 
-		velvetifySequence(line, seqWriteInfo);
-		if (isCreateBinary()) {
-			cnySeqInsertNucleotideString(line, seqWriteInfo);
-		} else {
-		start = 0;
-		while (start <= strlen(line)) {
-			strncpy(str, line + start, 60);
-			str[60] = '\0';
-				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
-			start += 60;
-		}
-	}
-	}
-	if (isCreateBinary()) {
-		cnySeqInsertEnd(seqWriteInfo);
+		writeSeqName("RAW", seqWriteInfo, cat, sequenceIndex);
+		writeSequence(line, seqWriteInfo);
+		counter++;
 	}
 	gzclose(file);
-	if (seqWriteInfo->m_referenceMask) {
-		free(seqWriteInfo->m_referenceMask);
-		seqWriteInfo->m_referenceMask = NULL;
-	}
+	cleanupFastX(seqWriteInfo, cat);
 	velvetLog("%li reads found.\n", (long) counter);
 	velvetLog("Done\n");
 }
@@ -614,60 +598,6 @@ static gzFile openFastXFile(int fileType, char*filename)
 
 	return file;
 }
-
-static void writeSeqName(char*seq_name, SequencesWriter *seqWriteInfo, Category cat, IDnum *sequenceIndex)
-{
-	char name[5001];
-	if (isCreateBinary()) {
-	  	cnySeqInsertStart(seqWriteInfo);
-		sprintf(name, ">%s", seq_name);
-		cnySeqInsertSequenceName(name, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
-	} else {
-		velvetFprintf(seqWriteInfo->m_pFile,">%s\t%ld\t%d\n", seq_name, (long) ((*sequenceIndex)++), (int) cat);
-	}
-}
-
-static void writeSequence(char*seq, SequencesWriter *seqWriteInfo)
-{
-	char str[100];
-	velvetifySequence(seq, seqWriteInfo);
-	if (isCreateBinary()) {
-		cnySeqInsertNucleotideString(seq, seqWriteInfo);
-		cnySeqInsertEnd(seqWriteInfo);
-	} else {
-		Coordinate start = 0;
-		while (start <= strlen(seq)) {
-			strncpy(str, seq + start, 60);
-			str[60] = '\0';
-				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
-			start += 60;
-		}
-	}
-}
-
-static void initFastX(SequencesWriter *seqWriteInfo, Category cat)
-{
-	seqWriteInfo->m_referenceMask = NULL;
-	seqWriteInfo->m_position = 0;
-	seqWriteInfo->m_openMask = false;
-
-	// Binary file stuff
-	if (isCreateBinary() && (cat == REFERENCE)) {
-		seqWriteInfo->m_referenceMask = callocOrExit(1, Mask*);
-	}
-	if (isCreateBinary()) {
-		inputCnySeqFileStart(cat, seqWriteInfo);
-	}
-}
-
-static void cleanupFastX(SequencesWriter *seqWriteInfo, Category cat)
-{
-	if (seqWriteInfo->m_referenceMask) {
-		free(seqWriteInfo->m_referenceMask);
-		seqWriteInfo->m_referenceMask = NULL;
-	}
-}
-
 
 // Read in FastA or FastQ files in compressed or gz format
 static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
