@@ -569,22 +569,12 @@ static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTabl
 // Define mode to use kseq in
 KSEQ_INIT(gzFile, gzread)
 
-
-// Read in FastA or FastQ files in compressed or gz format
-static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
+static gzFile openFastXFile(int fileType, char*filename)
 {
-	kseq_t *seq;
 	gzFile file;
-	char name[5001];
-	IDnum counter = 0;
-	char str[100];
-	Coordinate start;
 	char c;
-	seqWriteInfo->m_referenceMask = NULL;
-	seqWriteInfo->m_position = 0;
-	seqWriteInfo->m_openMask = false;
 
-  	// Choose file or stdin
+    	// Choose file or stdin
 	if (strcmp(filename, "-")==0) {
 		file = gzdopen(fileno(stdin), "rb");
 		SET_BINARY_MODE(stdin);
@@ -612,13 +602,54 @@ static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *fil
 	if (file != NULL) {
 		char *type;
 		switch (fileType) {
-		case FASTA: type = "FastA"; break;
-		case FASTQ: type = "FastQ"; break;
+		case FASTA:
+		case FASTA_GZ: type = "FastA"; break;
+		case FASTQ:
+		case FASTQ_GZ: type = "FastQ"; break;
 		default: type = ""; break;
 		}
 		velvetLog("Reading %s file %s;\n", type, filename);
 	} else
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
+
+	return file;
+}
+
+static void writeSeqName(char*seq_name, SequencesWriter *seqWriteInfo, Category cat, IDnum *sequenceIndex)
+{
+	char name[5001];
+	if (isCreateBinary()) {
+	  	cnySeqInsertStart(seqWriteInfo);
+		sprintf(name, ">%s", seq_name);
+		cnySeqInsertSequenceName(name, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
+	} else {
+		velvetFprintf(seqWriteInfo->m_pFile,">%s\t%ld\t%d\n", seq_name, (long) ((*sequenceIndex)++), (int) cat);
+	}
+}
+
+static void writeSequence(char*seq, SequencesWriter *seqWriteInfo)
+{
+	char str[100];
+	velvetifySequence(seq, seqWriteInfo);
+	if (isCreateBinary()) {
+		cnySeqInsertNucleotideString(seq, seqWriteInfo);
+		cnySeqInsertEnd(seqWriteInfo);
+	} else {
+		Coordinate start = 0;
+		while (start <= strlen(seq)) {
+			strncpy(str, seq + start, 60);
+			str[60] = '\0';
+				velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
+			start += 60;
+		}
+	}
+}
+
+static void initFastX(SequencesWriter *seqWriteInfo, Category cat)
+{
+	seqWriteInfo->m_referenceMask = NULL;
+	seqWriteInfo->m_position = 0;
+	seqWriteInfo->m_openMask = false;
 
 	// Binary file stuff
 	if (isCreateBinary() && (cat == REFERENCE)) {
@@ -627,44 +658,43 @@ static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *fil
 	if (isCreateBinary()) {
 		inputCnySeqFileStart(cat, seqWriteInfo);
 	}
+}
+
+static void cleanupFastX(SequencesWriter *seqWriteInfo, Category cat)
+{
+	if (seqWriteInfo->m_referenceMask) {
+		free(seqWriteInfo->m_referenceMask);
+		seqWriteInfo->m_referenceMask = NULL;
+	}
+}
+
+
+// Read in FastA or FastQ files in compressed or gz format
+static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
+{
+	kseq_t *seq;
+	gzFile file;
+	IDnum counter = 0;
+
+	file = openFastXFile(fileType, filename);
+	initFastX(seqWriteInfo, cat);
 
 	// Read a sequence at a time
 	seq = kseq_init(file);
 	while (kseq_read(seq) >= 0) {
-		if (isCreateBinary()) {
-		  	cnySeqInsertStart(seqWriteInfo);
-			sprintf(name, ">%s", seq->name.s);
-			cnySeqInsertSequenceName(name, (long) ((*sequenceIndex)++), seqWriteInfo, cat);
-		} else {
-			velvetFprintf(seqWriteInfo->m_pFile,">%s\t%ld\t%d\n", seq->name.s, (long) ((*sequenceIndex)++), (int) cat);
-		}
 		counter++;
-
-		velvetifySequence(seq->seq.s, seqWriteInfo);
-		if (isCreateBinary()) {
-			cnySeqInsertNucleotideString(seq->seq.s, seqWriteInfo);
-			cnySeqInsertEnd(seqWriteInfo);
-		} else {
-			start = 0;
-			while (start <= strlen(seq->seq.s)) {
-				strncpy(str, seq->seq.s + start, 60);
-				str[60] = '\0';
-					velvetFprintf(seqWriteInfo->m_pFile, "%s\n", str);
-				start += 60;
-			}
-		}
+		writeSeqName(seq->name.s, seqWriteInfo, cat, sequenceIndex);
+		writeSequence(seq->seq.s, seqWriteInfo);
 	}
 
 	kseq_destroy(seq);
 	gzclose(file);
 
-	if (cat == REFERENCE) {
+  	if (cat == REFERENCE) {
 		fillReferenceCoordinateTable(filename, refCoords, counter);
 	}
-	if (seqWriteInfo->m_referenceMask) {
-		free(seqWriteInfo->m_referenceMask);
-		seqWriteInfo->m_referenceMask = NULL;
-	}
+	cleanupFastX(seqWriteInfo, cat);
+
 	velvetLog("%li sequences found\n", (long) counter);
 	velvetLog("Done\n");
 }
