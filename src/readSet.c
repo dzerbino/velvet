@@ -699,10 +699,10 @@ static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTabl
 	Coordinate i;
 	IDnum index = 0;
 
-	if (strcmp(filename, "-"))
-		file = fopen(filename, "r");
+	if (strcmp(filename, "-") == 0)
+		exitErrorf(EXIT_FAILURE, false, "Cannot read reference sequence from stdin");
 	else
-		file = stdin;
+		file = fopen(filename, "r");
 
 	if (counter == 0)
 		return;
