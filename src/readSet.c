@@ -699,6 +699,48 @@ static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *fil
 	velvetLog("Done\n");
 }
 
+static void readFastXPair(int fileType, SequencesWriter *seqWriteInfo, char *filename1, char *filename2, Category cat, IDnum * sequenceIndex)
+{
+	kseq_t *seq1, *seq2;
+	gzFile file1, file2;
+	IDnum counter = 0;
+
+	if (cat==REFERENCE)
+		exitErrorf(EXIT_FAILURE, false, "Cannot read reference sequence in 'separate' read mode");
+
+	file1 = openFastXFile(fileType, filename1);
+	file2 = openFastXFile(fileType, filename2);
+	initFastX(seqWriteInfo, cat);
+
+	// Read a sequence at a time
+	seq1 = kseq_init(file1);
+	seq2 = kseq_init(file2);
+	while (kseq_read(seq1) >= 0) {
+		counter++;
+		writeSeqName(seq1->name.s, seqWriteInfo, cat, sequenceIndex);
+		writeSequence(seq1->seq.s, seqWriteInfo);
+
+		if (kseq_read(seq2) < 0)
+		  exitErrorf(EXIT_FAILURE, false, "Right sequence file '%s' has too few sequences", filename2);
+
+		counter++;
+		writeSeqName(seq2->name.s, seqWriteInfo, cat, sequenceIndex);
+		writeSequence(seq2->seq.s, seqWriteInfo);
+	}
+	if (kseq_read(seq2) >= 0)
+		  exitErrorf(EXIT_FAILURE, false, "Right sequence file '%s' has too many sequences", filename2);
+
+	kseq_destroy(seq1);
+	kseq_destroy(seq2);
+	gzclose(file1);
+	gzclose(file2);
+
+	cleanupFastX(seqWriteInfo, cat);
+
+	velvetLog("%li sequences found in total in the paired sequence files\n", (long) counter);
+	velvetLog("Done\n");
+}
+
 static void addMapping(boolean orientation, Coordinate pos, char * seq, ReferenceCoordinate * refCoord, char * buffer, SequencesWriter * seqWriteInfo, RefInfoList ** refTail, size_t * buffer_size) {
 	if (isCreateBinary()) {
 		seqWriteInfo->m_bIsRef = true;
@@ -1120,7 +1162,7 @@ static void readBAMFile(SequencesWriter *seqWriteInfo, char *filename, Category 
 static void printUsage()
 {
 	puts("Usage:");
-	puts("./velveth directory hash_length {[-file_format][-read_type] filename} [options]");
+	puts("./velveth directory hash_length {[-file_format][-read_type][-separate|-interleaved] filename} [options]");
 	puts("");
 	puts("\tdirectory\t\t: directory name for output files");
 	printf("\thash_length\t\t: odd integer (if even, it will be decremented) <= %i (if above, will be reduced)\n", MAXKMERLENGTH);
@@ -1165,6 +1207,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 	short short_var;
 	ReferenceCoordinateTable * refCoords = newReferenceCoordinateTable();
 	boolean reuseSequences = false;
+	boolean separate_pair_files = false;
 
 	if (argc < 2) {
 		printUsage();
@@ -1265,6 +1308,10 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				;
 			} else if (strcmp(argv[argIndex], "-create_binary") == 0) {
 				;
+			} else if (strcmp(argv[argIndex], "-interleaved") == 0) {
+				separate_pair_files = false;
+			} else if (strcmp(argv[argIndex], "-separate") == 0) {
+				separate_pair_files = true;
 			}
 			else {
 				velvetLog("Unknown option: %s\n",
@@ -1283,21 +1330,29 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 
 		switch (filetype) {
 		case FASTA:
-			readFastXFile(FASTA, seqWriteInfo, argv[argIndex], cat, &sequenceIndex, refCoords);
-			break;
 		case FASTQ:
-			readFastXFile(FASTQ, seqWriteInfo, argv[argIndex], cat, &sequenceIndex, refCoords);
+		case FASTA_GZ:
+		case FASTQ_GZ:
+			// Separate files for paired reads?  Note odd categories used for paired read type
+			if (separate_pair_files && cat%2==1) {
+				argIndex++;
+				if (argIndex>=argc)
+					exitErrorf(EXIT_FAILURE, false, "Require left & right filename for -separate mode");
+				readFastXPair(filetype, seqWriteInfo, argv[argIndex-1], argv[argIndex], cat, &sequenceIndex);
+			} else {
+				readFastXFile(filetype, seqWriteInfo, argv[argIndex], cat, &sequenceIndex, refCoords);
+			}
 			break;
 		case RAW:
+			if (separate_pair_files && cat%2==1) {
+                        	exitErrorf(EXIT_FAILURE, false, "Currently do not support -separate mode for RAW");
+                        }
 			readRawFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex);
 			break;
-		case FASTA_GZ:
-			readFastXFile(FASTA_GZ, seqWriteInfo, argv[argIndex], cat, &sequenceIndex, refCoords);
-			break;
-		case FASTQ_GZ:
-			readFastXFile(FASTQ_GZ, seqWriteInfo, argv[argIndex], cat, &sequenceIndex, refCoords);
-			break;
 		case RAW_GZ:
+			if (separate_pair_files && cat%2==1) {
+                        	exitErrorf(EXIT_FAILURE, false, "Currently do not support -separate mode for RAW");
+                        }
 			readRawGZFile(seqWriteInfo, argv[argIndex], cat, &sequenceIndex);
 			break;
 		case SAM:
