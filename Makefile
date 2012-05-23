@@ -115,3 +115,7 @@ doc: Manual.pdf
 
 Manual.pdf: doc/manual_src/Manual.tex doc/manual_src/Columbus_manual.tex
 	cd doc/manual_src; pdflatex Manual.tex; pdflatex Manual.tex; mv Manual.pdf ../..; pdflatex Columbus_manual.tex; mv Columbus_manual.pdf ../..
+
+test: velvetg velveth
+	cd tests && ./run-tests.sh
+	
