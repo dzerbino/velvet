@@ -3,12 +3,14 @@
 # load shared functions and variables
 . `dirname $0`/run-tests.functions
 
+inform "Running Velvet Test Suite"
+
 # check we have our binaries and test files
 for FILE in $VH $VG $SEQ $ROADMAP $FQL $FQR $FQI $FAL $FAR $FAI ; do
   if [ ! -r $FILE ]; then
     problem "required testing file '$FILE' not found"
   else
-    inform "ok, found $FILE" 
+    inform "Found $FILE, ok" 
   fi
 done
 
@@ -31,6 +33,5 @@ inform "removing test folder: $DIR"
 rm -fr ./$DIR
 
 # all done
-inform "passed all $NUMTESTS tests!"
-
-
+inform "passed all $NUMTESTS tests"
+inform "hooray!"

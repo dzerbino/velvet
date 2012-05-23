@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # load shared functions and variables
 . `dirname $0`/run-tests.functions
 
