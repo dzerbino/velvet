@@ -221,9 +221,7 @@ as you wish without having to re-type identical descriptors.  For example:
 capillary.fa
 \end{verbatim}
 
-In this example, all the files are considered to be in FASTA format,
-only the read category changes. However, the default options are ``fasta'' and ``short'', so the previous example
-can also be written as:
+In this example, all the files are considered to be in FASTA format, only the read category changes. However, the default options are ``fasta'' and ``short'', so the previous example can also be written as:
 
 \begin{verbatim}
 > ./velveth output_directory/ 21 solexa*.fa -long capillary.fa
@@ -553,6 +551,16 @@ Velvet will by default assume that paired end reads are perfectly placed. With e
 \label{sec:pairedformat}
 
 Velvet works mainly with fasta and fastq formats. 
+
+\subsubsection{How Velvet now reads paired reads}
+
+For FastA and FastQ files, Velvet can read pairs of files. If two files are paired, it is assumed that the n-th read in the first file is paired to the n-th read of the second file.
+
+To toggle this behaviour, simply add the $-separate$ flag. The paired files must be directly consecutive on the command line. Remember that a paired read category must be also be toggled (e.g. $-shortPaired$).
+
+\subsubsection{How Velvet used to work}
+
+The following is now made redundant by the above functionality. Nonetheless, for the users who are using old pipelines, the old handlng of paired reads is still possible, as described here.
 
 For paired-end reads, the assumption is that each read is next to its mate
 read. In other words, if the reads are indexed from 0, then reads 0 and 1 are
