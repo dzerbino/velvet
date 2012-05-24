@@ -1,0 +1,36 @@
+
+#-----------------------------------------------
+# GLOBALS
+#-----------------------------------------------
+
+VH=../velveth
+VG=../velvetg
+K=31
+SEQ="Sequences.$K"
+ROADMAP="Roadmaps.$K"
+FQL=read1.fq.gz
+FQR=read2.fq.gz
+FQI=reads.fq.gz
+FAL=read1.fa.gz
+FAR=read2.fa.gz
+FAI=reads.fa.gz
+
+#-----------------------------------------------
+# FUNCTIONS
+#-----------------------------------------------
+
+function inform {
+  # [Wed Mar 11 13:33:52 2009] 
+  # TIMESTAMP=`date --iso-8601=seconds`
+  TIMESTAMP=`date +"%a %b %d %X %Y"`
+  echo "[$TIMESTAMP] $*" 1>&2
+}
+
+function problem {
+  # [Wed Mar 11 13:33:52 2009] 
+  # TIMESTAMP=`date --iso-8601=seconds`
+  TIMESTAMP=`date +"%a %b %d %T %Y"`
+  echo "[$TIMESTAMP] *ERROR*: $*" 1>&2
+  exit 2
+}
+
