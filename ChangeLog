@@ -436,3 +436,7 @@ V 1.2.05
 - Scrubbing comments out of FastQ read names
 - Bug in multiple k-mer settings when kmax is equal to MAXKMERLENGTH
 - Bug when parsing parameters for multiple length k-mers
+
+V 1.2.06
+- Added test framework
+- Added option '-separate' to allow reading paired reads from 2 separate files
