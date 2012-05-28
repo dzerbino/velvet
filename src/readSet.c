@@ -31,6 +31,7 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "readSet.h"
 #include "utility.h"
 #include "binarySequences.h"
+#include "autoOpen.h"
 #include "kseq.h"
 
 #if !defined(BUNDLEDZLIB)
@@ -549,9 +550,7 @@ static void fillReferenceCoordinateTable(char *filename, ReferenceCoordinateTabl
 #define BAM 9
 #define RAW 10
 #define RAW_GZ 11
-
-// Define mode to use kseq in
-KSEQ_INIT(gzFile, gzread)
+#define AUTO 12
 
 static gzFile openFastXFile(int fileType, char*filename)
 {
@@ -599,16 +598,50 @@ static gzFile openFastXFile(int fileType, char*filename)
 	return file;
 }
 
+typedef struct {
+  gzFile gzFile;
+  AutoFile *autoFile;
+} FileGZOrAuto;
+
+size_t fileGZOrAuto_read(FileGZOrAuto kseq_file, void *ptr, size_t size)
+{
+  if (kseq_file.gzFile)
+    return gzread(kseq_file.gzFile, ptr, size);
+  else
+    return fread(ptr, 1, size, kseq_file.autoFile->file);
+}
+
+void fileGZOrAuto_close(FileGZOrAuto kseq_file)
+{
+  if (kseq_file.gzFile)
+    gzclose(kseq_file.gzFile);
+  else
+    closeFileAuto(kseq_file.autoFile);
+}
+
+
+// Define mode to use kseq in
+KSEQ_INIT(FileGZOrAuto, fileGZOrAuto_read)
+
+
+
 // Read in FastA or FastQ files in compressed or gz format
 static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
 {
 	kseq_t *seq;
-	gzFile file;
+	FileGZOrAuto file;
 	IDnum counter = 0;
 
-	file = openFastXFile(fileType, filename);
-	initFastX(seqWriteInfo, cat);
+        file.gzFile = NULL;
+        if (fileType == AUTO) {
+        	file.autoFile = openFileAuto(filename);
+                if (!file.autoFile)
+                	exitErrorf(EXIT_FAILURE, false, "Unable to open file '%s' in auto mode", filename);
+                velvetLog("Reading file '%s' using '%s'\n", filename, file.autoFile->decompressor);
+        } else
+          file.gzFile = openFastXFile(fileType, filename);
 
+	initFastX(seqWriteInfo, cat);
 	// Read a sequence at a time
 	seq = kseq_init(file);
 	while (kseq_read(seq) >= 0) {
@@ -618,7 +651,7 @@ static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *fil
 	}
 
 	kseq_destroy(seq);
-	gzclose(file);
+	fileGZOrAuto_close(file);
 
   	if (cat == REFERENCE) {
 		fillReferenceCoordinateTable(filename, refCoords, counter);
@@ -632,14 +665,25 @@ static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *fil
 static void readFastXPair(int fileType, SequencesWriter *seqWriteInfo, char *filename1, char *filename2, Category cat, IDnum * sequenceIndex)
 {
 	kseq_t *seq1, *seq2;
-	gzFile file1, file2;
+	FileGZOrAuto file1, file2;
 	IDnum counter = 0;
 
 	if (cat==REFERENCE)
 		exitErrorf(EXIT_FAILURE, false, "Cannot read reference sequence in 'separate' read mode");
 
-	file1 = openFastXFile(fileType, filename1);
-	file2 = openFastXFile(fileType, filename2);
+        if (fileType == AUTO) {
+        	file1.autoFile = openFileAuto(filename1);
+                if (!file1.autoFile)
+                	exitErrorf(EXIT_FAILURE, false, "Unable to open file '%s' in auto mode", filename1);
+                velvetLog("Reading file '%s' using '%s'\n", filename1, file1.autoFile->decompressor);
+        	file2.autoFile = openFileAuto(filename2);
+                if (!file2.autoFile)
+                	exitErrorf(EXIT_FAILURE, false, "Unable to open file '%s' in auto mode", filename2);
+                velvetLog("Reading file '%s' using '%s'\n", filename2, file2.autoFile->decompressor);
+        } else {
+        	file1.gzFile = openFastXFile(fileType, filename1);
+                file2.gzFile = openFastXFile(fileType, filename2);
+        }
 	initFastX(seqWriteInfo, cat);
 
 	// Read a sequence at a time
@@ -662,8 +706,9 @@ static void readFastXPair(int fileType, SequencesWriter *seqWriteInfo, char *fil
 
 	kseq_destroy(seq1);
 	kseq_destroy(seq2);
-	gzclose(file1);
-	gzclose(file2);
+
+        fileGZOrAuto_close(file1);
+        fileGZOrAuto_close(file2);
 
 	cleanupFastX(seqWriteInfo, cat);
 
@@ -1190,6 +1235,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 				filetype = RAW;
 			else if (strcmp(argv[argIndex], "-raw.gz") == 0)
 				filetype = RAW_GZ;
+			else if (strcmp(argv[argIndex], "-fmtAuto") == 0)
+				filetype = AUTO;
 			else if (strcmp(argv[argIndex], "-short") == 0)
 				cat = 0;
 			else if (strcmp(argv[argIndex], "-shortPaired") ==
@@ -1263,6 +1310,7 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 		case FASTQ:
 		case FASTA_GZ:
 		case FASTQ_GZ:
+		case AUTO:
 			// Separate files for paired reads?  Note odd categories used for paired read type
 			if (separate_pair_files && cat%2==1) {
 				argIndex++;
