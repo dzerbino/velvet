@@ -1,11 +1,13 @@
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include <string.h>
 
 #include "autoOpen.h"
 
-FILE* popenNoStderr(const char *exe, const char *const argv[], int* retPid)
+// Implementation of "popen" that ignores stderr
+static FILE* popenNoStderr(const char *exe, const char *const argv[], int* retPid)
 {
 	int out[2];
 	int pid;
@@ -79,7 +81,8 @@ AutoFile* openFileAuto(char*filename)
 		int c = fgetc(seqFile->file);
 		if (c=='>' || c=='@') {
 			// Ok, looks like FASTA or FASTQ
-		  	ungetc(c, seqFile->file);
+                	ungetc(c, seqFile->file);
+                        seqFile->first_char = c;
 			return seqFile;
 		} else {
 			if (seqFile->pid)

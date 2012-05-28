@@ -8,6 +8,7 @@ typedef struct {
 	int pid;
 	FILE* file;
 	char const* decompressor;
+	int first_char;
 } AutoFile;
 
 AutoFile* openFileAuto(char*filename);

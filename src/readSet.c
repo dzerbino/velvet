@@ -599,31 +599,37 @@ static gzFile openFastXFile(int fileType, char*filename)
 }
 
 typedef struct {
-  gzFile gzFile;
-  AutoFile *autoFile;
+	gzFile gzFile;
+	AutoFile *autoFile;
 } FileGZOrAuto;
 
 size_t fileGZOrAuto_read(FileGZOrAuto kseq_file, void *ptr, size_t size)
 {
-  if (kseq_file.gzFile)
-    return gzread(kseq_file.gzFile, ptr, size);
-  else
-    return fread(ptr, 1, size, kseq_file.autoFile->file);
+	if (kseq_file.gzFile)
+        	return gzread(kseq_file.gzFile, ptr, size);
+        else
+          return fread(ptr, 1, size, kseq_file.autoFile->file);
 }
 
 void fileGZOrAuto_close(FileGZOrAuto kseq_file)
 {
-  if (kseq_file.gzFile)
-    gzclose(kseq_file.gzFile);
-  else
-    closeFileAuto(kseq_file.autoFile);
+	if (kseq_file.gzFile)
+        	gzclose(kseq_file.gzFile);
+        else
+          closeFileAuto(kseq_file.autoFile);
 }
 
+char const* charToType(char c)
+{
+	switch(c) {
+        case '>': return "FastA";
+        case '@': return "FastQ";
+        default: return "Unknown";
+        }
+}
 
 // Define mode to use kseq in
 KSEQ_INIT(FileGZOrAuto, fileGZOrAuto_read)
-
-
 
 // Read in FastA or FastQ files in compressed or gz format
 static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *filename, Category cat, IDnum * sequenceIndex, ReferenceCoordinateTable * refCoords)
@@ -632,12 +638,12 @@ static void readFastXFile(int fileType, SequencesWriter *seqWriteInfo, char *fil
 	FileGZOrAuto file;
 	IDnum counter = 0;
 
-        file.gzFile = NULL;
+        file.gzFile = file.autoFile = NULL;
         if (fileType == AUTO) {
         	file.autoFile = openFileAuto(filename);
                 if (!file.autoFile)
                 	exitErrorf(EXIT_FAILURE, false, "Unable to open file '%s' in auto mode", filename);
-                velvetLog("Reading file '%s' using '%s'\n", filename, file.autoFile->decompressor);
+                velvetLog("Reading file '%s' using '%s' as %s\n", filename, file.autoFile->decompressor, charToType(file.autoFile->first_char));
         } else
           file.gzFile = openFastXFile(fileType, filename);
 
@@ -671,15 +677,17 @@ static void readFastXPair(int fileType, SequencesWriter *seqWriteInfo, char *fil
 	if (cat==REFERENCE)
 		exitErrorf(EXIT_FAILURE, false, "Cannot read reference sequence in 'separate' read mode");
 
+        file1.gzFile = file1.autoFile = NULL;
+        file2.gzFile = file2.autoFile = NULL;
         if (fileType == AUTO) {
         	file1.autoFile = openFileAuto(filename1);
                 if (!file1.autoFile)
                 	exitErrorf(EXIT_FAILURE, false, "Unable to open file '%s' in auto mode", filename1);
-                velvetLog("Reading file '%s' using '%s'\n", filename1, file1.autoFile->decompressor);
+                velvetLog("Reading file '%s' using '%s' as %s\n", filename1, file1.autoFile->decompressor, charToType(file1.autoFile->first_char));
         	file2.autoFile = openFileAuto(filename2);
                 if (!file2.autoFile)
                 	exitErrorf(EXIT_FAILURE, false, "Unable to open file '%s' in auto mode", filename2);
-                velvetLog("Reading file '%s' using '%s'\n", filename2, file2.autoFile->decompressor);
+                velvetLog("Reading file '%s' using '%s' as %s\n", filename2, file2.autoFile->decompressor, charToType(file2.autoFile->first_char));
         } else {
         	file1.gzFile = openFastXFile(fileType, filename1);
                 file2.gzFile = openFastXFile(fileType, filename2);
@@ -1152,6 +1160,7 @@ static void printUsage()
 	puts("\t-raw.gz");
 	puts("\t-sam");
 	puts("\t-bam");
+        puts("\t-fmtAuto");
 	puts("");
 	puts("Read type options:");
 	puts("\t-short");
