@@ -9,6 +9,7 @@ class VelvetGraph {
 protected:
   ReadSet* sequences;
   Graph* graph;
+  Connection** scaffold;
   boolean* dubious;
   long getMinimumContigKmerLength( long minContigLength ) const;
   void removeLowCoverageNodes( double coverageCutoff, double longCoverageCutoff, long minContigKmerLength, bool flagExportFilteredNodes, 
