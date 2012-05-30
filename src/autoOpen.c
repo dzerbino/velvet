@@ -53,7 +53,7 @@ static int pcloseNoStderr(int pid, FILE* out)
 }
 
 
-static const char const* decompressors[] = {"","gunzip", "pbunzip2", "bunzip2", NULL};
+static const char const* decompressors[] = {"","pigz", "gunzip", "pbunzip2", "bunzip2", NULL};
 
 AutoFile* openFileAuto(char*filename)
 {
