@@ -48,7 +48,7 @@ static void printUsage()
 	puts("\t\t(default: no removal)");
 	puts("");
 	puts("Advanced options:");
-	puts("\t-ins_length2 <integer>\t\t: expected distance between two paired-end reads in the second short-read dataset (default: no read pairing)");
+	puts("\t-ins_length* <integer>\t\t: expected distance between two paired-end reads in the respective short-read dataset (default: no read pairing)");
 	puts("\t-ins_length_long <integer>\t: expected distance between two long paired-end reads (default: no read pairing)");
 	puts("\t-ins_length*_sd <integer>\t: est. standard deviation of respective dataset (default: 10% of corresponding length)");
 	puts("\t\t[replace '*' by nothing, '2' or '_long' as necessary]");
