@@ -2,8 +2,8 @@
 . `dirname $0`/run-tests.functions
 
 # velveth binary
-$VH $DIR/fai.bin $K -shortPaired -fasta.gz $FAI > /dev/null
-$VH $DIR/fqi.bin $K -shortPaired -fastq.gz $FQI > /dev/null
+$VH $DIR/fai.bin $K -create_binary -shortPaired -fasta.gz $FAI > /dev/null
+$VH $DIR/fqi.bin $K -create_binary -shortPaired -fastq.gz $FQI > /dev/null
 
 # check fai
 cmp --quiet $ROADMAP $DIR/fai.bin/Roadmaps
