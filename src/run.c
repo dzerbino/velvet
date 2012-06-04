@@ -42,7 +42,8 @@ static void printUsage()
 	puts("\tfilename\t: path to sequence file or - for standard input");	
 	puts("");
 	puts("File format options:");
-	puts("\t-fasta\t-fastq\t-raw\t-fasta.gz\t-fastq.gz\t-raw.gz\t-sam\t-bam");
+	puts("\t-fasta\t-fastq\t-raw\t-fasta.gz\t-fastq.gz\t-raw.gz\t-sam\t-bam\t-fmtAuto");
+        puts("\t(Note: -fmtAuto will detect fasta or fastq, and will try the following programs for decompression : gunzip, pbunzip2, bunzip2");
 	puts("");
         puts("File layout options for paired reads (only for fasta and fastq formats):");
         puts("\t-interleaved\t: File contains paired reads interleaved in the one file (default)");

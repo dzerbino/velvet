@@ -2,11 +2,11 @@
 . `dirname $0`/run-tests.functions
 
 # velveth binary
-$VH $DIR/fai.bin $K -create_binary -shortPaired -fasta.gz $FAI > /dev/null
-$VH $DIR/fqi.bin $K -create_binary -shortPaired -fastq.gz $FQI > /dev/null
+$VH $DIR/fmtAuto_fai.bin $K -create_binary -shortPaired -fmtAuto $FAI > /dev/null
+$VH $DIR/fmtAuto_fqi.bin $K -create_binary -shortPaired -fmtAuto $FQI > /dev/null
 
 # check fai
-cmp --quiet $ROADMAP $DIR/fai.bin/Roadmaps
+cmp --quiet $ROADMAP $DIR/fmtAuto_fai.bin/Roadmaps
 if [ $? -ne 0 ]; then
   problem "$FAI binary mode Roadmap differs to $ROADMAP"
 else
@@ -14,7 +14,7 @@ else
 fi
 
 # check fqi
-cmp --quiet $ROADMAP $DIR/fqi.bin/Roadmaps
+cmp --quiet $ROADMAP $DIR/fmtAuto_fqi.bin/Roadmaps
 if [ $? -ne 0 ]; then
   problem "$FQI binary mode Roadmap differs to $ROADMAP"
 else
