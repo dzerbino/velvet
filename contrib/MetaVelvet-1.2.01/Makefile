@@ -19,14 +19,17 @@ OBJS_V = $(VelvetDir)/splay.o $(VelvetDir)/splayTable.o \
 	$(VelvetDir)/kmer.o $(VelvetDir)/kmerOccurenceTable.o $(VelvetDir)/allocArray.o
 OBJS_H = Apps/meta-velveth.o $(OBJS_V)
 OBJS_G = Apps/meta-velvetg.o $(OBJS_V)	
+OBJS_IS = Apps/annoIS.o $(OBJS_V)
+#PROG = meta-velvetg annoIS
 PROG = meta-velvetg
 INCLUDES = 
 LIBS = -lz \
 	-lVelvet -LVelvet-1.1.06 \
 	-lVelvetAPI -LVelvetAPI \
 	-lCommon -LCommon \
-	-lPeak -LPeak
-SUBDIRS = Velvet-1.1.06 VelvetAPI Common Peak
+	-lPeak -LPeak \
+	-lISGraph -L ISGraph
+SUBDIRS = Velvet-1.1.06 VelvetAPI Common Peak ISGraph
 
 MAXKMERLENGTH = 63
 CATEGORIES = 2
@@ -58,6 +61,9 @@ meta-velveth:lib-recur $(OBJS_H)
 
 meta-velvetg:lib-recur $(OBJS_G)
 	$(CXX) $(CXXFLAGS) $(DFLAGS) $(INCLUDES) $(OBJS_G) -o $@ $(LIBS)
+
+annoIS:lib-recur $(OBJS_IS)
+	$(CXX) $(CXXFLAGS) $(DFLAGS) $(INCLUDES) $(OBJS_IS) -o $@ $(LIBS)
 
 cleanlocal:
 	rm -f *.o $(PROG) *~ *.a Apps/*.o

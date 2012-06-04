@@ -4,7 +4,10 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include "../Utils/Utils.hh"
 #include "VelvetHeaders.hh"
+
+#define VUTILS_FASTA_TITLE_DELIMITER "___"
 
 using namespace std;
 
@@ -16,6 +19,8 @@ public:
   static int getNumInArcs( Node* node );
   static vector<Node*> getOutNodes( Node* node );
   static vector<Node*> getInNodes( Node* node );
+  static string getTitle( Node* node );
+  static string getSequence( Node* node );
   static double getTotalNodeDensity( const vector<Node*>& nodes );
   static double getMaxNodeDensity( const vector<Node*>& nodes );
   static double getMinNodeDensity( const vector<Node*>& nodes );

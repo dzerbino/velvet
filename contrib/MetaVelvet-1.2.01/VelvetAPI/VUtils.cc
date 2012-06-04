@@ -43,6 +43,35 @@ vector<Node*> VUtils::getInNodes( Node* node ){
   return inNodes;
 }
 
+string VUtils::getTitle( Node* node ){
+  string delim = VUTILS_FASTA_TITLE_DELIMITER;
+  return Utils::ltoa( getNodeID(node) ) + delim
+    + Utils::dtoa( getNodeDensity(node) ) + delim
+    + Utils::ltoa( getNodeLength(node) );
+}
+
+string VUtils::getSequence( Node* node ){
+  string seq = "";
+  for( Coordinate i=0 ; i<getNodeLength(node) ; ++i ){
+    Nucleotide base = getNucleotideInNode( node, i );
+    switch(base){
+    case ADENINE:
+      seq += "A";
+      break;
+    case CYTOSINE:
+      seq += "C";
+      break;
+    case GUANINE:
+      seq += "G";
+      break;
+    case THYMINE:
+      seq += "T";
+      break;
+    }
+  }
+  return seq;
+}
+
 double VUtils::getTotalNodeDensity( const vector<Node*>& nodes ){
   double totalDensity = 0.0;
   for( size_t i=0 ; i<nodes.size() ; ++i ){
