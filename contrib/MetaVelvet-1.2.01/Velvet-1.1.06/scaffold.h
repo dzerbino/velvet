@@ -61,4 +61,7 @@ void printScaffold(Graph * graph,
 		   boolean * dubious,
 		   boolean * shadows);
 
+//
+void computeConnections( Graph* argGraph, ReadSet* reads, boolean* dubious, boolean* shadows );
+
 #endif

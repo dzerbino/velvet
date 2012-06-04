@@ -7,10 +7,6 @@ int main( int argc, char* argv[] ){
   MetaGraph* graph = mvg->loadGraph();
   cout << "[meta-velveth] " << "...done (load meta-graph)." << endl << endl;
 
-  cout << "[meta-velvetg] " << "Set insert lengths for each library..." << endl;
-  mvg->setInsertLengths( graph );
-  cout << "[meta-velveth] " << "...done (determine insert lengths)." << endl << endl;
-
   cout << "[meta-velvetg] " << "Estimate coverage parameters..." << endl;
   mvg->estimateCoverage( graph );
   cout << "[meta-velvetg] " << "...done (estimate coverage parameters)." << endl << endl;
@@ -37,10 +33,14 @@ int main( int argc, char* argv[] ){
 }
 
 MetaGraph* MetaVelvetG::loadGraph() const {
-  return new MetaGraph( FileNameUtils::getSeqFileName(prefix), FileNameUtils::getInitialGraphFileName(prefix) );
+  MetaGraph* graph = new MetaGraph( FileNameUtils::getSeqFileName(prefix), FileNameUtils::getInitialGraphFileName(prefix) );
+  setInsertLengths( graph );
+  setSplitJudge( graph );
+  setSubgraphOptions( graph );
+  return graph;
 }
 
-void MetaVelvetG::setInsertLengths( MetaGraph* metaGraph ){
+void MetaVelvetG::setInsertLengths( MetaGraph* metaGraph ) const {
   for( int cat=0 ; cat<CATEGORIES ; ++cat ){
     metaGraph->setInsertLength( cat, insertLength[cat], insertLengthSD[cat] );
     cout << "[meta-velvetg] " << "Category = 'short" << cat+1 << "'\t" 
@@ -49,6 +49,16 @@ void MetaVelvetG::setInsertLengths( MetaGraph* metaGraph ){
   metaGraph->setInsertLength( CATEGORIES, longInsertLength, longInsertLengthSD );
   cout << "[meta-velvetg] " << "Category = 'long'" << "\t" 
        << "Ave. = " << longInsertLength << ", SD = " << longInsertLengthSD << endl;
+}
+
+void MetaVelvetG::setSplitJudge( MetaGraph* metaGraph ) const {
+  SplitJudge* judge = new SplitJudge( repeatCoverageSD, minSplitLength, flagUseConnections, numValidConnections, numNoiseConnections );
+  judge->setStatsWriter( FileNameUtils::getSplitStatsFileName(prefix), FileNameUtils::getSplitDetailFileName(prefix), flagReportSplitDetail );
+  metaGraph->setSplitJudge( judge );
+}
+
+void MetaVelvetG::setSubgraphOptions( MetaGraph* metaGraph ) const {
+  metaGraph->setSubgraphOptions( FileNameUtils::getSubgraphPrefix(prefix), flagReportSubgraph );
 }
 
 void MetaVelvetG::estimateCoverage( MetaGraph* metaGraph ){
@@ -118,7 +128,7 @@ void MetaVelvetG::removeNodes( MetaGraph* metaGraph ){
 }
 
 void MetaVelvetG::scaffolding( MetaGraph* metaGraph ){
-  metaGraph->scaffolding( flagMatePair, flagScaffolding, maxChimeraRate, repeatCoverageSD, flagDiscardChimera );
+  metaGraph->scaffolding( flagMatePair, flagScaffolding, maxChimeraRate, flagDiscardChimera );
 }
 
 void MetaVelvetG::finalize( MetaGraph* metaGraph ){
@@ -140,7 +150,7 @@ MetaVelvetG::MetaVelvetG( int argc, char* argv[] ){
        << "[meta-velvetg] " << "Check command line options..." << endl;
   if( !checkParameters( argc, argv ) or !setParameters( argc, argv ) or !checkParameters() ){
     cout << "\t" << "Your command line options are not appropriate." << endl
-	 << "\t" << "Please read usage of meta-velveth carefully." << endl
+	 << "\t" << "Please read usage of meta-velvetg carefully." << endl
 	 << endl
 	 << "\t" << "Thanks, " << endl
 	 << endl << endl;
@@ -177,17 +187,23 @@ void MetaVelvetG::setDefaultParameters(){
     flagMatePair[cat]   = false;
   }
   
-  // metagenomics parameters
+  // graph-splitting parameters
+  flagDiscardChimera  = false;
+  maxChimeraRate      = META_VELEVTG_DEFAULT_MAX_CHIMERA_RATE;
+  repeatCoverageSD    = META_VELVETG_DEFAULT_REPEAT_COVERAGE_SD;
+  minSplitLength      = META_VELVETG_DEFAULT_MIN_SPLIT_LENGTH;
+  flagUseConnections  = true;
+  numValidConnections = META_VELVETG_DEFAULT_NUM_VALID_CONNECTIONS;
+  numNoiseConnections = META_VELVETG_DEFAULT_NUM_NOISE_CONNECTIONS;
+  flagReportSplitDetail = false;
+  flagReportSubgraph  = false;
+  
+  // peak parameters
   flagEstimateExpectedCoverages = true;
-  flagDiscardChimera = false;
-  maxChimeraRate     = META_VELEVTG_DEFAULT_MAX_CHIMERA_RATE;
-  repeatCoverageSD   = META_VELVETG_DEFAULT_REPEAT_COVERAGE_SD;
   numCoveragePeaks   = 1;
   for( int i=0 ; i<META_VELVET_G_MAX_NUM_COVERAGE_PEAKS ; ++i ){
     expectedCoverages[i] = META_VELVET_G_PARAMETER_VALUE_NOT_SPECIFIED;
   }
-  
-  // peak detection parameters
   minPeakCoverage = META_VELVET_G_DEFAULT_MIN_PEAK_COVERAGE;
   maxPeakCoverage = META_VELVET_G_DEFAULT_MAX_PEAK_COVERAGE;
   histoBinWidth   = META_VELVET_G_DEFAULT_HISTO_BIN_WIDTH;
@@ -259,21 +275,27 @@ void MetaVelvetG::printUsage() const {
        << "  " << "meta-velvetg directory [options]" << endl
        << "\t" << "directory                   " << "\t: directory name for output files" << endl
        << endl
-       << "  " << "Metagenomics options:" << endl
+       << "  " << "Graph-splitting options (metagenome-specific):" << endl
        << "\t" << "-discard_chimera <yes|no>    " << "\t: discard chimera sub-graph (default: no)" << endl
        << "\t" << "-max_chimera_rate <double>   " << "\t: maximum allowable chimera rate (default: 0.0)" << endl
+       << "\t" << "-repeat_cov_sd               " << "\t: standard deviation of repeat node coverages (default: 0.1)" << endl
+       << "\t" << "-min_split_length <int>      " << "\t: minimum node length required for repeat resolution (default: 0)" << endl
+       << "\t" << "-valid_connections <int>     " << "\t: minimum allowable number of consistent paired-end connections (default: 1)" << endl
+       << "\t" << "-noise_connections <int>     " << "\t: maximum allowable number of inconsistent paired-end connections (default: 0)" << endl
+       << "\t" << "-use_connections <yes|no>    " << "\t: use paired-end connections for graph splitting (default: yes)" << endl
+       << "\t" << "-report_split_detail <yes|no>" << "\t: report sequences around repeat nodes (default: no)" << endl
+       << "\t" << "-report_subgraph <yes|no>    " << "\t: report node sequences for each subgraph (default: no)" << endl
+       << endl
+       << "  " << "Peak detection options (metagenome-specific):" << endl
        << "\t" << "-exp_covs <string|auto>      " << "\t: expected coverages for each species in microbiome (default: auto)" << endl
        << "\t" << "                             " << "\t    ex) -exp_covs 214_122_70_43_25_13.5" << endl
        << "\t" << "                             " << "\t    coverage values should be sorted in a descending order" << endl
-       << "\t" << "-repeat_cov_sd               " << "\t: standard deviation of repeat node coverages (default: 0.1)" << endl
-       << endl
-       << "  " << "Peak detection options:" << endl
        << "\t" << "-min_peak_cov <double>       " << "\t: minimum peak coverage (default: " << META_VELVET_G_DEFAULT_MIN_PEAK_COVERAGE << ")" << endl
        << "\t" << "-max_peak_cov <double>       " << "\t: maximum peak coverage (default: " << META_VELVET_G_DEFAULT_MAX_PEAK_COVERAGE << ")" << endl
        << "\t" << "-histo_bin_width <double>    " << "\t: bin width of peak coverage histogram (default: " << META_VELVET_G_DEFAULT_HISTO_BIN_WIDTH << ")" << endl
        << "\t" << "-histo_sn_ratio <double>     " << "\t: signal-noise ratio to remove peak noises (default: " << META_VELVET_G_DEFAULT_HISTO_SN_RATIO << ")" << endl
        << endl
-       << "  " << "Contiging options:" << endl
+       << "  " << "Contiging options: (common to single-genome)" << endl
        << "\t" << "-cov_cutoff <double|auto>    " << "\t: removal of low coverage nodes AFTER tour bus or allow the system to infer it (default: auto)" << endl
        << "\t" << "-max_coverage <double>       " << "\t: removal of high coverage nodes AFTER tour bus (default: no removal)" << endl
        << "\t" << "-long_cov_cutoff <double>    " << "\t: removal of nodes with low long-read coverage AFTER tour bus (default: no removal)" << endl
@@ -283,7 +305,7 @@ void MetaVelvetG::printUsage() const {
        << "\t" << "-max_gap_count <int>         " << "\t: maximum number of gaps allowed in the alignment of the two branches of a bubble (default: 3)" << endl
        << "\t" << "-min_contig_lgth <int>       " << "\t: minimum contig length exported to contigs.fa file (default: hash length * 2)" << endl
        << endl
-       << "  " << "Scaffolding options:" << endl
+       << "  " << "Scaffolding options: (common to single-genome)" << endl
        << "\t" << "-scaffolding <yes|no>        " << "\t: scaffolding of contigs used paired end information (default: on)" << endl
        << "\t" << "-exp_cov <double|auto>       " << "\t: expected coverage of unique regions or allow the system to infer it (default: auto)" << endl
        << "\t" << "-ins_length <double>         " << "\t: expected distance between two paired end reads for the category (default: no read pairing)" << endl
@@ -296,7 +318,7 @@ void MetaVelvetG::printUsage() const {
        << "\t" << "-long_mult_cutoff <int>      " << "\t: minimum number of long reads required to merge contigs (default: 2)" << endl
        << "\t" << "-shortMatePaired <yes|no>    " << "\t: for mate-pair libraries, indicate that the library might be contaminated with paired-end reads (default no)" << endl
        << endl
-       << "  " << "Output options:" << endl
+       << "  " << "Output options: (common to single-genome)" << endl
        << "\t" << "-amos_file <yes|no>          " << "\t: export assembly to AMOS file (default: no export)" << endl
        << "\t" << "-coverage_mask <int>         " << "\t: minimum coverage required for confident regions of contigs (default: 1)" << endl
        << "\t" << "-unused_reads <yes|no>       " << "\t: export unused reads in UnusedReads.fa file (default: no)" << endl
@@ -305,9 +327,10 @@ void MetaVelvetG::printUsage() const {
        << "\t" << "-paired_exp_fraction <double>" << "\t: remove all the paired end connections which less than the specified fraction of the expected count (default: 0.1)" << endl
        << endl << endl
        << "Output: -----------------------------------------------" << endl
-       << "\t" << "directory/contigs.fa\t\t: fasta file of contigs longer than twice hash length" << endl
-       << "\t" << "directory/LastGraph\t\t: special formatted file with all the information on the final graph" << endl
-       << "\t" << "directory/stats.txt\t\t: stats file (tab-spaced) useful for determining appropriate coverage cutoff" << endl
+       << "\t" << "directory/meta-velvetg.contigs.fa       \t: fasta file of contigs longer than twice hash length" << endl
+       << "\t" << "directory/meta-velvetg.LastGraph        \t: special formatted file with all the information on the final graph" << endl
+       << "\t" << "directory/meta-velvetg.Graph2-stats.txt \t: stats file (tab-delimited) useful for optimizing coverage peak values" << endl
+       << "\t" << "directory/meta-velvetg.split-stats.txt  \t: stats file (tab-delimited) useful for optimizing graph-splitting parameters" << endl
        << endl 
        << "************************************************************" << endl
        << endl << endl;
@@ -361,10 +384,16 @@ bool MetaVelvetG::setParameter( char* name, char* val ){
   if( strcmp(name, "-exp_covs")             == 0 ){ return setExpectedCoverages( val ); }
   if( strcmp(name, "-manual_exp_cov_multi") == 0 ){ return setExpectedCoverages( val ); }
   if( strcmp(name, "-repeat_cov_sd")        == 0 ){ return setRepeatCoverageSD( val ); }
+  if( strcmp(name, "-min_split_length")     == 0 ){ return setMinSplitLength( val ); }
   if( strcmp(name, "-min_peak_cov")         == 0 ){ return setMinPeakCoverage( val ); }
   if( strcmp(name, "-max_peak_cov")         == 0 ){ return setMaxPeakCoverage( val ); }
   if( strcmp(name, "-histo_bin_width")      == 0 ){ return setHistoBinWidth( val ); }
   if( strcmp(name, "-histo_sn_ratio")       == 0 ){ return setHistoSnRatio( val ); }
+  if( strcmp(name, "-valid_connections")    == 0 ){ return setNumValidConnections( val ); }
+  if( strcmp(name, "-noise_connections")    == 0 ){ return setNumNoiseConnections( val ); }
+  if( strcmp(name, "-use_connections")      == 0 ){ return setFlagUseConnections( val ); }
+  if( strcmp(name, "-report_split_detail")  == 0 ){ return setFlagReportSplitDetail( val ); }
+  if( strcmp(name, "-report_subgraph")      == 0 ){ return setFlagReportSubgraph( val ); }
   if( strcmp(name, "--help")                == 0 ){ return false; }
   cerr << "[meta-velvetg] Unknown option: " << name << endl;
   return false;
@@ -559,6 +588,11 @@ bool MetaVelvetG::setRepeatCoverageSD( char* val ){
   return true;
 }
 
+bool MetaVelvetG::setMinSplitLength( char* val ){
+  minSplitLength = atoi(val);
+  return true;
+}
+
 bool MetaVelvetG::setMinPeakCoverage( char* val ){
   minPeakCoverage = atof(val);
   return true;
@@ -576,6 +610,31 @@ bool MetaVelvetG::setHistoBinWidth( char* val ){
 
 bool MetaVelvetG::setHistoSnRatio( char* val ){
   histoSnRatio = atof(val);
+  return true;
+}
+
+bool MetaVelvetG::setNumValidConnections( char* val ){
+  numValidConnections = atoi(val);
+  return true;
+}
+
+bool MetaVelvetG::setNumNoiseConnections( char* val ){
+  numNoiseConnections = atoi(val);
+  return true;
+}
+
+bool MetaVelvetG::setFlagUseConnections( char* val ){
+  flagUseConnections = ( strcmp(val, "yes") == 0 );
+  return true;
+}
+
+bool MetaVelvetG::setFlagReportSplitDetail( char* val ){
+  flagReportSplitDetail = ( strcmp(val, "yes") == 0 );
+  return true;
+}
+
+bool MetaVelvetG::setFlagReportSubgraph( char* val ){
+  flagReportSubgraph = ( strcmp(val, "yes") == 0 );
   return true;
 }
 
@@ -626,4 +685,5 @@ void MetaVelvetG::guessCoverageFlags(){
   if( coverageCutoff < 0 )
     flagEstimateCoverageCutoff = true;
 }
+
 

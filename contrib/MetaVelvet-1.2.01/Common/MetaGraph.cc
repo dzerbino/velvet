@@ -1,29 +1,16 @@
 #include "MetaGraph.hh"
 
-void MetaGraph::setExpectedCoverages( int num, const double* covs ){
-  numCoveragePeaks = num;
-  for( int i=0 ; i<META_GRAPH_MAX_NUM_COVERAGE_PEAKS ; ++i ){ 
-    expectedCoverages[i] = covs[i]; 
-  }
-}
-
-void MetaGraph::showExpectedCoverages() const {
-  for( int i=0 ; i<numCoveragePeaks ; ++i ){
-    cout << "[MetaGraph] " << (i+1) << "-th coverage peak = " << expectedCoverages[i] << endl;
-  }
-}
-
-
-void MetaGraph::scaffolding( boolean* flagMatePair, bool flagScaffolding, double maxChimeraRate, double repeatCoverageSD, bool flagDiscardChimera ){
-  if( numCoveragePeaks == 1 ){
+void MetaGraph::scaffolding( boolean* flagMatePair, bool flagScaffolding, double maxChimeraRate, bool flagDiscardChimera ){
+  if( splitJudge->getNumCoveragePeaks() == 1 ){
     cout << "[MetaGraph] " << " === Scaffolding with single peak mode ===" << endl;
-    return scaffoldingWithSinglePeakMode( expectedCoverages[0], flagMatePair, flagScaffolding );
+    return scaffoldingWithSinglePeakMode( splitJudge->getExpectedCoverage(0), flagMatePair, flagScaffolding );
   }
   cout << "[MetaGraph] " << " === Scaffolding with multi-peak mode ===" << endl;
-  scaffoldingWithMultiPeakMode( flagMatePair, flagScaffolding, maxChimeraRate, repeatCoverageSD, flagDiscardChimera );
+  scaffoldingWithMultiPeakMode( flagMatePair, flagScaffolding, maxChimeraRate, flagDiscardChimera );
+				
 }
 
-void MetaGraph::scaffoldingWithMultiPeakMode( boolean* flagMatePair, bool flagScaffolding, double maxChimeraRate, double repeatCoverageSD, bool flagDiscardChimera ){
+void MetaGraph::scaffoldingWithMultiPeakMode( boolean* flagMatePair, bool flagScaffolding, double maxChimeraRate, bool flagDiscardChimera ){
   cout << "[MetaGraph] " << " === Create read paring array ===" << endl;
   createReadPairingArray(sequences);
 
@@ -38,12 +25,12 @@ void MetaGraph::scaffoldingWithMultiPeakMode( boolean* flagMatePair, bool flagSc
   subgraphMask = callocOrExit( getSubgraphMaskSize() , int );
   eliminateNullNodes();
 
-  int roundID = 0;
-  int primaryPeakID = 0;
+  size_t roundID = 0;
+  size_t primaryPeakID = 0;
   bool flagVisitedAllNodes = false;
   while( !flagVisitedAllNodes ){
-    double primaryCoverage = expectedCoverages[primaryPeakID];
-    double secondaryCoverage = expectedCoverages[primaryPeakID+1];
+    double primaryCoverage   = splitJudge->getExpectedCoverage(primaryPeakID);
+    double secondaryCoverage = splitJudge->getExpectedCoverage(primaryPeakID+1);
     cout << "[MetaGraph] " << (roundID+1) << "-th round" << endl
 	 << "[MetaGraph] " << "Primary coverage   = " << primaryCoverage << endl
 	 << "[MetaGraph] " << "Secondary coverage = " << secondaryCoverage << endl;
@@ -52,10 +39,15 @@ void MetaGraph::scaffoldingWithMultiPeakMode( boolean* flagMatePair, bool flagSc
     }
     ++roundID;
 
+    if( splitJudge->getFlagUseConnections() ){
+      setSubgraphUniqueness();
+      _computeConnections( flagMatePair );
+    }
+
     while( IDnum nodeID = getUnvisitedNodeID() ){
       extractNextSubgraph( nodeID );
       if( isChimeraSubgraph( primaryCoverage, secondaryCoverage, maxChimeraRate ) ){
-	splitRepeats( primaryCoverage, secondaryCoverage, repeatCoverageSD );
+	splitRepeats();
 	eliminateNullNodes();
 	if( flagDiscardChimera ){
 	  changeSubgraphMask( META_GRAPH_MASK_NOW_VISITING, META_GRAPH_MASK_DELETED );
@@ -70,6 +62,7 @@ void MetaGraph::scaffoldingWithMultiPeakMode( boolean* flagMatePair, bool flagSc
     resetNodeFlags();
     cout << "[MetaGraph] " << " === Subgraph contiging ===" << endl;
     identifyUniqueNodesSubgraph( primaryCoverage ); 
+    saveSubgraph( roundID, primaryCoverage );
     
     if( flagLongRead ){
       cout << "[MetaGraph] " << " === Subgraph Rock Band ===" << endl;
@@ -102,6 +95,26 @@ void MetaGraph::eliminateNullNodes(){
       subgraphMask[i] = META_GRAPH_MASK_DELETED;
     }
   }
+}
+
+void MetaGraph::setSubgraphUniqueness() {
+  IDnum index;
+  Node *node;
+  for(index = 0; index < nodeCount(graph); index++) {
+    node = getNodeInGraph(graph, index + 1);
+    if(node == NULL) {
+      continue;
+    }
+    if(subgraphMask[index + 1 + nodeCount(graph)] == META_GRAPH_MASK_UNVISITED) {
+      setUniqueness(node, true);
+    } else {
+      setUniqueness(node, false);
+    }
+  }
+}
+
+void MetaGraph::_computeConnections( boolean* flagMatePair ) {
+  computeConnections( graph, sequences, dubious, flagMatePair );
 }
 
 void MetaGraph::extractNextSubgraph( IDnum nodeID ){
@@ -184,7 +197,7 @@ bool MetaGraph::isPrimarySubgraph( double primaryCoverage, double secondaryCover
   return false;
 }
 
-int MetaGraph::splitRepeats( double primaryCoverage, double secondaryCoverage, double repeatCoverageSD ){
+int MetaGraph::splitRepeats(){
   int numInterRepeats = 0;
   vector<Node*> inNodes, outNodes;
   resetNodeFlags();
@@ -197,7 +210,7 @@ int MetaGraph::splitRepeats( double primaryCoverage, double secondaryCoverage, d
       continue;
     }
 
-    if( isLocalRepeatStructure(node) and isRepeatCoverageCondition(node, repeatCoverageSD) ){
+    if( splitJudge->isSplit(node) ){
       ++numInterRepeats;
       vector<Node*> inNodes  = VUtils::getInNodes( node );
       vector<Node*> outNodes = VUtils::getOutNodes( node );
@@ -205,23 +218,10 @@ int MetaGraph::splitRepeats( double primaryCoverage, double secondaryCoverage, d
       Node* secondaryInNode  = VUtils::getMinDensityNode( inNodes );
       Node* primaryOutNode   = VUtils::getMaxDensityNode( outNodes );
       Node* secondaryOutNode = VUtils::getMinDensityNode( outNodes );
-      cout << endl
-	   << "[MetaGraph] REPEAT Node:        ID = " << getNodeID(node)
-	   << "\tCov = " << VUtils::getNodeDensity(node)  << "\tLength = " << getNodeLength(node) << endl
-	   << "[MetaGraph] Primary IN Node:    ID = " << getNodeID(primaryInNode)  
-	   << "\tCov = " << VUtils::getNodeDensity(primaryInNode)  << "\tLength = " << getNodeLength(primaryInNode) << endl
-	   << "[MetaGraph] Primary OUT Node:   ID = " << getNodeID(primaryOutNode)
-	   << "\tCov = " << VUtils::getNodeDensity(primaryOutNode)  << "\tLength = " << getNodeLength(primaryOutNode) << endl
-	   << "[MetaGraph] Secondary IN Node:  ID = " << getNodeID(secondaryInNode)
-	   << "\tCov = " << VUtils::getNodeDensity(secondaryInNode) << "\tLength = " << getNodeLength(secondaryInNode) << endl
-	   << "[MetaGraph] Secondary OUT Node: ID = " << getNodeID(secondaryOutNode)
-	   << "\tCov = " << VUtils::getNodeDensity(secondaryOutNode) << "\tLength = " << getNodeLength(secondaryOutNode) << endl;
       setNodeStatus(node, true); setUniqueness(node, false);
       if( getNodeID(primaryInNode) != getNodeID(primaryOutNode) ){ // Taking into account the knock-turn exception
 	setNodeStatus(primaryInNode, true); setUniqueness(primaryInNode, true); setNodeStatus(primaryOutNode, true); setUniqueness(primaryOutNode, true);
 	pushNeighboursInterRepeat( primaryInNode, node, primaryOutNode );
-      } else {
-	
       }
       if( getNodeID(secondaryInNode) != getNodeID(secondaryOutNode) ){ // Taking into account the knock-turn exception
 	setNodeStatus(secondaryOutNode, true); setUniqueness(secondaryOutNode, true); setNodeStatus(secondaryOutNode, true); setUniqueness(secondaryOutNode, true);
@@ -231,46 +231,6 @@ int MetaGraph::splitRepeats( double primaryCoverage, double secondaryCoverage, d
   }
   resetNodeFlags();
   return numInterRepeats;
-}
-
-bool MetaGraph::isLocalRepeatStructure( Node * node ) const {
-  if( !(VUtils::getNumOutArcs(node) == 2) ){
-    return false;
-  }
-  if( !(VUtils::getNumInArcs(node) == 2) ){
-    return false;
-  }
-  return true;
-}
-
-bool MetaGraph::isRepeatCoverageCondition( Node* node, double repeatCoverageSD ) const {
-  vector<Node*> inNodes  = VUtils::getInNodes( node );
-  vector<Node*> outNodes = VUtils::getOutNodes( node );
-  double inPeak1  = getNearestPeak( VUtils::getMaxNodeDensity( inNodes ) );
-  double inPeak2  = getNearestPeak( VUtils::getMinNodeDensity( inNodes ) );
-  double outPeak1 = getNearestPeak( VUtils::getMaxNodeDensity( outNodes ) );
-  double outPeak2 = getNearestPeak( VUtils::getMinNodeDensity( outNodes ) );
-  if( inPeak1==outPeak1 and inPeak2==outPeak2 and inPeak1>inPeak2 ){
-    double aveDensity = ( VUtils::getTotalNodeDensity(inNodes) + VUtils::getTotalNodeDensity(outNodes) ) / 2.0;
-    if( VUtils::getNodeDensity(node)<=aveDensity*(1.0+repeatCoverageSD) and VUtils::getNodeDensity(node)>=aveDensity*(1.0-repeatCoverageSD) ){
-      return true;
-    }
-  }
-  return false;
-}
-
-double MetaGraph::getNearestPeak( double coverage ) const {
-  double nearestPeak = expectedCoverages[0];
-  double nearestDiff = fabs( coverage - nearestPeak );
-  for( int i=1 ; i<numCoveragePeaks ; ++i ){
-    double curPeak = expectedCoverages[i];
-    double curDiff = fabs( coverage - curPeak );
-    if( curDiff < nearestDiff ){
-      nearestPeak = curPeak;
-      nearestDiff = curDiff;
-    }
-  }
-  return nearestPeak;
 }
 
 bool MetaGraph::pushNeighboursInterRepeat( Node* inNode, Node* repNode, Node* outNode ){
@@ -523,4 +483,24 @@ IDnum MetaGraph::getNumActiveNodes() const {
     }
   }
   return count;
+}
+
+void MetaGraph::saveSubgraph( size_t roundID, double cov ) const {
+  if( !flagReportSubgraph ) {
+    return ;
+  }
+  FastaWriter* writer = new FastaWriter( "[SubgraphWriter ]" );
+  writer->open( subgraphPrefix + "__" + Utils::itoa(roundID) + "__" + Utils::dtoa(cov) );
+  for( IDnum i=1; i<=nodeCount(graph) ; ++i ){
+    Node* node = getNodeInGraph( graph, i );
+    if( node == NULL )
+      continue;
+    if( getUniqueness( node ) ){
+      FastaSeq* seq = FastaSeq::instantiate( VUtils::getTitle(node), VUtils::getSequence(node) );
+      writer->send( seq );
+      delete seq;
+    }
+  }
+  writer->close();
+  delete writer;
 }

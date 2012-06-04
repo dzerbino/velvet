@@ -46,6 +46,12 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #define LONG_PAIRED 2 * CATEGORIES + 1
 #define REFERENCE 2 * CATEGORIES + 2
 
+// nucleotide definition
+#define ADENINE 0
+#define CYTOSINE 1
+#define GUANINE 2
+#define THYMINE 3
+
 /* NULL value for ArrayIdx */
 #define NULL_IDX 0
 
@@ -146,5 +152,8 @@ typedef struct dfibheap DFibHeap;
 typedef struct dfibheap_el DFibHeapNode;
 
 typedef struct nodeList_st NodeList;
+
+// Scaffolding (connection) elements
+typedef struct readOccurence_st ReadOccurence;
 
 #endif

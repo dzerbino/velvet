@@ -23,6 +23,9 @@
 #define META_VELVET_G_DEFAULT_HISTO_SN_RATIO 10.0
 #define META_VELEVTG_DEFAULT_MAX_CHIMERA_RATE 0.0
 #define META_VELVETG_DEFAULT_REPEAT_COVERAGE_SD 0.10
+#define META_VELVETG_DEFAULT_MIN_SPLIT_LENGTH 0
+#define META_VELVETG_DEFAULT_NUM_VALID_CONNECTIONS 1
+#define META_VELVETG_DEFAULT_NUM_NOISE_CONNECTIONS 0
 
 using namespace std;
 
@@ -56,7 +59,12 @@ class MetaVelvetG {
   double repeatCoverageSD;
   double expectedCoverages[META_VELVET_G_MAX_NUM_COVERAGE_PEAKS];
   double coverageBoundaries[META_VELVET_G_MAX_NUM_COVERAGE_PEAKS];
+  size_t minSplitLength;
   double minPeakCoverage, maxPeakCoverage, histoBinWidth, histoSnRatio;
+  bool flagUseConnections;
+  size_t numValidConnections, numNoiseConnections;
+  bool flagReportSplitDetail;
+  bool flagReportSubgraph;
   void setDefaultParameters();
   bool checkParameters() const;
   bool checkMetaHistoParameters() const;
@@ -97,10 +105,16 @@ class MetaVelvetG {
   bool setMaxChimeraRate( char* val );
   bool setExpectedCoverages( char* val );
   bool setRepeatCoverageSD( char* val );
+  bool setMinSplitLength( char* val );
   bool setMinPeakCoverage( char* val );
   bool setMaxPeakCoverage( char* val );
   bool setHistoBinWidth( char* val );
   bool setHistoSnRatio( char* val );
+  bool setFlagUseConnections( char* val );
+  bool setNumNoiseConnections( char* val );
+  bool setNumValidConnections( char* val );
+  bool setFlagReportSplitDetail( char* val );
+  bool setFlagReportSubgraph( char* val );
   string getInitialGraphFileName() const;
   void guessNonMandatoryParameters();
   void guessInsertLengthSD();
@@ -111,7 +125,9 @@ public:
   MetaVelvetG( int argc, char* argv[] );
   void constructPregraph() const;
   MetaGraph* loadGraph() const;
-  void setInsertLengths( MetaGraph* metaGraph );
+  void setInsertLengths( MetaGraph* metaGraph ) const;
+  void setSplitJudge( MetaGraph* metaGraph ) const;
+  void setSubgraphOptions( MetaGraph* metaGraph ) const;
   void estimateCoverage( MetaGraph* metaGraph );
   void estimateExpectedCoverages( MetaGraph* metaGraph );
   PeakDetectorParameters* getPeakDetectorParameters() const;

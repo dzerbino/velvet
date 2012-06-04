@@ -30,11 +30,6 @@ Copyright 2007, 2008 Daniel Zerbino (zerbino@ebi.ac.uk)
 #include "utility.h"
 #include "kmer.h"
 
-#define ADENINE 0
-#define CYTOSINE 1
-#define GUANINE 2
-#define THYMINE 3
-
 struct arc_st {
 	Arc *twinArc;		// 64
 	Arc *next;		// 64

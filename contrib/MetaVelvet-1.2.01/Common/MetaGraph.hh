@@ -1,10 +1,10 @@
 #ifndef _META_GRAPH_HH_
 #define _META_GRAPH_HH_
-#include <math.h>
+#include "../Utils/Utils.hh"
 #include "../VelvetAPI/VelvetGraph.hh"
 #include "InfiniteLoopChecker.hh"
+#include "SplitJudge.hh"
 
-#define META_GRAPH_MAX_NUM_COVERAGE_PEAKS 100
 #define META_GRAPH_MAX_NUM_INTER_LOOPS 100
 #define META_GRAPH_MASK_UNVISITED 0
 #define META_GRAPH_MASK_NOW_VISITING 1
@@ -17,21 +17,21 @@
 
 using namespace std;
 
-class MetaGraph : public VelvetGraph {
-  int numCoveragePeaks;
-  double expectedCoverages[META_GRAPH_MAX_NUM_COVERAGE_PEAKS];
+class MetaGraph : public VelvetGraph {  
   int* subgraphMask;
-  void scaffoldingWithMultiPeakMode( boolean* flagMatePair, bool flagScaffolding, double maxChimeraRate, double repeatCoverageSD, bool flagDiscardChimera );
+  SplitJudge* splitJudge;
+  string subgraphPrefix;
+  bool flagReportSubgraph;
+  void scaffoldingWithMultiPeakMode( boolean* flagMatePair, bool flagScaffolding, double maxChimeraRate, bool flagDiscardChimera );
   void eliminateNullNodes();
+  void setSubgraphUniqueness();
+  void _computeConnections( boolean* flagMatePair );
   void extractNextSubgraph( IDnum nodeID );
   IDnum getUnvisitedNodeID() const;
   void dfs( IDnum currentIndex );
   bool isChimeraSubgraph( double primaryCoverage, double secondaryCoverage, double maxChimeraRate ) const;
   bool isPrimarySubgraph( double primaryCoverage, double secondaryCoverage ) const;
-  int splitRepeats( double primaryCoverage, double secondaryCoverage, double repeatCoverageSD );
-  bool isLocalRepeatStructure( Node* node ) const;
-  bool isRepeatCoverageCondition( Node* node, double repeatCoverageSD ) const;
-  double getNearestPeak( double coverage ) const ;
+  int splitRepeats();
   bool pushNeighboursInterRepeat( Node* inNode, Node* repNode, Node* outNode );
   void absorbExtensionInterRepeat( Node * node, Node * extension );
   void adjustShortReadsInterRepeat( Node * target, Node * source );
@@ -46,13 +46,16 @@ class MetaGraph : public VelvetGraph {
   void resetNodeFlags();
   void resetUniqueness();
   IDnum getNumActiveNodes() const;
+  void saveSubgraph( size_t roundID, double cov ) const;
 public:
   MetaGraph( const string& seqFileName, const string& roadmapFileName, const string& pregraphFileName, bool flagReadTracking, int accelerationBits ) 
     : VelvetGraph( seqFileName, roadmapFileName, pregraphFileName, flagReadTracking, accelerationBits ){}
   MetaGraph( const string& seqFileName, const string& graphFileName ) : VelvetGraph( seqFileName, graphFileName ){}
-  void setExpectedCoverages( int num, const double* covs );
-  void scaffolding( boolean* flagMatePair, bool flagScaffolding, double maxChimeraRate, double repeatCoverageSD, bool flagDiscardChimera );
-  void showExpectedCoverages() const;
+  void setSplitJudge( SplitJudge* sj ) { splitJudge = sj; }
+  void setSubgraphOptions( const string& prefix, bool flag ) { subgraphPrefix = prefix; flagReportSubgraph = flag; }
+  void scaffolding( boolean* flagMatePair, bool flagScaffolding, double maxChimeraRate, bool flagDiscardChimera );
+  void setExpectedCoverages( int num, const double* covs ){ splitJudge->setExpectedCoverages( num, covs ); }
+  void showExpectedCoverages() const { splitJudge->showExpectedCoverages(); }
 };
 
 #endif // _META_GRAPH_HH_

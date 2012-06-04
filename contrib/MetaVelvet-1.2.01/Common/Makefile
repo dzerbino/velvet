@@ -1,4 +1,4 @@
-OBJS = InfiniteLoopChecker.o MetaGraph.o
+OBJS = FastaSeq.o FastaWriter.o SplitStats.o SplitJudge.o InfiniteLoopChecker.o MetaGraph.o
 PROG =
 INCLUDES = 
 LIBS = 
