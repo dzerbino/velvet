@@ -75,8 +75,8 @@ velvetg : obj
 
 debug : override DEF := $(DEF) -D DEBUG 
 debug : cleanobj obj/dbg
-	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velveth obj/dbg/tightString.o obj/dbg/run.o obj/dbg/recycleBin.o obj/dbg/splay.o obj/dbg/splayTable.o obj/dbg/readSet.o obj/dbg/binarySequences.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o obj/dbg/allocArray.o obj/autoOpen.o $(Z_LIB_FILES) $(LIBS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velvetg obj/dbg/tightString.o obj/dbg/graph.o obj/dbg/run2.o obj/dbg/fibHeap.o obj/dbg/fib.o obj/dbg/concatenatedGraph.o obj/dbg/passageMarker.o obj/dbg/graphStats.o obj/dbg/correctedGraph.o obj/dbg/dfib.o obj/dbg/dfibHeap.o obj/dbg/recycleBin.o obj/dbg/readSet.o obj/dbg/binarySequences.o obj/dbg/shortReadPairs.o obj/dbg/scaffold.o obj/dbg/locallyCorrectedGraph.o obj/dbg/graphReConstruction.o obj/dbg/roadMap.o obj/dbg/preGraph.o obj/dbg/preGraphConstruction.o obj/dbg/concatenatedPreGraph.o obj/dbg/readCoherentGraph.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o obj/dbg/allocArray.o obj/autoOpen.o $(Z_LIB_FILES) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velveth obj/dbg/tightString.o obj/dbg/run.o obj/dbg/recycleBin.o obj/dbg/splay.o obj/dbg/splayTable.o obj/dbg/readSet.o obj/dbg/binarySequences.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o obj/dbg/allocArray.o obj/dbg/autoOpen.o $(Z_LIB_FILES) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velvetg obj/dbg/tightString.o obj/dbg/graph.o obj/dbg/run2.o obj/dbg/fibHeap.o obj/dbg/fib.o obj/dbg/concatenatedGraph.o obj/dbg/passageMarker.o obj/dbg/graphStats.o obj/dbg/correctedGraph.o obj/dbg/dfib.o obj/dbg/dfibHeap.o obj/dbg/recycleBin.o obj/dbg/readSet.o obj/dbg/binarySequences.o obj/dbg/shortReadPairs.o obj/dbg/scaffold.o obj/dbg/locallyCorrectedGraph.o obj/dbg/graphReConstruction.o obj/dbg/roadMap.o obj/dbg/preGraph.o obj/dbg/preGraphConstruction.o obj/dbg/concatenatedPreGraph.o obj/dbg/readCoherentGraph.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o obj/dbg/allocArray.o obj/dbg/autoOpen.o $(Z_LIB_FILES) $(LIBS)
 
 color : override DEF := $(DEF) -D COLOR
 color : cleanobj obj_de
@@ -85,8 +85,8 @@ color : cleanobj obj_de
 
 colordebug : override DEF := $(DEF) -D COLOR -D DEBUG
 colordebug : cleanobj obj/dbg_de
-	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velveth_de obj/dbg/tightString.o obj/dbg/run.o obj/dbg/recycleBin.o obj/dbg/splay.o obj/dbg/splayTable.o obj/dbg/readSet.o obj/dbg/binarySequences.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o obj/dbg/allocArray.o obj/autoOpen.o $(Z_LIB_FILES) $(LIBS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velvetg_de obj/dbg/tightString.o obj/dbg/graph.o obj/dbg/run2.o obj/dbg/fibHeap.o obj/dbg/fib.o obj/dbg/concatenatedGraph.o obj/dbg/passageMarker.o obj/dbg/graphStats.o obj/dbg/correctedGraph.o obj/dbg/dfib.o obj/dbg/dfibHeap.o obj/dbg/recycleBin.o obj/dbg/readSet.o obj/dbg/binarySequences.o obj/dbg/shortReadPairs.o obj/dbg/scaffold.o obj/dbg/locallyCorrectedGraph.o obj/dbg/graphReConstruction.o obj/dbg/roadMap.o obj/dbg/preGraph.o obj/dbg/preGraphConstruction.o obj/dbg/concatenatedPreGraph.o obj/dbg/readCoherentGraph.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o obj/dbg/allocArray.o obj/autoOpen.o $(Z_LIB_FILES) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velveth_de obj/dbg/tightString.o obj/dbg/run.o obj/dbg/recycleBin.o obj/dbg/splay.o obj/dbg/splayTable.o obj/dbg/readSet.o obj/dbg/binarySequences.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o obj/dbg/allocArray.o obj/dbg/autoOpen.o $(Z_LIB_FILES) $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(DEBUG) -o velvetg_de obj/dbg/tightString.o obj/dbg/graph.o obj/dbg/run2.o obj/dbg/fibHeap.o obj/dbg/fib.o obj/dbg/concatenatedGraph.o obj/dbg/passageMarker.o obj/dbg/graphStats.o obj/dbg/correctedGraph.o obj/dbg/dfib.o obj/dbg/dfibHeap.o obj/dbg/recycleBin.o obj/dbg/readSet.o obj/dbg/binarySequences.o obj/dbg/shortReadPairs.o obj/dbg/scaffold.o obj/dbg/locallyCorrectedGraph.o obj/dbg/graphReConstruction.o obj/dbg/roadMap.o obj/dbg/preGraph.o obj/dbg/preGraphConstruction.o obj/dbg/concatenatedPreGraph.o obj/dbg/readCoherentGraph.o obj/dbg/utility.o obj/dbg/kmer.o obj/dbg/kmerOccurenceTable.o obj/dbg/allocArray.o obj/dbg/autoOpen.o $(Z_LIB_FILES) $(LIBS)
 
 objdir:
 	mkdir -p obj
