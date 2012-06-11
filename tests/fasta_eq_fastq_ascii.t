@@ -36,4 +36,3 @@ if [ $? -ne 0 ]; then
 else
   inform "ok"
 fi
-    
