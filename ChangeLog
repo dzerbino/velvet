@@ -443,3 +443,6 @@ V 1.2.06
 
 V 1.2.07
 - Add file format option '-fmtAuto' to auto-detect compression (using gunzip/bunzip2) and format (only FastA or FastQ for now)
+- Updated MetaVelvet
+- Bug in unit testing
+- Compilation bug
