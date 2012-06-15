@@ -446,3 +446,4 @@ V 1.2.07
 - Updated MetaVelvet
 - Bug in unit testing
 - Compilation bug
+- Memory corruption when running multiple k-mers

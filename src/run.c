@@ -206,7 +206,7 @@ int main(int argc, char **argv)
 
 		resetWordFilter(h);
 
-		buf = mallocOrExit(strlen(argv[1]) + 100, char);
+		buf = mallocOrExit(2 * strlen(argv[1]) + 500, char);
 
 		if ( multiple_kmers ) {
 			sprintf(buf,"%s_%d",argv[1],h);
@@ -288,7 +288,7 @@ int main(int argc, char **argv)
 		if (isCreateBinary()) {
 			allSequences = importCnyReadSet(seqFilename);
 		} else {
-		allSequences = importReadSet(seqFilename);
+			allSequences = importReadSet(seqFilename);
 		}
 		velvetLog("%li sequences in total.\n", (long) allSequences->readCount);
 
