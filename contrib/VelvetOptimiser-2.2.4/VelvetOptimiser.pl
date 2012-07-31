@@ -19,7 +19,7 @@
 #       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #       MA 02110-1301, USA.
 
-#		Version 2.2.0
+my $OptVersion = "2.2.4";
 
 #
 #   pragmas
@@ -74,9 +74,11 @@ our $num_threads;
 my $current_threads : shared = 0;
 my $opt_func;
 my $opt_func2;
-my $OptVersion = "2.2.0";
+my $minCovCutoff;
+my $upperCovCutoff;
 my $threadfailed : shared = 0;
 my $finaldir;
+my $printVersion = 0;
 
 #
 #
@@ -85,11 +87,7 @@ my $finaldir;
 #
 print STDERR "
 ****************************************************
-
            VelvetOptimiser.pl Version $OptVersion
-
-            Simon Gladman - CSIRO 2009
-
 ****************************************************\n";
 
 my $currfreemem = VelvetOpt::Utils::free_mem;
@@ -149,7 +147,8 @@ print STDERR "Will run velvet optimiser with the following paramters:\n";
 print STDERR "\tVelveth parameter string:\n\t\t$readfile\n";
 print STDERR "\tVelveth start hash values:\t$hashs\n";
 print STDERR "\tVelveth end hash value:\t\t$hashe\n";
-print STDERR "\tVelveth hash step value:\t$hashstep\n\n";
+print STDERR "\tVelveth hash step value:\t$hashstep\n";
+print STDERR "\tVelvetg minimum coverage cutoff to use:\t$minCovCutoff\n\n";
 if($vgoptions){
 	print $OUT "\tUser specified velvetg options: $vgoptions\n";
 }
@@ -161,8 +160,10 @@ if($amos){
 
 #build the hashval array - steps too...
 for(my $i = $hashs; $i <= $hashe; $i += $hashstep){
+	print STDERR "i is $i\n";
     push @hashvals, $i;
 }
+
 #check for $hashe in array..
 my $max = $hashvals[$#hashvals];
 if($max < $hashe){
@@ -190,7 +191,8 @@ print $OUT "Will run velvet optimiser with the following paramters:\n";
 print $OUT "\tVelveth parameter string:\n\t\t$readfile\n";
 print $OUT "\tVelveth start hash values:\t$hashs\n";
 print $OUT "\tVelveth end hash value:\t\t$hashe\n";
-print $OUT "\tVelveth hash step value:\t\t$hashstep\n\n";
+print $OUT "\tVelveth hash step value:\t$hashstep\n";
+print $OUT "\tVelvetg minimum coverage cutoff to use:\t$minCovCutoff\n\n";
 if($vgoptions){
 	print $OUT "\tUser specified velvetg options: $vgoptions\n";
 }
@@ -402,6 +404,7 @@ sub setOptions {
 
 	@Options = (
 		{OPT=>"help",    VAR=>\&usage,             DESC=>"This help"},
+		{OPT=>"version!", VAR=>\$printVersion, DEFAULT=>0, DESC=>"Print version to stdout and exit."},
 		{OPT=>"v|verbose+", VAR=>\$verbose, DEFAULT=>0, DESC=>"Verbose logging, includes all velvet output in the logfile."},
 		{OPT=>"s|hashs=i", VAR=>\$hashs, DEFAULT=>19, DESC=>"The starting (lower) hash value"}, 
 		{OPT=>"e|hashe=i", VAR=>\$hashe, DEFAULT=>$maxhash, DESC=>"The end (higher) hash value"},
@@ -413,8 +416,10 @@ sub setOptions {
 		{OPT=>"g|genomesize=f", VAR=>\$genomesize, DEFAULT=>0, DESC=>"The approximate size of the genome to be assembled in megabases.\n\t\t\tOnly used in memory use estimation. If not specified, memory use estimation\n\t\t\twill not occur. If memory use is estimated, the results are shown and then program exits."},
 		{OPT=>"k|optFuncKmer=s", VAR=>\$opt_func, DEFAULT=>'n50', DESC=>"The optimisation function used for k-mer choice."},
 		{OPT=>"c|optFuncCov=s", VAR=>\$opt_func2, DEFAULT=>'Lbp', DESC=>"The optimisation function used for cov_cutoff optimisation."},
+        {OPT=>"m|minCovCutoff=f", VAR=>\$minCovCutoff, DEFAULT=>0, DESC=>"The minimum cov_cutoff to be used."},
 		{OPT=>"p|prefix=s", VAR=>\$prefix, DEFAULT=>'auto', DESC=>"The prefix for the output filenames, the default is the date and time in the format DD-MM-YYYY-HH-MM_."},
 		{OPT=>"d|dir_final=s", VAR=>\$finaldir, DEFAULT=>'.', DESC=>"The name of the directory to put the final output into."},
+		{OPT=>"z|upperCovCutoff=f", VAR=>\$upperCovCutoff, DEFAULT=>0.8, DESC=>"The maximum coverage cutoff to consider as a multiplier of the expected coverage."},
 	);
 
 	(@ARGV < 1) && (usage());
@@ -428,6 +433,11 @@ sub setOptions {
 		}
 	}
 	
+	if ($printVersion) {
+		print "VelvetOptimiser $OptVersion\n";
+		exit 0;
+        }
+
 	print STDERR strftime("%b %e %H:%M:%S", localtime), " Starting to check input parameters.\n";
 	
 	unless($readfile){
@@ -449,15 +459,14 @@ sub setOptions {
 		$hashstep --;
 		print STDERR "\tHash search step value was odd, substracting one.  New hash step value = $hashstep\n";
 	}
-	if($hashstep < 2){
-		$hashstep = 2;
-		print STDERR "\tHash step set below minimum of 2.  New hash step value = 2\n";
-	}
 	if($hashstep > ($hashe - $hashs)){
 		$hashstep = $hashe - $hashs;
 		print STDERR "\tHash search step value was higher than start to end range.  Setting hash step to range. New hash step value = $hashstep\n";
 	}
-		
+	if($hashstep < 2){
+		$hashstep = 2;
+		print STDERR "\tHash step set below minimum of 2.  New hash step value = 2\n";
+	}	
 	if($hashe > $maxhash || $hashe < 1){
         print STDERR "\tEnd hash value not in workable range.  New end hash value is $maxhash.\n";
         $hashe = $maxhash;
@@ -747,9 +756,18 @@ sub covCutoff{
     $dir .= "/stats.txt";
     #print "\tLooking for exp_cov in $dir\n";
     my $expCov = VelvetOpt::Utils::estExpCov($dir, $ass->{hashval});
+    if ($minCovCutoff >= $expCov * 0.8) {
+        my $maxc = $expCov * 0.8;
+        print $OUT "Minimum specified coverage cutoff is higher than the expected coverage. Please choose a minimum coverage cutoff smaller than $maxc and re-run.\n";
+        die "Minimum specified coverage cutoff is higher than the expected coverage. Please choose a minimum coverage cutoff smaller than $maxc and re-run.\n";
+    }
+    if ($minCovCutoff >= $expCov * 0.5) {
+        print $OUT strftime("%b %e %H:%M:%S", localtime), " Warning: Minimum coverage cutoff is set to be higher than 50% of the expected coverage.  Please consider lowering minCovCutoff.\n";
+        print STDERR strftime("%b %e %H:%M:%S", localtime), " Warning: Minimum coverage cutoff is set to be higher than 50% of the expected coverage.  Please consider lowering minCovCutoff.\n";
+    }
 	
-	my $a = 0;
-	my $b = 0.8 * $expCov;
+	my $a = $minCovCutoff;
+	my $b = $upperCovCutoff * $expCov;
 	my $t = 0.618;
 	my $c = $a + $t * ($b - $a);
 	my $d = $b + $t * ($a - $b);

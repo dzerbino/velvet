@@ -1,0 +1,59 @@
+
+==============================
+HOW TO INSTALL VELVETOPTIMISER
+==============================
+
+
+
+1. DOWNLOAD TARBALL
+===================
+
+Download the latest .tar.gz file from the website:
+
+    http://bioinformatics.net.au/software.velvetoptimiser.shtml
+
+For example: 
+
+    VelvetOptimiser-2.2.4.tar.gz 
+
+
+
+2. UNTAR
+========
+
+Choose a place to put the software - it comes in it's own directory.
+
+Here we install it as a normal user in our $HOME directory (eg. /home/peter)
+
+    % cd $HOME
+    % sudo tar zxvf /path/to/VelvetOptimiser-2.2.4.tar.gz 
+
+You now have it in a folder called $HOME/VelvetOptimiser-2.2.4
+
+
+
+3. ADD TO PATH
+==============
+
+Add the following to your $HOME/.bashrc file
+
+    export PATH=$PATH:$HOME/VelvetOptimiser-2.2.4
+
+You will have to log out and log back in for this to be incorporated.
+
+
+4. TRY IT
+=========
+
+Type:
+
+    % VelvetOptimiser.pl
+
+You should see the command line help. For detailed instructions read the
+README file:
+
+    % less $HOME/VelvetOptimiser-2.2.4/README
+
+
+
+   

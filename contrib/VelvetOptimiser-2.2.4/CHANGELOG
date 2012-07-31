@@ -1,0 +1,80 @@
+
+CHANGELOG FOR VELVETOPTIMISER
+=============================
+
+Changes since Version 2.0:
+
+2.0.1:
+
+*	Added Mikael Brandstrom Durling's code to get free_mem and num_cpus for the Mac.
+*	Fixed a bug where if no assembly score was calculable the program crashed.  It now sets the assembly score to 0 instead.
+
+2.1.0:
+
+*	Added two stage optimisation functions.  First one is used to optimise for hash value and second to optimise for cov_cutoff.  Both are user definable and default to "n50" for k-mer size and "Lbp" for cov_cutoff.
+*	Above necessitated change in command line option letters to minimise confusion.  first stage opt. func is -k for k-mer size and second is -c for cov_cutoff
+*	Fixed a bug in Utils.pm where the exp_cov was only calculated for the first two categories and left out the rest.  Now uses all short read categories.
+*	Added a command line option -o to pass through extra commands to velvetg (such as long_mult_cutoff etc.)  NB: No sanity checking here!
+
+2.1.1:
+
+*	Fixed a bug where prefixs containing '-' or '.' would cause the script to fail.
+
+2.1.2:
+
+*	Fixed a bug where estExpCov would try and incorporate columns in the stats.txt file that contained "Inf" or "N/A" into the calculation and thereby crash.
+
+2.1.3:
+
+*	Now gives a nice warning when optimisation function returns undef or 0, instead of cryptic perl error message.
+
+2.1.4:
+
+*	Fixed another bug in estExpCov in Utils.pm so it now doesn't count stats with coverage < 2 and contigs of less than 3 * kmer size - 1.
+
+2.1.5:
+
+*	Added support for velveth's new input file types. (bam, sam and raw) and attempted to future proof it..
+
+2.1.6
+
+*	Now prints Velvet calculated insert sizes and standard deviations in assembly summaries, both in the logfile and on screen
+
+2.1.7
+
+*	Takes new velveth help format into account.  Thanks to Alexie Papanicolaou - CSIRO for the patch.
+
+2.1.8
+
+*	Fixed a bug in the Assembly.pm file so it displays the paired end statistics for newer versions of velvet.
+
+2.1.9
+
+*	Added a hash value search step option.
+*	Calculates the maximum number of velvet instances to run allowing for the velvet OMP compile num threads.
+*	Warns if compiled with velvet is OMP and optimiser threads set to more than number of cpus times OMP threads.
+
+2.2.0
+
+*	You can choose an output folder to put final optimal results into with the -d option.
+*	Fixed a potential bug when running as root.
+*	Set default 'hashe' parameter to MAXKMERLENGTH that velvet was compiled with.
+
+2.2.1
+
+*	Added an option to manually set a minimum coverage cutoff.
+
+2.2.2
+
+*	Added an option to set the maximum coverage cutoff as a fraction of the expected coverage.
+
+2.2.3
+
+*	Added --version option
+*	Added LICENSE
+*	Added INSTALL
+*	Moved the change log from README to its own file CHANGELOG
+
+2.2.4
+
+*	Fixed a bug when the starting and ending hash values were the same.
