@@ -447,3 +447,6 @@ V 1.2.07
 - Bug in unit testing
 - Compilation bug
 - Memory corruption when running multiple k-mers
+
+V 1.2.08
+- Bug in multi-kmer Columbus reference masks

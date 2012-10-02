@@ -1126,6 +1126,7 @@ void inputSequenceArrayIntoSplayTableAndArchive(ReadSet * reads,
 
 		if (maskMemory)
 			destroyRecycleBin(maskMemory);
+		maskMemory = NULL;
 		sortKmerOccurenceTable(table->kmerOccurenceTable);
 	}
 
