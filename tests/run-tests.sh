@@ -1,6 +1,6 @@
 #!/bin/bash
 
-OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=1
 
 # load shared functions and variables
 . `dirname $0`/run-tests.functions
