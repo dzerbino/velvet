@@ -6,7 +6,7 @@ $VH $DIR/fai $K -shortPaired -fasta.gz $FAI > /dev/null
 $VH $DIR/fqi $K -shortPaired -fastq.gz $FQI > /dev/null
 
 # check fai seqs
-cmp --quiet $SEQ $DIR/fai/Sequences
+cmp -s $SEQ $DIR/fai/Sequences
 if [ $? -ne 0 ]; then
   problem "$FAI Sequences different to $SEQ"
 else
@@ -14,7 +14,7 @@ else
 fi
 
 # check fqi seqs
-cmp --quiet $SEQ $DIR/fqi/Sequences
+cmp -s $SEQ $DIR/fqi/Sequences
 if [ $? -ne 0 ]; then
   problem "$FQI Sequences different to $SEQ"
 else
@@ -22,7 +22,7 @@ else
 fi
 
 # check fai roadmap
-cmp --quiet $ROADMAP $DIR/fai/Roadmaps
+cmp -s $ROADMAP $DIR/fai/Roadmaps
 if [ $? -ne 0 ]; then
   problem "$FAI Roadmap differs to $ROADMAP"
 else
@@ -30,7 +30,7 @@ else
 fi
   
 # check fqi roadmap
-cmp --quiet $ROADMAP $DIR/fqi/Roadmaps
+cmp -s $ROADMAP $DIR/fqi/Roadmaps
 if [ $? -ne 0 ]; then
   problem "$FQI Roadmap differs to $ROADMAP"
 else
