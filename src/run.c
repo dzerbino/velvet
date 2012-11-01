@@ -66,6 +66,7 @@ static void printUsage()
 	puts("Options:");
 	puts("\t-strand_specific\t: for strand specific transcriptome sequencing data (default: off)");
 	puts("\t-reuse_Sequences\t: reuse Sequences file (or link) already in directory (no need to provide original filenames in this case (default: off)");
+	puts("\t-reuse_binary\t: reuse binary sequences file (or link) already in directory (no need to provide original filenames in this case (default: off)");
 	puts("\t-noHash\t\t\t: simply prepare Sequences file, do not hash reads or prepare Roadmaps file (default: off)");
 	puts("\t-create_binary  \t: create binary CnyUnifiedSeq file (default: off)");
 	puts("");
@@ -199,7 +200,7 @@ int main(int argc, char **argv)
 	// check if binary sequences should be used
 	int argIndex;
 	for (argIndex = 3; argIndex < argc; argIndex++)
-		if (strcmp(argv[argIndex], "-create_binary") == 0)
+		if (strcmp(argv[argIndex], "-create_binary") == 0 || strcmp(argv[argIndex], "-reuse_binary") == 0)
 			setCreateBinary(true);
 
 	for (h = hashLength; h < hashLengthMax; h += hashLengthStep) {

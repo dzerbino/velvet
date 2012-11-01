@@ -1207,6 +1207,8 @@ void parseDataAndReadFiles(char * filename, int argc, char **argv, boolean * dou
 			reference_coordinate_double_strand = false;
 		} else if (strcmp(argv[argIndex], "-reuse_Sequences") == 0) {
 			reuseSequences = true;
+		} else if (strcmp(argv[argIndex], "-reuse_binary") == 0) {
+			reuseSequences = true;
 		} else if (strcmp(argv[argIndex], "-noHash") == 0) {
 			*noHash = true;
 		}
