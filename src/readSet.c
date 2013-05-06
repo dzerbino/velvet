@@ -745,9 +745,9 @@ static void addMapping(boolean orientation, Coordinate pos, char * seq, Referenc
 		seqWriteInfo->m_refCnt++;
 	} else {
 		if (refCoord->positive_strand) {
-			sprintf(buffer, "%sM\t%li\t%lli\n", buffer, (long) orientation * refCoord->referenceID, (long long) (pos - refCoord->start));
+			snprintf(buffer, *buffer_size, "%sM\t%li\t%lli\n", buffer, (long) orientation * refCoord->referenceID, (long long) (pos - refCoord->start));
 		} else 
-			sprintf(buffer, "%sM\t%li\t%lli\n", buffer, (long) - orientation * refCoord->referenceID, (long long) (refCoord->finish - pos - strlen(seq)));
+			snprintf(buffer, *buffer_size, "%sM\t%li\t%lli\n", buffer, (long) - orientation * refCoord->referenceID, (long long) (refCoord->finish - pos - strlen(seq)));
 
 		if (*buffer_size - strlen(buffer) < 100) {
 			*buffer_size += 1000;

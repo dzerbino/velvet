@@ -450,3 +450,6 @@ V 1.2.07
 
 V 1.2.08
 - Bug in multi-kmer Columbus reference masks
+
+V 1.2.09
+- Bug in copying read mappings into Sequences file
