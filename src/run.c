@@ -103,6 +103,7 @@ int main(int argc, char **argv)
 	boolean double_strand = true;
 	boolean noHash = false;
 	boolean multiple_kmers = false;
+	char buffer[100];
 	DIR *dir;
 
 	setProgramName("velveth");
@@ -137,7 +138,8 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	token = strtok(argv[2], ",");
+	strcpy(buffer, argv[2]);
+	token = strtok(buffer, ",");
 	hashLength = atoi(token);
 	token = strtok(NULL, ",");
 	if (token == NULL) {
