@@ -71,3 +71,7 @@ Separates paired reads from unpaired read after filtering step
 - MetaVelvet by Yasumbumi Sakakibara et al (yasu@bio.keio.ac.jp)
 
 Modification of Velvet to analyze metagenomic data
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+- Pe_read_prepare by Manojkumar Sumathiselvaraju (manojsbiotech@gmail.com)
+
+Preprocessing of paired-end data for de novo genome assembly

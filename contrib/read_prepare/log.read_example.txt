@@ -1,0 +1,14 @@
+Sun Jun  2 23:44:46 2013	Paired-End Read Preprocessing Has Begum
+
+Input Read Stats:
+Total No. Of Reads		= 50000
+Total No. Of R1 Reads		= 25000
+Total No. Of R2 Reads		= 25000
+
+Output Read Stats:
+Total No. Of Paired Reads	= 45830 (22915 + 22915)
+Total No. Of Singleton Reads	= 1931 (804 + 1127)
+Total No. Of NNNN Reads		= 34 ( + 34)
+Total No. Of Quality Fail Reads	= 2205 (1281 + 924)
+
+Sun Jun  2 23:44:47 2013	Processing Completed. Reads Are Ready For Assembly.
