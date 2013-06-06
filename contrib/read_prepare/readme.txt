@@ -6,10 +6,10 @@ PE_READ_PREPARE.pl: Preprocessing of paired-end data for de novo genome assembly
 
 Introduction:
    Quality filtering of raw data forms the primary step in NGS data analysis.
-This script combines the feature of popular quality filtering tools like
-FASTX. Commonly, reads forom a paired-end data are pre-processed separately
-and paired later for downstream analysis. This kind of anlaysis has the
-following pros and cons.
+This script combines the features of popular quality filtering tools like
+FASTX-toolkits. Commonly, reads from a paired-end data are pre-processed
+separately, and paired later for downstream analysis. This kind of anlaysis has 
+the following pros and cons.
 
 Pros: 1) One can process read 1 and read 2 seperately at the same time.
 Cons: 1) Read pairing will become a memory intensive process.
@@ -28,15 +28,19 @@ depending on his/her data quality profile.
 
 Any Bugs:
    If you find any bugs in this script or need more information, please
-reach me at manojsbiotech [at] gmail [dot] com
+reach me at manojsbiotech [at] gmail [dot] com.
 
 ------------------------------------------------------------------------------------------
 
-[user@ngs-server]$ perl ~/pe_read_prepare.pl 
+How To Use:
+	To know how to use the script, in your terminal just run the script as
+described below:
+
+[user@ngs-server]$ perl ~/pe_read_prepare.0.1.pl 
 
 Usage:
 
-perl pe_read_prepare.0.01.pl [Options] <READ1> <READ2> <Output_File_Name>
+perl pe_read_prepare.0.01.pl [Options] <READ1> <READ2> <Output_Prefix>
 
 Optional Parameters:
 
@@ -82,9 +86,9 @@ velvet assembly with -short2 and -short3 parameters respectively.]
 
 Note:
 
-1) Either -s Or (-s_r1 and -s_r2), Either -l Or (-l_r1 and -l_r2)
+1) Use either -s Or (-s_r1 and -s_r2); either -l Or (-l_r1 and -l_r2)
 2) The input files must be in fastq format & they must be paired
-3) Gzipped files are also accepted as inputs
+3) Gzipped fastq files are also accepted as inputs
 4) Values of -l Or (-l_r1 and -l_r2) must be <= Read Length
 
 ------------------------------------------------------------------------------------------
@@ -93,13 +97,13 @@ EXAMPLE PE_READ_PREPARE:
 
 [user@ngs-server]$ sh ./run_example_read_prepare.sh
 
-perl pe_read_prepare.0.1.pl -e 64 -q 10 -p 100 -n 2 -l_r1 15 -l_r2 5 \ 
+perl pe_read_prepare.0.1.pl -e 64 -q 10 -p 100 -s 1 -n 2 -l_r1 15 -l_r2 5 \ 
 			    read1.fq.gz read2.fq.gz READ >& log.read_example.txt &
 
 INPUT FILES
 
-1) read2.fq.gz
-2) read1.fq.gz
+1) read1.fq.gz
+2) read2.fq.gz
 
 OUTPUT FILES
 

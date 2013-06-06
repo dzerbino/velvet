@@ -2,7 +2,7 @@
 
 # Script        : pe_read_prepare.0.1.pl
 # Date          : June 03, 2013
-# Usage         : perl ~/pe_read_prepare.pl [options] <READ1> <READ2> <Output_Name>
+# Usage         : perl ~/pe_read_prepare.0.1.pl [options] <READ1> <READ2> <Output_Prefix>
 # Author	: Manojkumar Sumathiselvaraju
 # Contact	: manojsbiotech [at] gmail [dot] com
 # Institute	: Next Generation Genomics Facility, C-CAMP, NCBS-TIFR, Bangalore, India
@@ -255,7 +255,7 @@ sub how_to_use(){
 
 Usage:
 
-perl pe_read_prepare.0.1.pl [Options] <READ1> <READ2> <Output_File_Name>
+perl pe_read_prepare.0.1.pl [Options] <READ1> <READ2> <Output_Prefix>
 
 Optional Parameters:
 
