@@ -8,7 +8,7 @@ CATEGORIES=2
 DEF = -D MAXKMERLENGTH=$(MAXKMERLENGTH) -D CATEGORIES=$(CATEGORIES)
 
 # Mac OS users: uncomment the following lines
-# CFLAGS = -Wall -m64
+CFLAGS = -Wall -m64
 
 # Sparc/Solaris users: uncomment the following line
 # CFLAGS = -Wall -m64
