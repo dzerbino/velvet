@@ -453,3 +453,8 @@ V 1.2.08
 
 V 1.2.09
 - Bug in copying read mappings into Sequences file
+
+V 1.2.10
+- Bug in multi k-mer run
+- Addition of contributed 'read_prepare' script
+- Better detection of out-of-bounds error
