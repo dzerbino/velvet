@@ -2094,9 +2094,11 @@ static void cleanUpRedundancy()
 		if (isTerminal(slowMarker))
 			slowLength = finalLength;
 		else {
-			slowLength =
-			    slowToFastMapping[getPassageMarkerFinish
-					      (slowMarker) - 1];
+			if(getPassageMarkerFinish(slowMarker) != 0)
+				slowLength = slowToFastMapping[getPassageMarkerFinish(slowMarker) - 1];
+			else
+				slowLength = slowToFastMapping[0];
+
 			if (slowLength < slowConstraint)
 				slowLength = slowConstraint;
 		}

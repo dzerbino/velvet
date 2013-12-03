@@ -906,7 +906,7 @@ void appendDescriptors(Node * destination, Node * source)
 	twinDestination->length = newLength;
 }
 
-static void catDescriptors(Descriptor * descr, Coordinate destinationLength, Descriptor * copy, Coordinate sourceLength) 
+static void catDescriptors(Descriptor * descr, Coordinate destinationLength, Descriptor * copy, Coordinate sourceLength)
 {
 	Coordinate index;
 	Nucleotide nucleotide;
@@ -917,7 +917,7 @@ static void catDescriptors(Descriptor * descr, Coordinate destinationLength, Des
 	}
 }
 
-static void reverseCatDescriptors(Descriptor * descr, Coordinate destinationLength, Descriptor * copy, Coordinate sourceLength, Coordinate totalLength) 
+static void reverseCatDescriptors(Descriptor * descr, Coordinate destinationLength, Descriptor * copy, Coordinate sourceLength, Coordinate totalLength)
 {
 	Coordinate shift = totalLength - destinationLength - sourceLength;
 	Coordinate index;
@@ -2052,7 +2052,7 @@ Graph *importGraph(char *filename)
 	short short_var;
 	char c;
 
-	if (file == NULL) 
+	if (file == NULL)
 		exitErrorf(EXIT_FAILURE, true, "Could not open %s", filename);
 
 	velvetLog("Reading graph file %s\n", filename);
@@ -2204,9 +2204,9 @@ Graph *importGraph(char *filename)
 				velvetLog
 				    ("ERROR: reading in graph - only %d items read for line '%s'",
 				     sCount, line);
-#ifdef DEBUG 
+#ifdef DEBUG
 				abort();
-#endif 
+#endif
 				exit(1);
 			}
 			newMarker =
@@ -2404,7 +2404,7 @@ Graph *readPreGraphFile(char *preGraphFilename, boolean * double_strand)
 #endif
 				}
 			}
-			
+
 			index++;
 		}
 
@@ -2506,7 +2506,7 @@ Graph *readConnectedGraphFile(char *connectedGraphFilename, boolean * double_str
 		twin = node->twinNode;
 		twin->length = node->length;
 		twin->descriptor =
-			callocOrExit(arrayLength, Descriptor);   
+			callocOrExit(arrayLength, Descriptor);
 
 		index = 0;
 		while ((c = getc(file)) != '\n') {
@@ -3145,8 +3145,12 @@ ShortReadMarker *extractFrontOfNodeReads(Node * node,
 	}
 
 	free(sourceArray);
-	graph->nodeReads[sourceID] = newArray;
 	graph->nodeReadCounts[sourceID] = newLength;
+
+	if(newLength > 0)
+		graph->nodeReads[sourceID] = newArray;
+	else
+		graph->nodeReads[sourceID] = NULL;
 
 	*length = mergeLength;
 	return mergeArray;
@@ -3275,8 +3279,12 @@ ShortReadMarker *extractBackOfNodeReads(Node * node, Coordinate breakpoint,
 	}
 
 	free(sourceArray);
-	graph->nodeReads[sourceID] = newArray;
 	graph->nodeReadCounts[sourceID] = newLength;
+
+	if(newLength > 0)
+		graph->nodeReads[sourceID] = newArray;
+	else
+		graph->nodeReads[sourceID] = NULL;
 
 	*length = mergeLength;
 	return mergeArray;
@@ -3321,8 +3329,13 @@ void spreadReadIDs(ShortReadMarker * reads, IDnum readCount, Node * node,
 			sourceIndex++;
 		}
 
-		graph->nodeReads[targetID] = mergeArray;
 		graph->nodeReadCounts[targetID] = sourceLength;
+
+		if(sourceLength > 0)
+		    graph->nodeReads[targetID] = mergeArray;
+		else
+		    graph->nodeReads[targetID] = NULL;
+
 		return;
 	}
 
@@ -3402,8 +3415,12 @@ void spreadReadIDs(ShortReadMarker * reads, IDnum readCount, Node * node,
 	}
 
 	free(targetArray);
-	graph->nodeReads[targetID] = mergeArray;
 	graph->nodeReadCounts[targetID] = mergeLength;
+
+	if(mergeLength > 0)
+		graph->nodeReads[targetID] = mergeArray;
+	else
+		graph->nodeReads[targetID] = NULL;
 }
 
 static inline Coordinate min(Coordinate A, Coordinate B)
@@ -3437,8 +3454,13 @@ void injectShortReads(ShortReadMarker * sourceArray, IDnum sourceLength,
 
 	if (targetLength == 0) {
 		free(targetArray);
-		graph->nodeReads[targetID] = sourceArray;
 		graph->nodeReadCounts[targetID] = sourceLength;
+
+		if(sourceLength > 0)
+			graph->nodeReads[targetID] = sourceArray;
+		else
+			graph->nodeReads[targetID] = NULL;
+
 		return;
 	}
 
@@ -3548,8 +3570,12 @@ void injectShortReads(ShortReadMarker * sourceArray, IDnum sourceLength,
 	}
 
 	free(targetArray);
-	graph->nodeReads[targetID] = mergeArray;
 	graph->nodeReadCounts[targetID] = mergeLength;
+
+	if(mergeLength > 0)
+		graph->nodeReads[targetID] = mergeArray;
+	else
+		graph->nodeReads[targetID] = NULL;
 
 	free(sourceArray);
 }
@@ -3693,12 +3719,20 @@ void foldSymmetricalNodeReads(Node * node, Graph * graph)
 	}
 
 	free(targetArray);
-	graph->nodeReads[targetID] = mergeArray;
 	graph->nodeReadCounts[targetID] = mergeLength;
 
+	if(mergeLength > 0)
+		graph->nodeReads[targetID] = mergeArray;
+	else
+		graph->nodeReads[targetID] = NULL;
+
 	free(sourceArray);
-	graph->nodeReads[sourceID] = mergeArray2;
 	graph->nodeReadCounts[sourceID] = mergeLength;
+
+	if(mergeLength > 0)
+		graph->nodeReads[sourceID] = mergeArray2;
+	else
+		graph->nodeReads[sourceID] = NULL;
 }
 
 void shareReadStarts(Node * target, Node * source, Graph * graph)
@@ -3973,7 +4007,7 @@ void reallocateNodeDescriptor(Node * node, Coordinate length) {
 		nucleotide = getNucleotideInDescriptor(twin->descriptor, index);
 		writeNucleotideInDescriptor(nucleotide, array, index + shift);
 	}
-	
+
 	free(twin->descriptor);
 	twin->descriptor = array;
 }
